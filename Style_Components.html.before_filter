@@ -73,51 +73,6 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
     margin-bottom: 16px;
   }
 
-  .dashboard-header-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .dashboard-header-text {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .outlet-filter-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-family: var(--font-body);
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--text-dim);
-    cursor: pointer;
-    max-width: 140px;
-    margin-top: 2px;
-  }
-
-  .outlet-filter-pill:hover {
-    border-color: var(--sage-dim);
-  }
-
-  .outlet-filter-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .outlet-filter-arrow {
-    flex-shrink: 0;
-    color: var(--text-faint);
-  }
-
   .dashboard-eyebrow {
     font-family: var(--font-mono);
     font-size: 10.5px;
