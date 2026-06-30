@@ -4634,28 +4634,6 @@ window.saveAirForm = saveAirForm;
 })();
 </script>
 
-<script>
-(function() {
-  window.addEventListener("load", function() {
-    setTimeout(function() {
-      var docWidth = document.documentElement.clientWidth;
-      var allEls = document.querySelectorAll("*");
-      var overflowing = [];
-      allEls.forEach(function(el) {
-        if (el.scrollWidth > docWidth + 2) {
-          var rect = el.getBoundingClientRect();
-          overflowing.push(el.tagName + "." + String(el.className).replace(/\s+/g, ".") + " | scrollWidth: " + el.scrollWidth + "px | right edge: " + Math.round(rect.right) + "px");
-        }
-      });
-      if (overflowing.length > 0) {
-        alert("OVERFLOW DITEMUKAN (" + overflowing.length + " elemen):\n\n" + overflowing.slice(0, 8).join("\n\n"));
-      } else {
-        alert("Masih tidak ada overflow terdeteksi. Lebar: " + docWidth + "px");
-      }
-    }, 4000);
-  });
-})();
-</script>
 </body>
 </html>
 
