@@ -93,7 +93,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         <div class="menu-card dashboard-card tone-sage" onclick="openScreenCabangList()">
           <div class="menu-icon">&#127981;</div>
           <div class="menu-body">
-            <div class="menu-title">Profil Outlet</div>
+            <div class="menu-title">Cabang &amp; lokasi</div>
             <div class="menu-desc">Kelola profil outlet, mesin, jam operasional, dan kapasitas.</div>
             <div class="dashboard-card-summary is-loading" id="dashboardCabangSummary">Memuat data...</div>
           </div>
@@ -147,7 +147,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     =================================================================== -->
     <section class="screen" id="screenList">
       <div class="list-header">
-        <h1>Profil Outlet</h1>
+        <h1>Cabang &amp; lokasi</h1>
         <span class="count" id="cabangCount">0 cabang</span>
       </div>
       <div id="cabangListEmpty" class="empty-state" style="display:none;">
@@ -160,7 +160,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
 
     <section class="screen" id="screenRingkasan">
       <div class="summary-hero">
-        <div class="summary-eyebrow">Profil Outlet</div>
+        <div class="summary-eyebrow">Profil Operasional</div>
         <div class="summary-title" id="rNamaLaundry">-</div>
         <div class="summary-meta">
           <span>Jam operasional: <b id="rJamOperasional">-</b></span>
@@ -378,7 +378,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
       <div id="biayaPickCabangList"></div>
       <div id="biayaPickCabangEmpty" class="empty-state" style="display:none;">
         <div class="icon">&#127981;</div>
-        <p>Belum ada cabang. Tambahkan cabang dulu di menu "Profil Outlet" sebelum mengisi Master Biaya.</p>
+        <p>Belum ada cabang. Tambahkan cabang dulu di menu "Cabang &amp; lokasi" sebelum mengisi Master Biaya.</p>
       </div>
     </section>
 
@@ -1314,7 +1314,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         var rows = Array.isArray(data.rows) ? data.rows : [];
 
         if (!rows.length) {
-          setDashboardCardHtml("dashboardCabangSummary", '<div class="dashboard-empty">Belum ada outlet. Mulai dari Profil Outlet.</div>');
+          setDashboardCardHtml("dashboardCabangSummary", '<div class="dashboard-empty">Belum ada outlet. Mulai dari Cabang &amp; Lokasi.</div>');
           return;
         }
 
@@ -3527,7 +3527,7 @@ window.saveAirForm = saveAirForm;
         listEl.innerHTML =
           '<div class="empty-state">' +
             '<div class="icon">&#127981;</div>' +
-            '<p>Belum ada outlet. Silakan buat Profil Outlet terlebih dahulu.</p>' +
+            '<p>Belum ada outlet. Silakan buat Cabang &amp; Lokasi terlebih dahulu.</p>' +
           '</div>';
         return;
       }
@@ -3781,7 +3781,7 @@ window.saveAirForm = saveAirForm;
     if (countEl) countEl.textContent = rows.length + " outlet";
 
     if (!rows.length) {
-      listEl.innerHTML = '<div class="empty-state"><div class="icon">&#127981;</div><p>Belum ada outlet. Buat Profil Outlet terlebih dahulu.</p></div>';
+      listEl.innerHTML = '<div class="empty-state"><div class="icon">&#127981;</div><p>Belum ada outlet. Buat Cabang &amp; Lokasi terlebih dahulu.</p></div>';
       return;
     }
 
@@ -3889,7 +3889,7 @@ window.saveAirForm = saveAirForm;
       '</div>' +
       '<div class="fc-section">' +
         '<div class="fc-section-title">4. Penyusutan Mesin (Depresiasi)</div>' +
-        '<div class="fc-section-note">Data mesin diambil dari Profil Outlet. Isi harga beli, nilai residu, dan masa aus. Jumlah unit otomatis mengikuti data outlet.</div>' +
+        '<div class="fc-section-note">Data mesin diambil dari Profil Operasional. Isi harga beli, nilai residu, dan masa aus. Jumlah unit otomatis mengikuti data outlet.</div>' +
         '<div id="fcDepresiasiRows" class="fc-dynamic-list">' + renderBiayaTetapDepresiasiRows(record.depresiasiRows || []) + '</div>' +
       '</div>' +
       '<div class="fc-section">' +
@@ -3928,7 +3928,7 @@ window.saveAirForm = saveAirForm;
 
   function renderBiayaTetapDepresiasiRows(rows) {
     rows = Array.isArray(rows) ? rows : [];
-    if (!rows.length) return '<div class="empty-hint">Belum ada data mesin di Profil Outlet.</div>';
+    if (!rows.length) return '<div class="empty-hint">Belum ada data mesin di Profil Operasional.</div>';
     return rows.map(createBiayaTetapDepresiasiRowHtml).join("");
   }
 
@@ -4225,7 +4225,7 @@ window.saveAirForm = saveAirForm;
       listEl.innerHTML =
         '<div class="empty-state">' +
           '<div class="icon">&#127981;</div>' +
-          '<p>Belum ada outlet. Silakan buat Profil Outlet terlebih dahulu.</p>' +
+          '<p>Belum ada outlet. Silakan buat Cabang &amp; Lokasi terlebih dahulu.</p>' +
         '</div>';
       return;
     }
