@@ -1479,6 +1479,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           setDashboardCardHtml("dashboardMasterBiayaSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek.</div>');
           return;
         }
+        var shown = rows.slice(0, 3);
         var html =
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
@@ -1560,6 +1561,8 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         if (!rows.length) {
           setDashboardCardHtml("dashboardHargaLayananSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek harga layanan.</div>');
           return;
+        }
+        var shown = rows.slice(0, 3);
         var html =
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
@@ -1574,7 +1577,6 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
         setDashboardCardHtml('dashboardHargaLayananSummary', html);
-        setDashboardCardHtml("dashboardHargaLayananSummary", html);
       })
       .withFailureHandler(function (err) {
         setDashboardCardError("dashboardHargaLayananSummary", err && err.message ? err.message : String(err));
@@ -1596,6 +1598,8 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         if (!rows.length) {
           setDashboardCardHtml("dashboardFixedCostSummary", '<div class="dashboard-empty">Belum ada outlet untuk fixed cost.</div>');
           return;
+        }
+        var shown = rows.slice(0, 3);
         var html =
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
@@ -1611,7 +1615,6 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
         setDashboardCardHtml('dashboardFixedCostSummary', html);
-        setDashboardCardHtml("dashboardFixedCostSummary", html);
       })
       .withFailureHandler(function (err) {
         setDashboardCardError("dashboardFixedCostSummary", err && err.message ? err.message : String(err));
