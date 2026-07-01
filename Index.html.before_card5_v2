@@ -1332,14 +1332,8 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     var nameEl = document.querySelector("#dashboardOutletFilter .outlet-filter-name");
     if (!nameEl) return;
 
-    var rows = cabangListCache || [];
-    var current = rows.find(function (c) { return c.id === dashboardSelectedOutletId; });
+    var current = (cabangListCache || []).find(function (c) { return c.id === dashboardSelectedOutletId; });
     nameEl.textContent = current ? (current.namaLaundry || "Outlet tanpa nama") : "Pilih outlet";
-
-    var countEl = document.getElementById("dashboardOutletCountLabel");
-    if (countEl) {
-      countEl.textContent = rows.length > 0 ? rows.length + " outlet aktif" : "";
-    }
   }
 
   function ensureDashboardOutletSelection_() {
@@ -1596,21 +1590,29 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         if (!rows.length) {
           setDashboardCardHtml("dashboardFixedCostSummary", '<div class="dashboard-empty">Belum ada outlet untuk fixed cost.</div>');
           return;
+        }
+
+        var shown = rows.slice(0, 3);
         var html =
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + formatDashboardRp(data.totalFixedCostPerBulan || 0) + '</strong><span>total / bulan</span></div>' +
+          '</div>' +
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var pill = row.hasData
                 ? '<span class="dashboard-status-pill ok">Terisi</span>'
                 : '<span class="dashboard-status-pill warning">Belum diisi</span>';
+
               return (
                 '<div class="dashboard-outlet-row ' + (row.hasData ? 'is-ok' : 'is-warning') + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
                   '<span class="dashboard-outlet-value">' + formatDashboardRp(row.totalPerBulan || 0) + '/bulan ' + pill + '</span>' +
                 '</div>'
               );
-            }).join('') +
+            }).join("") +
           '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
-        setDashboardCardHtml('dashboardFixedCostSummary', html);
+
         setDashboardCardHtml("dashboardFixedCostSummary", html);
       })
       .withFailureHandler(function (err) {
