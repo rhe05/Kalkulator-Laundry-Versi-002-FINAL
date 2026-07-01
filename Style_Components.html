@@ -120,15 +120,21 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 2px;
     flex-shrink: 0;
+    max-width: 140px;
   }
 
   .outlet-count-label {
-    font-size: 10.5px;
+    font-size: 9.5px;
     color: var(--text-faint);
     text-align: right;
-    min-height: 14px;
+    opacity: 0.7;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
   }
     color: var(--text-faint);
   }
