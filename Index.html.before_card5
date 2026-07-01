@@ -1590,20 +1590,27 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           return;
         }
 
+        var shown = rows.slice(0, 3);
         var html =
-          "<div class=""dashboard-outlet-list"">" +
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + formatDashboardRp(data.totalFixedCostPerBulan || 0) + '</strong><span>total / bulan</span></div>' +
+          '</div>' +
+          '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var pill = row.hasData
-                ? "<span class=""dashboard-status-pill ok"">Terisi</span>"
-                : "<span class=""dashboard-status-pill warning"">Belum diisi</span>";
+                ? '<span class="dashboard-status-pill ok">Terisi</span>'
+                : '<span class="dashboard-status-pill warning">Belum diisi</span>';
+
               return (
-                "<div class=""dashboard-outlet-row " + (row.hasData ? "is-ok" : "is-warning") + """>" +
-                  "<span class=""dashboard-outlet-value"">" + formatDashboardRp(row.totalPerBulan || 0) + "/bulan " + pill + "</span>" +
-                "</div>"
+                '<div class="dashboard-outlet-row ' + (row.hasData ? 'is-ok' : 'is-warning') + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
+                  '<span class="dashboard-outlet-value">' + formatDashboardRp(row.totalPerBulan || 0) + '/bulan ' + pill + '</span>' +
+                '</div>'
               );
             }).join("") +
-          "</div>" +
+          '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
+
         setDashboardCardHtml("dashboardFixedCostSummary", html);
       })
       .withFailureHandler(function (err) {

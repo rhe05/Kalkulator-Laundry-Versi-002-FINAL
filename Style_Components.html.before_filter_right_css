@@ -115,21 +115,6 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
 
   .outlet-filter-arrow {
     flex-shrink: 0;
-
-  .dashboard-filter-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  .outlet-count-label {
-    font-size: 10.5px;
-    color: var(--text-faint);
-    text-align: right;
-    min-height: 14px;
-  }
     color: var(--text-faint);
   }
 

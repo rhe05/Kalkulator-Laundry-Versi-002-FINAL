@@ -1439,10 +1439,14 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
 
         var shown = rows.slice(0, 3);
         var html =
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + escapeHtml(data.totalOutlet) + '</strong><span>outlet aktif</span></div>' +
+          '</div>' +
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               return (
                 '<div class="dashboard-outlet-row">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
                   '<span class="dashboard-outlet-value">Cuci ' + escapeHtml(row.loadCuciPerBulan || 0) + ' Â· Kering ' + escapeHtml(row.loadKeringPerBulan || 0) + ' load/bln</span>' +
                 '</div>'
               );
@@ -1473,20 +1477,28 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           setDashboardCardHtml("dashboardMasterBiayaSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek.</div>');
           return;
         }
+
+        var shown = rows.slice(0, 3);
         var html =
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + escapeHtml(data.completeOutlet || 0) + '/' + escapeHtml(data.totalOutlet || 0) + '</strong><span>outlet lengkap</span></div>' +
+          '</div>' +
           '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var pill = row.isComplete
                 ? '<span class="dashboard-status-pill ok">Lengkap</span>'
                 : '<span class="dashboard-status-pill warning">Belum lengkap</span>';
+
               return (
                 '<div class="dashboard-outlet-row ' + (row.isComplete ? 'is-ok' : 'is-warning') + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
                   '<span class="dashboard-outlet-value">' + escapeHtml(row.lengkapCount || 0) + '/4 ' + pill + '</span>' +
                 '</div>'
               );
             }).join("") +
           '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
+
         setDashboardCardHtml("dashboardMasterBiayaSummary", html);
       })
       .withFailureHandler(function (err) {
@@ -1510,26 +1522,35 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           setDashboardCardHtml("dashboardHppSummary", '<div class="dashboard-empty">Belum ada outlet untuk dihitung HPP.</div>');
           return;
         }
+
+        var shown = rows.slice(0, 3);
         var html =
-          "<div class=""dashboard-outlet-list"">" +
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + escapeHtml(data.readyOutlet || 0) + '/' + escapeHtml(data.totalOutlet || 0) + '</strong><span>HPP siap</span></div>' +
+          '</div>' +
+          '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var value = "HPP belum siap";
               if (row.isReady) {
                 value = row.hppCuciKering > 0
                   ? "CK " + formatDashboardRp(row.hppCuciKering)
-                  : "Range " + formatDashboardRp(row.hppMin) + "–" + formatDashboardRp(row.hppMax);
+                  : "Range " + formatDashboardRp(row.hppMin) + "â€“" + formatDashboardRp(row.hppMax);
               }
+
               var pill = row.warningsCount > 0
-                ? "<span class=""dashboard-status-pill warning"">" + escapeHtml(row.warningsCount) + " warning</span>"
-                : "<span class=""dashboard-status-pill ok"">OK</span>";
+                ? '<span class="dashboard-status-pill warning">' + escapeHtml(row.warningsCount) + ' warning</span>'
+                : '<span class="dashboard-status-pill ok">OK</span>';
+
               return (
-                "<div class=""dashboard-outlet-row " + (row.isReady ? "is-ok" : "is-warning") + """>" +
-                  "<span class=""dashboard-outlet-value"">" + escapeHtml(value) + " " + pill + "</span>" +
-                "</div>"
+                '<div class="dashboard-outlet-row ' + (row.isReady ? 'is-ok' : 'is-warning') + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
+                  '<span class="dashboard-outlet-value">' + escapeHtml(value) + ' ' + pill + '</span>' +
+                '</div>'
               );
             }).join("") +
-          "</div>" +
+          '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
+
         setDashboardCardHtml("dashboardHppSummary", html);
       })
       .withFailureHandler(function (err) {
@@ -1553,19 +1574,28 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           setDashboardCardHtml("dashboardHargaLayananSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek harga layanan.</div>');
           return;
         }
+
+        var shown = rows.slice(0, 3);
         var html =
-          "<div class=""dashboard-outlet-list"">" +
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + escapeHtml(data.dangerOutlet || 0) + '</strong><span>outlet berisiko rugi</span></div>' +
+            '<div class="dashboard-kpi"><strong>' + escapeHtml(data.warningOutlet || 0) + '</strong><span>perlu dicek</span></div>' +
+          '</div>' +
+          '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var pillClass = row.status === "danger" ? "danger" : (row.status === "warning" ? "warning" : "ok");
               var pillText = row.status === "danger" ? "Rugi" : (row.status === "warning" ? "Cek harga" : "Aman");
+
               return (
-                "<div class=""dashboard-outlet-row is-" + escapeHtml(pillClass) + """>" +
-                  "<span class=""dashboard-outlet-value"">Aman " + escapeHtml(row.amanCount || 0) + " · Tipis " + escapeHtml(row.tipisCount || 0) + " · Rugi " + escapeHtml(row.rugiCount || 0) + " <span class=""dashboard-status-pill " + escapeHtml(pillClass) + """>" + escapeHtml(pillText) + "</span></span>" +
-                "</div>"
+                '<div class="dashboard-outlet-row is-' + escapeHtml(pillClass) + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
+                  '<span class="dashboard-outlet-value">Aman ' + escapeHtml(row.amanCount || 0) + ' Â· Tipis ' + escapeHtml(row.tipisCount || 0) + ' Â· Rugi ' + escapeHtml(row.rugiCount || 0) + ' <span class="dashboard-status-pill ' + escapeHtml(pillClass) + '">' + escapeHtml(pillText) + '</span></span>' +
+                '</div>'
               );
             }).join("") +
-          "</div>" +
+          '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
+
         setDashboardCardHtml("dashboardHargaLayananSummary", html);
       })
       .withFailureHandler(function (err) {
@@ -1590,20 +1620,27 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           return;
         }
 
+        var shown = rows.slice(0, 3);
         var html =
-          "<div class=""dashboard-outlet-list"">" +
+          '<div class="dashboard-kpi-row">' +
+            '<div class="dashboard-kpi"><strong>' + formatDashboardRp(data.totalFixedCostPerBulan || 0) + '</strong><span>total / bulan</span></div>' +
+          '</div>' +
+          '<div class="dashboard-outlet-list">' +
             shown.map(function (row) {
               var pill = row.hasData
-                ? "<span class=""dashboard-status-pill ok"">Terisi</span>"
-                : "<span class=""dashboard-status-pill warning"">Belum diisi</span>";
+                ? '<span class="dashboard-status-pill ok">Terisi</span>'
+                : '<span class="dashboard-status-pill warning">Belum diisi</span>';
+
               return (
-                "<div class=""dashboard-outlet-row " + (row.hasData ? "is-ok" : "is-warning") + """>" +
-                  "<span class=""dashboard-outlet-value"">" + formatDashboardRp(row.totalPerBulan || 0) + "/bulan " + pill + "</span>" +
-                "</div>"
+                '<div class="dashboard-outlet-row ' + (row.hasData ? 'is-ok' : 'is-warning') + '">' +
+                  '<span class="dashboard-outlet-name">' + escapeHtml(row.namaLaundry) + '</span>' +
+                  '<span class="dashboard-outlet-value">' + formatDashboardRp(row.totalPerBulan || 0) + '/bulan ' + pill + '</span>' +
+                '</div>'
               );
             }).join("") +
-          "</div>" +
+          '</div>' +
           dashboardMoreRowsText(rows.length, shown.length);
+
         setDashboardCardHtml("dashboardFixedCostSummary", html);
       })
       .withFailureHandler(function (err) {
