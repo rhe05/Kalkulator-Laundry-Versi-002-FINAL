@@ -1515,11 +1515,11 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
 
         var data = res.data || {};
         var rows = Array.isArray(data.rows) ? data.rows : [];
-
         if (!rows.length) {
-        }
           setDashboardCardHtml("dashboardMasterBiayaSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek.</div>');
           return;
+        }
+
         var shown = rows.slice(0, 1);
         var html = shown.map(function (row) {
           var komponen = Array.isArray(row.komponenBiaya) ? row.komponenBiaya : [];
