@@ -1655,29 +1655,25 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
           setDashboardCardError("dashboardFixedCostSummary", res && res.error ? res.error : "Data fixed cost belum bisa dibaca.");
           return;
         }
-
         var data = res.data || {};
         var rows = Array.isArray(data.rows) ? data.rows : [];
-
         if (!rows.length) {
           setDashboardCardHtml("dashboardFixedCostSummary", '<div class="dashboard-empty">Belum ada outlet untuk fixed cost.</div>');
           return;
         }
-        var shown = rows.slice(0, 3);
+        var d = rows[0];
+        var pill = d.hasData
+          ? '<span class="dashboard-status-pill ok">Terisi</span>'
+          : '<span class="dashboard-status-pill warning">Belum diisi</span>';
         var html =
-          '<div class="dashboard-outlet-list">' +
-            shown.map(function (row) {
-              var pill = row.hasData
-                ? '<span class="dashboard-status-pill ok">Terisi</span>'
-                : '<span class="dashboard-status-pill warning">Belum diisi</span>';
-              return (
-                '<div class="dashboard-outlet-row ' + (row.hasData ? 'is-ok' : 'is-warning') + '">' +
-                  '<span class="dashboard-outlet-value">' + formatDashboardRp(row.totalPerBulan || 0) + '/bulan ' + pill + '</span>' +
-                '</div>'
-              );
-            }).join('') +
-          '</div>' +
-          dashboardMoreRowsText(rows.length, shown.length);
+          '<div class="fc-head">' + pill + '</div>' +
+          '<div class="fc-main">' + formatDashboardRp(d.totalPerBulan || 0) + '</div>' +
+          '<div class="fc-sublabel">per bulan</div>' +
+          '<div class="fc-divider"></div>' +
+          '<div class="fc-hari">' +
+            '<span class="fc-hari-label">Estimasi per hari</span>' +
+            '<span class="fc-hari-val">' + formatDashboardRp(d.totalPerHari || 0) + '</span>' +
+          '</div>';
         setDashboardCardHtml('dashboardFixedCostSummary', html);
       })
       .withFailureHandler(function (err) {
