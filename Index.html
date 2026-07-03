@@ -1517,6 +1517,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         var rows = Array.isArray(data.rows) ? data.rows : [];
 
         if (!rows.length) {
+        }
           setDashboardCardHtml("dashboardMasterBiayaSummary", '<div class="dashboard-empty">Belum ada outlet untuk dicek.</div>');
           return;
         var shown = rows.slice(0, 1);
@@ -1559,7 +1560,6 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         }).join('');
         setDashboardCardHtml('dashboardMasterBiayaSummary', html);
         setDashboardCardHtml("dashboardMasterBiayaSummary", html);
-      })
       .withFailureHandler(function (err) {
         setDashboardCardError("dashboardMasterBiayaSummary", err && err.message ? err.message : String(err));
       })
