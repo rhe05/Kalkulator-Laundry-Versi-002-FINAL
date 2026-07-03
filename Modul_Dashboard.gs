@@ -374,6 +374,11 @@ function getDashboardHargaLayananSummary(cabangId) {
         }
       });
 
+      const layananList = layanan
+        .filter(function(svc) { return svc && dashboardNumber_(svc.hargaJual, 0) > 0; })
+        .map(function(svc) {
+          return { key: String(svc.key || ""), title: String(svc.title || ""), marginPercent: dashboardRound2_(dashboardNumber_(svc.marginPercent, 0)), status: String(svc.status || "aman") };
+        });
       const totalLayanan = layanan.length;
       let status = "ok";
       if (rugiCount > 0) {
@@ -392,6 +397,7 @@ function getDashboardHargaLayananSummary(cabangId) {
         impasCount: impasCount,
         amanCount: amanCount,
         minMarginPercent: marginPercents.length ? dashboardRound2_(Math.min.apply(null, marginPercents)) : null,
+        layananList: layananList,
         warningsCount: warnings.length + (errorText ? 1 : 0),
         status: status,
         errorText: errorText
