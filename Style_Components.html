@@ -401,6 +401,44 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
     width: 100%;
   }
 
+  .bep-chart-wrap {
+    background: var(--panel-2);
+    border-radius: var(--radius);
+    padding: 10px 10px 8px 10px;
+    margin-bottom: 4px;
+  }
+
+  .bep-chart-svg {
+    width: 100%;
+    height: 120px;
+    display: block;
+  }
+
+  .bep-chart-legend {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .bep-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    color: var(--text-faint);
+  }
+
+  .bep-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .bep-legend-dot.sage { background: var(--sage); }
+  .bep-legend-dot.brass { background: var(--brass); }
+
   .bep-section {
     display: flex;
     flex-direction: column;
