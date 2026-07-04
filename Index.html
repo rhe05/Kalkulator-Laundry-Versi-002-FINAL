@@ -918,7 +918,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     }) + "%";
   }
 
-  function toggleOkupansiTooltip(btn, evt) {
+  window.toggleOkupansiTooltip = function (btn, evt) {
     if (evt) evt.stopPropagation();
     var tip = btn.nextElementSibling;
     var wasOpen = tip && tip.classList.contains("is-open");
