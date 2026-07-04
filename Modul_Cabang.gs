@@ -118,6 +118,9 @@ function listCabang() {
         kategoriLayanan: cabang.kategoriLayanan,
         totalUnitCuci: sumUnit_(cabang.mesinCuci),
         totalUnitPengering: sumUnit_(cabang.mesinPengering),
+        mesinCuci: cabang.mesinCuci,
+        mesinPengering: cabang.mesinPengering,
+        okupansi: cabang.okupansi,
         updatedAt: cabang.updatedAt,
         summary: computeSummary_(cabang),
       });

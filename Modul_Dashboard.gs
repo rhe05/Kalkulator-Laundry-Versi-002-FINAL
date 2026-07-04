@@ -79,22 +79,14 @@ function getDashboardCabangSummary(cabangId) {
       const cuci = summary.cuci || {};
       const kering = summary.kering || {};
 
-      let mesinCuci = [];
-      let mesinPengering = [];
-      let okupansiCuci = 0;
-      let okupansiKering = 0;
-      try {
-        if (typeof getCabang === "function") {
-          const detailRes = getCabang(item.id);
-          if (detailRes && detailRes.ok && detailRes.data && detailRes.data.cabang) {
-            mesinCuci = dashboardArray_(detailRes.data.cabang.mesinCuci);
-            mesinPengering = dashboardArray_(detailRes.data.cabang.mesinPengering);
-            var okupansi = detailRes.data.cabang.okupansi || {};
-            okupansiCuci = dashboardNumber_(okupansi.cuciPersen, 0);
-            okupansiKering = dashboardNumber_(okupansi.keringPersen, 0);
-          }
-        }
-      } catch (e) {}
+      // Dulu di sini panggil getCabang(item.id) lagi (baca ulang sheet) hanya
+      // untuk ambil mesinCuci/mesinPengering/okupansi. Sekarang listCabang()
+      // sudah menyertakan field ini langsung, jadi tidak perlu fetch kedua.
+      const mesinCuci = dashboardArray_(item.mesinCuci);
+      const mesinPengering = dashboardArray_(item.mesinPengering);
+      const okupansiSrc = item.okupansi || {};
+      const okupansiCuci = dashboardNumber_(okupansiSrc.cuciPersen, 0);
+      const okupansiKering = dashboardNumber_(okupansiSrc.keringPersen, 0);
 
       return {
         cabangId: String(item.id || ""),
