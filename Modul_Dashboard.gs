@@ -186,7 +186,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
             dashboardArray_(gasRes.data.items).forEach(function(g) {
               gasTotalPerLoad += dashboardNumber_((g.summary || {}).biayaPerLoad, 0);
             });
-            if (gasTotalPerLoad > 0) {
+            if (gasComplete) {
               komponenBiaya.push({ key: "gas", label: "Gas LPG", biayaPerLoad: dashboardRound2_(gasTotalPerLoad) });
               totalBiayaPerLoad += gasTotalPerLoad;
             }
@@ -204,7 +204,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
             const washerPerLoad = cuciArr.length > 0 ? dashboardNumber_(cuciArr[0].rpListrikPerLoad, 0) : 0;
             const dryerPerLoad = pengeringArr.length > 0 ? dashboardNumber_(pengeringArr[0].rpListrikPerLoad, 0) : 0;
             const rataListrik = pompaPerLoad + washerPerLoad + dryerPerLoad;
-            if (rataListrik > 0) {
+            if (listrikComplete) {
               komponenBiaya.push({ key: "listrik", label: "Listrik", biayaPerLoad: dashboardRound2_(rataListrik) });
               totalBiayaPerLoad += rataListrik;
             }
@@ -216,7 +216,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
           const airRes = getBiayaAir(cabangId);
           if (airRes && airRes.ok && airRes.data && airRes.data.summary) {
             const airPerLoad = dashboardNumber_(airRes.data.summary.biayaPerLoad, 0);
-            if (airPerLoad > 0) {
+            if (airComplete) {
               komponenBiaya.push({ key: "air", label: "Air", biayaPerLoad: dashboardRound2_(airPerLoad) });
               totalBiayaPerLoad += airPerLoad;
             }
@@ -229,7 +229,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
           const notaRes = getBiayaNotaKasir(cabangId);
           if (notaRes && notaRes.ok && notaRes.data && notaRes.data.summary) {
             const notaPerLoad = dashboardNumber_(notaRes.data.summary.totalBiayaNotaKasirPerLoad, 0);
-            if (notaPerLoad > 0) {
+            if (notaComplete) {
               komponenBiaya.push({ key: "nota", label: "Nota/Kasir", biayaPerLoad: dashboardRound2_(notaPerLoad) });
               totalBiayaPerLoad += notaPerLoad;
             }
