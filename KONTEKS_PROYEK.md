@@ -269,11 +269,16 @@ Catatan: rataHPP & rataHarga dihitung rata-rata sederhana lintas layanan
 ### PRIORITAS BERIKUTNYA
 
 1. **Test live card BEP** di browser dengan outlet berdata lengkap
-2. **Desain ulang card yang belum disentuh:**
+2. **Card "Kap. Setrika" untuk kategori Drop Off/Kiloan & Hybrid** (belum dikerjakan):
+   - Satuan per jam (beda dari Cuci/Kering yang per bulan)
+   - Form input data setrika di menu Profil Outlet belum aktif — harus dibuat dulu sebelum card dashboard bisa jalan
+   - Gaya visual: statis, elegan, premium — konsisten dengan card Cuci/Kering yang sudah ada
+   - Dashboard harus adaptif per kategori outlet: Self Service tetap 2 KPI (Cuci/Kering), Drop Off/Kiloan & Hybrid jadi 3 KPI (+ Setrika)
+3. **Desain ulang card yang belum disentuh:**
    - Harga Layanan (data: `amanCount`, `tipisCount`, `rugiCount`, `minMarginPercent`, `status`)
    - Biaya Tetap Outlet / Fixed Cost (data: `hasData`, `totalPerBulan`, `totalPerHari`)
-3. **Perbaikan tampilan layar detail** (Gas, Listrik, Air, Nota)
-4. **Fitur Packing** untuk laundry kiloan/hybrid (komponen biaya ke-5 dan ke-6)
+4. **Perbaikan tampilan layar detail** (Gas, Listrik, Air, Nota)
+5. **Fitur Packing** untuk laundry kiloan/hybrid (komponen biaya ke-5 dan ke-6)
 
 ---
 
