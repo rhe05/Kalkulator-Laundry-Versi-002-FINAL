@@ -399,7 +399,15 @@ function getDashboardHargaLayananSummary(cabangId) {
       const layananList = layanan
         .filter(function(svc) { return svc && dashboardNumber_(svc.hargaJual, 0) > 0; })
         .map(function(svc) {
-          return { key: String(svc.key || ""), title: String(svc.title || ""), marginPercent: dashboardRound2_(dashboardNumber_(svc.marginPercent, 0)), status: String(svc.status || "aman") };
+          return {
+            key: String(svc.key || ""),
+            title: String(svc.title || ""),
+            marginPercent: dashboardRound2_(dashboardNumber_(svc.marginPercent, 0)),
+            status: String(svc.status || "aman"),
+            hpp: dashboardRound2_(dashboardNumber_(svc.hpp, 0)),
+            hargaJual: dashboardRound2_(dashboardNumber_(svc.hargaJual, 0)),
+            margin: dashboardRound2_(dashboardNumber_(svc.margin, 0))
+          };
         });
       const totalLayanan = layanan.length;
       let status = "ok";
