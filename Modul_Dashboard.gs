@@ -79,6 +79,18 @@ function getDashboardCabangSummary(cabangId) {
       const cuci = summary.cuci || {};
       const kering = summary.kering || {};
 
+      let mesinCuci = [];
+      let mesinPengering = [];
+      try {
+        if (typeof getCabang === "function") {
+          const detailRes = getCabang(item.id);
+          if (detailRes && detailRes.ok && detailRes.data && detailRes.data.cabang) {
+            mesinCuci = dashboardArray_(detailRes.data.cabang.mesinCuci);
+            mesinPengering = dashboardArray_(detailRes.data.cabang.mesinPengering);
+          }
+        }
+      } catch (e) {}
+
       return {
         cabangId: String(item.id || ""),
         namaLaundry: dashboardOutletName_(item),
@@ -89,10 +101,10 @@ function getDashboardCabangSummary(cabangId) {
         loadKeringPerBulan: dashboardRound2_(kering.loadPerBulan),
         jamBukaMenit: dashboardNumber_(item.jamBukaMenit, 0),
         jamTutupMenit: dashboardNumber_(item.jamTutupMenit, 0),
-        jenisCuci: (function() { var arr = dashboardArray_(item.mesinCuci); if (!arr.length) return ""; var j = arr[0].jenis || ""; return j === "rumah_tangga" ? "home" : j === "komersial" ? "commercial" : j; })(),
-        jenisKering: (function() { var arr = dashboardArray_(item.mesinPengering); if (!arr.length) return ""; var j = arr[0].jenis || ""; return j === "konversi" ? "home" : j === "komersial" ? "commercial" : j; })(),
-        durasiCuci: (function() { var arr = dashboardArray_(item.mesinCuci); return arr.length ? dashboardNumber_(arr[0].durasiMenit, 0) : 0; })(),
-        durasiKering: (function() { var arr = dashboardArray_(item.mesinPengering); return arr.length ? dashboardNumber_(arr[0].durasiMenit, 0) : 0; })()
+        jenisCuci: (function() { if (!mesinCuci.length) return ""; var j = mesinCuci[0].jenis || ""; return j === "rumah_tangga" ? "home" : j === "komersial" ? "commercial" : j; })(),
+        jenisKering: (function() { if (!mesinPengering.length) return ""; var j = mesinPengering[0].jenis || ""; return j === "konversi" ? "home" : j === "komersial" ? "commercial" : j; })(),
+        durasiCuci: mesinCuci.length ? dashboardNumber_(mesinCuci[0].durasiMenit, 0) : 0,
+        durasiKering: mesinPengering.length ? dashboardNumber_(mesinPengering[0].durasiMenit, 0) : 0
       };
     });
 
