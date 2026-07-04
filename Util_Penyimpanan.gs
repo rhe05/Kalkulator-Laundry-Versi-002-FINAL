@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * UTIL PENYIMPANAN — Sheet "_data_operasional" sebagai key-value store
  * ============================================================================
@@ -47,30 +47,55 @@ function ensureDataSheet_() {
   return sheet;
 }
 
-function readKey_(sheet, key) {
+// Cache baca-sekali-per-eksekusi: sebelumnya readKey_/writeKey_/deleteKeyRow_
+// masing-masing memanggil getDataRange().getValues() SENDIRI-SENDIRI, padahal
+// dalam satu eksekusi (misal 1 pemuatan Dashboard) fungsi ini bisa terpanggil
+// puluhan kali berantai (listCabang -> getCabang per baris -> dst). Cache ini
+// hidup HANYA selama satu eksekusi google.script.run (variabel global Apps
+// Script reset tiap eksekusi baru), jadi aman dari data basi lintas request.
+let _dataSheetCache_ = null;
+
+function _getSheetCacheKey_(sheet) {
+  return sheet.getSheetId ? String(sheet.getSheetId()) : sheet.getName();
+}
+
+function _loadSheetCache_(sheet) {
+  const cacheKey = _getSheetCacheKey_(sheet);
+  if (_dataSheetCache_ && _dataSheetCache_.sheetKey === cacheKey) {
+    return _dataSheetCache_;
+  }
   const values = sheet.getDataRange().getValues();
-  for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === key) return values[i][1];
+  _dataSheetCache_ = { sheetKey: cacheKey, rows: values.slice(1) };
+  return _dataSheetCache_;
+}
+
+function readKey_(sheet, key) {
+  const cache = _loadSheetCache_(sheet);
+  for (let i = 0; i < cache.rows.length; i++) {
+    if (cache.rows[i][0] === key) return cache.rows[i][1];
   }
   return null;
 }
 
 function writeKey_(sheet, key, value) {
-  const values = sheet.getDataRange().getValues();
-  for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === key) {
-      sheet.getRange(i + 1, 2).setValue(value);
+  const cache = _loadSheetCache_(sheet);
+  for (let i = 0; i < cache.rows.length; i++) {
+    if (cache.rows[i][0] === key) {
+      sheet.getRange(i + 2, 2).setValue(value);
+      cache.rows[i][1] = value;
       return;
     }
   }
   sheet.appendRow([key, value]);
+  cache.rows.push([key, value]);
 }
 
 function deleteKeyRow_(sheet, key) {
-  const values = sheet.getDataRange().getValues();
-  for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === key) {
-      sheet.deleteRow(i + 1);
+  const cache = _loadSheetCache_(sheet);
+  for (let i = 0; i < cache.rows.length; i++) {
+    if (cache.rows[i][0] === key) {
+      sheet.deleteRow(i + 2);
+      cache.rows.splice(i, 1);
       return;
     }
   }

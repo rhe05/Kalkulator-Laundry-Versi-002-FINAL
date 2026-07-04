@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * MODUL: CABANG & LOKASI
  * ============================================================================
@@ -60,10 +60,12 @@ function defaultCabang_() {
     },
     mesinCuci: [],
     mesinPengering: [],
+    mesinSetrika: [],
     kategoriLayanan: "self_service",
     okupansi: {
       cuciPersen: 70,
       keringPersen: 70,
+      setrikaPersen: 70,
     },
     createdAt: null,
     updatedAt: null,
@@ -76,6 +78,15 @@ function defaultMachineRow_() {
     jenis: "",
     kapasitasKg: 0,
     durasiMenit: 0,
+    jumlahUnit: 1,
+  };
+}
+
+function defaultSetrikaRow_() {
+  return {
+    id: "",
+    jenis: "",
+    kapasitasKgPerJam: 0,
     jumlahUnit: 1,
   };
 }
@@ -257,6 +268,7 @@ function sanitizeCabang_(input) {
 
   out.mesinCuci = toMachineArray_(input && input.mesinCuci);
   out.mesinPengering = toMachineArray_(input && input.mesinPengering);
+  out.mesinSetrika = toSetrikaArray_(input && input.mesinSetrika);
 
   const allowedKategori = ["self_service", "drop_off", "hybrid"];
   out.kategoriLayanan = allowedKategori.indexOf(input && input.kategoriLayanan) >= 0
@@ -266,6 +278,7 @@ function sanitizeCabang_(input) {
   const ok = (input && input.okupansi) || {};
   out.okupansi.cuciPersen = clamp_(toNumber_(ok.cuciPersen, base.okupansi.cuciPersen), 0, 100);
   out.okupansi.keringPersen = clamp_(toNumber_(ok.keringPersen, base.okupansi.keringPersen), 0, 100);
+  out.okupansi.setrikaPersen = clamp_(toNumber_(ok.setrikaPersen, base.okupansi.setrikaPersen), 0, 100);
 
   out.createdAt = (input && input.createdAt) || null;
   out.updatedAt = (input && input.updatedAt) || null;
@@ -283,6 +296,21 @@ function toMachineArray_(arr) {
     safe.jenis = toSafeString_(row.jenis, "", 60);
     safe.kapasitasKg = clamp_(toNumber_(row.kapasitasKg, 0), 0, 1000);
     safe.durasiMenit = clamp_(toNumber_(row.durasiMenit, 0), 0, 1440);
+    safe.jumlahUnit = clamp_(toInt_(row.jumlahUnit, 1), 0, 500);
+    cleaned.push(safe);
+  }
+  return cleaned;
+}
+
+function toSetrikaArray_(arr) {
+  if (!Array.isArray(arr)) return [];
+  const cleaned = [];
+  for (let i = 0; i < arr.length; i++) {
+    const row = arr[i] || {};
+    const safe = defaultSetrikaRow_();
+    safe.id = toSafeString_(row.id, "s_" + i + "_" + Date.now().toString(36), 60) || ("s_" + i);
+    safe.jenis = toSafeString_(row.jenis, "", 60);
+    safe.kapasitasKgPerJam = clamp_(toNumber_(row.kapasitasKgPerJam, 0), 0, 1000);
     safe.jumlahUnit = clamp_(toInt_(row.jumlahUnit, 1), 0, 500);
     cleaned.push(safe);
   }
@@ -308,6 +336,12 @@ function validateCabang_(data) {
       return { valid: false, message: "Baris mesin pengering #" + (i + 1) + " perlu kapasitas dan durasi lebih dari 0." };
     }
   }
+  for (let i = 0; i < data.mesinSetrika.length; i++) {
+    const m = data.mesinSetrika[i];
+    if (m.jumlahUnit > 0 && m.kapasitasKgPerJam <= 0) {
+      return { valid: false, message: "Baris mesin setrika #" + (i + 1) + " perlu kapasitas kg/jam lebih dari 0." };
+    }
+  }
   return { valid: true, message: "" };
 }
 
@@ -331,6 +365,7 @@ function computeSummary_(cabang) {
     totalJamPerHari: round2_(totalMenit / 60),
     cuci: computeGroupLoad_(cabang.mesinCuci, totalMenit, cabang.okupansi.cuciPersen),
     kering: computeGroupLoad_(cabang.mesinPengering, totalMenit, cabang.okupansi.keringPersen),
+    setrika: computeSetrikaCapacity_(cabang.mesinSetrika, cabang.okupansi.setrikaPersen),
   };
 }
 
@@ -363,5 +398,26 @@ function computeGroupLoad_(rows, totalMenitPerHari, okupansiPersen) {
     loadPerHari: round2_(loadPerHari),
     loadPerMinggu: round2_(loadPerHari * 7),
     loadPerBulan: round2_(loadPerHari * 30),
+  };
+}
+
+function computeSetrikaCapacity_(rows, okupansiPersen) {
+  let totalUnit = 0;
+  let kapasitasMaksimalKgPerJam = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const m = rows[i];
+    const unit = toInt_(m.jumlahUnit, 0);
+    totalUnit += unit;
+    kapasitasMaksimalKgPerJam += toNumber_(m.kapasitasKgPerJam, 0) * unit;
+  }
+
+  const okupansiFraksi = clamp_(okupansiPersen, 0, 100) / 100;
+  const kapasitasKgPerJam = kapasitasMaksimalKgPerJam * okupansiFraksi;
+
+  return {
+    totalUnit: totalUnit,
+    kapasitasMaksimalKgPerJam: round2_(kapasitasMaksimalKgPerJam),
+    kapasitasKgPerJam: round2_(kapasitasKgPerJam),
   };
 }
