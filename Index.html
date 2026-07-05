@@ -1475,12 +1475,64 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
       : "";
   }
 
-  function setDashboardAllLoading() {
-    setDashboardCardLoading("dashboardCabangSummary");
+  function setDashboardAllLoading(skipCabangCard) {
+    if (!skipCabangCard) setDashboardCardLoading("dashboardCabangSummary");
     setDashboardCardLoading("dashboardMasterBiayaSummary");
     setDashboardCardLoading("dashboardHppSummary");
     setDashboardCardLoading("dashboardHargaLayananSummary");
     setDashboardCardLoading("dashboardFixedCostSummary");
+  }
+
+  /**
+   * mapCabangRowToProfilSummary_: salinan ringan dari transform yang dilakukan
+   * getDashboardCabangSummary_ di backend (Modul_Dashboard.gs), supaya card
+   * "Profil Outlet" bisa dirender SEKETIKA dari cabangListCache yang sudah ada
+   * di memori (tanpa nunggu roundtrip getDashboardFullSummary), begitu user
+   * ganti outlet di picker. Backend tetap sumber kebenaran tunggal - fetch
+   * asli tetap jalan di belakang layar dan akan menimpa render optimistik ini.
+   */
+  function mapCabangRowToProfilSummary_(item) {
+    var summary = item.summary || {};
+    var cuci = summary.cuci || {};
+    var kering = summary.kering || {};
+    var setrikaSummary = summary.setrika || {};
+    var mesinCuci = item.mesinCuci || [];
+    var mesinPengering = item.mesinPengering || [];
+    var mesinSetrika = item.mesinSetrika || [];
+    var okupansiSrc = item.okupansi || {};
+
+    return {
+      cabangId: String(item.id || ""),
+      namaLaundry: item.namaLaundry || "Outlet tanpa nama",
+      kategoriLayanan: String(item.kategoriLayanan || ""),
+      totalUnitCuci: Number(item.totalUnitCuci) || 0,
+      totalUnitPengering: Number(item.totalUnitPengering) || 0,
+      loadCuciPerBulan: round2(cuci.loadPerBulan),
+      loadKeringPerBulan: round2(kering.loadPerBulan),
+      jamBukaMenit: Number(item.jamBukaMenit) || 0,
+      jamTutupMenit: Number(item.jamTutupMenit) || 0,
+      jenisCuci: mesinCuci.length ? (mesinCuci[0].jenis === "rumah_tangga" ? "home" : mesinCuci[0].jenis === "komersial" ? "commercial" : (mesinCuci[0].jenis || "")) : "",
+      jenisKering: mesinPengering.length ? (mesinPengering[0].jenis === "komersial" ? "commercial" : (mesinPengering[0].jenis || "")) : "",
+      durasiCuci: mesinCuci.length ? (Number(mesinCuci[0].durasiMenit) || 0) : 0,
+      durasiKering: mesinPengering.length ? (Number(mesinPengering[0].durasiMenit) || 0) : 0,
+      okupansiCuci: Number(okupansiSrc.cuciPersen) || 0,
+      okupansiKering: Number(okupansiSrc.keringPersen) || 0,
+      totalUnitSetrika: Number(setrikaSummary.totalUnit) || 0,
+      kapasitasSetrikaKgPerJam: round2(setrikaSummary.kapasitasKgPerJam),
+      jenisSetrika: mesinSetrika.length ? String(mesinSetrika[0].jenis || "") : "",
+      okupansiSetrika: Number(okupansiSrc.setrikaPersen) || 0
+    };
+  }
+
+  function refreshDashboardFast() {
+    if (!document.getElementById("dashboardCabangSummary")) return;
+
+    var rows = cabangListCache || [];
+    var current = rows.find(function (c) { return c.id === dashboardSelectedOutletId; });
+    if (current) {
+      renderDashboardCabangCard({ ok: true, data: { rows: [mapCabangRowToProfilSummary_(current)] } });
+    }
+    refreshDashboard(!!current);
   }
 
   /**
@@ -1564,11 +1616,13 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     listEl.querySelectorAll("[data-outlet-id]").forEach(function (el) {
       el.addEventListener("click", function () {
         var id = el.getAttribute("data-outlet-id");
+        var changed = id !== dashboardSelectedOutletId;
         dashboardSelectedOutletId = id;
         setStoredOutletId_(id);
         updateOutletFilterPillText_();
         renderOutletPickerList_();
         closeOutletPicker();
+        if (changed) refreshDashboardFast();
       });
     });
   }
@@ -1582,10 +1636,10 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     document.getElementById("outletPickerOverlay").classList.remove("show");
   };
 
-  function refreshDashboard() {
+  function refreshDashboard(skipCabangCardLoading) {
     if (!document.getElementById("dashboardCabangSummary")) return;
 
-    setDashboardAllLoading();
+    setDashboardAllLoading(skipCabangCardLoading);
     google.script.run
       .withSuccessHandler(function (res) {
         if (res && res.ok) {

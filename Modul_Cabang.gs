@@ -120,6 +120,7 @@ function listCabang() {
         totalUnitPengering: sumUnit_(cabang.mesinPengering),
         mesinCuci: cabang.mesinCuci,
         mesinPengering: cabang.mesinPengering,
+        mesinSetrika: cabang.mesinSetrika,
         okupansi: cabang.okupansi,
         updatedAt: cabang.updatedAt,
         summary: computeSummary_(cabang),
