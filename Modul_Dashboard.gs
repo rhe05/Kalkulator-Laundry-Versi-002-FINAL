@@ -84,9 +84,12 @@ function getDashboardCabangSummary(cabangId) {
       // sudah menyertakan field ini langsung, jadi tidak perlu fetch kedua.
       const mesinCuci = dashboardArray_(item.mesinCuci);
       const mesinPengering = dashboardArray_(item.mesinPengering);
+      const mesinSetrika = dashboardArray_(item.mesinSetrika);
+      const setrikaSummary = summary.setrika || {};
       const okupansiSrc = item.okupansi || {};
       const okupansiCuci = dashboardNumber_(okupansiSrc.cuciPersen, 0);
       const okupansiKering = dashboardNumber_(okupansiSrc.keringPersen, 0);
+      const okupansiSetrika = dashboardNumber_(okupansiSrc.setrikaPersen, 0);
 
       return {
         cabangId: String(item.id || ""),
@@ -103,7 +106,11 @@ function getDashboardCabangSummary(cabangId) {
         durasiCuci: mesinCuci.length ? dashboardNumber_(mesinCuci[0].durasiMenit, 0) : 0,
         durasiKering: mesinPengering.length ? dashboardNumber_(mesinPengering[0].durasiMenit, 0) : 0,
         okupansiCuci: okupansiCuci,
-        okupansiKering: okupansiKering
+        okupansiKering: okupansiKering,
+        totalUnitSetrika: dashboardNumber_(setrikaSummary.totalUnit, 0),
+        kapasitasSetrikaKgPerJam: dashboardRound2_(setrikaSummary.kapasitasKgPerJam),
+        jenisSetrika: mesinSetrika.length ? String(mesinSetrika[0].jenis || "") : "",
+        okupansiSetrika: okupansiSetrika
       };
     });
 

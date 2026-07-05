@@ -224,6 +224,11 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
     padding: 14px 16px;
   }
 
+  .profil-outlet-kpi.profil-outlet-kpi-solo {
+    grid-template-columns: 1fr;
+    margin-top: 8px;
+  }
+
   .profil-kpi-item {
     display: flex;
     flex-direction: column;
@@ -246,12 +251,16 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
     letter-spacing: -0.02em;
   }
 
-  .profil-kpi-item:first-child .profil-kpi-value {
+  .profil-kpi-item.cuci .profil-kpi-value {
     color: var(--sage);
   }
 
-  .profil-kpi-item:last-child .profil-kpi-value {
+  .profil-kpi-item.kering .profil-kpi-value {
     color: var(--brass);
+  }
+
+  .profil-kpi-item.setrika .profil-kpi-value {
+    color: var(--volt);
   }
 
   .profil-kpi-unit {
@@ -377,6 +386,15 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
 
   .profil-mesin-item.brass .profil-mesin-count {
     color: var(--brass);
+  }
+
+  .profil-mesin-item.volt {
+    border-color: rgba(217,194,75,0.25);
+    background: rgba(217,194,75,0.05);
+  }
+
+  .profil-mesin-item.volt .profil-mesin-count {
+    color: var(--volt);
   }
 
   .profil-mesin-type {
