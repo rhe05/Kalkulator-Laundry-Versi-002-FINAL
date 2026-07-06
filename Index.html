@@ -4073,7 +4073,7 @@ function selectGasCustom() {
    * ===========================================================================
    */
 
-  var JENIS_MESIN_LABEL_CLIENT = { rumah_tangga: "Konversi", konversi: "Konversi", komersial: "Komersial" };
+  var JENIS_MESIN_LABEL_CLIENT = { rumah_tangga: "Home", konversi: "Konversi", komersial: "Komersial" };
 
   function listrikMachineLabel(m, index) {
     var jenis = JENIS_MESIN_LABEL_CLIENT[m.jenis] || "Mesin";
@@ -4222,22 +4222,6 @@ function selectGasCustom() {
         "<span class=\"k\">" + escapeHtml(label) + "</span>" +
         "<span class=\"v\">" + money0(r.rpListrikPerLoad) + "</span>";
       el.appendChild(row);
-
-      if (showPompa && r.rpPompaPerLoad > 0) {
-        var pompaRow = document.createElement("div");
-        pompaRow.className = "listrik-rincian-row";
-        pompaRow.innerHTML =
-          "<span class=\"k\">&nbsp;&nbsp;+ Beban pompa air</span>" +
-          "<span class=\"v muted\">" + money0(r.rpPompaPerLoad) + "</span>";
-        el.appendChild(pompaRow);
-
-        var totalRow = document.createElement("div");
-        totalRow.className = "listrik-total-bar";
-        totalRow.innerHTML =
-          "<span class=\"k\">Total / load</span>" +
-          "<span class=\"v\">" + money0(r.rpTotalPerLoad) + "</span>";
-        el.appendChild(totalRow);
-      }
     });
   }
 
