@@ -1769,9 +1769,12 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
     var current = rows.find(function (c) { return c.id === dashboardSelectedOutletId; });
     nameEl.textContent = current ? (current.namaLaundry || "Outlet tanpa nama") : "Pilih outlet";
 
+    var pillEl = document.getElementById("dashboardOutletFilter");
+    if (pillEl) pillEl.classList.toggle("single-outlet", rows.length <= 1);
+
     var countEl = document.getElementById("dashboardOutletCountLabel");
     if (countEl) {
-      countEl.textContent = rows.length > 0 ? rows.length + " outlet aktif" : "";
+      countEl.textContent = rows.length > 1 ? rows.length + " outlet aktif" : "";
     }
   }
 
@@ -1832,6 +1835,8 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
   }
 
   window.openOutletPicker = function () {
+    var rows = cabangListCache || [];
+    if (rows.length <= 1) return;
     renderOutletPickerList_();
     document.getElementById("outletPickerOverlay").classList.add("show");
   };
