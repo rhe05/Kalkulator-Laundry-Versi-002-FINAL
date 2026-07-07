@@ -573,9 +573,15 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
         </div>
         <div class="panel-body">
 
-          <div class="field">
+          <div class="field" id="chemicalNamaFixedWrap" style="display:none;">
+            <label>Nama item</label>
+            <div class="chemical-nama-fixed" id="chemicalNamaFixedLabel">-</div>
+          </div>
+
+          <div class="field" id="chemicalNamaField">
             <label for="chemicalNama">Nama item</label>
-            <input type="text" id="chemicalNama" placeholder="Contoh: Deterjen, Softener, Parfum, Pelicin">
+            <input type="text" id="chemicalNama" placeholder="Contoh: Anti noda, Pemutih, Pewangi khusus">
+            <div class="field-hint">Untuk item tambahan di luar 4 chemical utama. Isi sesuai nama chemical yang dipakai, misalnya Anti noda atau Pemutih.</div>
           </div>
 
           <div class="field">
@@ -3736,14 +3742,22 @@ function selectGasCustom() {
     };
   }
 
+  function isChemicalFixedNama(nama) {
+    var v = (nama || "").trim().toLowerCase();
+    return CHEMICAL_FIXED_NAMA.some(function (n) { return n.toLowerCase() === v; });
+  }
+
   window.openChemicalFormNew = function (presetNama) {
     if (!chemicalCabangCache) { showToast("Pilih cabang terlebih dahulu.", "err"); return; }
     view.chemicalIsNew = true;
     view.chemicalEditingId = null;
     chemicalFormState = defaultChemicalRecord(view.chemicalCabangId);
     if (presetNama) chemicalFormState.nama = presetNama;
+    view.chemicalIsFixedNama = isChemicalFixedNama(presetNama);
     showScreen("chemicalForm");
-    document.getElementById("chemicalFormTitle").textContent = "Tambah Item Chemical";
+    document.getElementById("chemicalFormTitle").textContent = view.chemicalIsFixedNama
+      ? "Isi Data " + presetNama
+      : "Tambah Item Chemical";
     renderChemicalForm();
     setSaveStatus("", "");
   };
@@ -3763,6 +3777,10 @@ function selectGasCustom() {
           return;
         }
         chemicalFormState = res.data.record;
+        view.chemicalIsFixedNama = isChemicalFixedNama(chemicalFormState.nama);
+        if (view.chemicalIsFixedNama) {
+          document.getElementById("chemicalFormTitle").textContent = "Edit Data " + chemicalFormState.nama;
+        }
         renderChemicalForm();
         setSaveStatus("", "");
       })
@@ -3783,7 +3801,18 @@ function selectGasCustom() {
 
   function renderChemicalForm() {
     syncChemicalFormFieldsFromState();
+    renderChemicalFormNamaMode();
     renderChemicalFormPreview();
+  }
+
+  function renderChemicalFormNamaMode() {
+    var isFixed = !!view.chemicalIsFixedNama;
+    var fixedWrap = document.getElementById("chemicalNamaFixedWrap");
+    var fixedLabel = document.getElementById("chemicalNamaFixedLabel");
+    var namaField = document.getElementById("chemicalNamaField");
+    if (fixedWrap) fixedWrap.style.display = isFixed ? "" : "none";
+    if (fixedLabel) fixedLabel.textContent = chemicalFormState.nama || "";
+    if (namaField) namaField.style.display = isFixed ? "none" : "";
   }
 
   function computeBiayaChemicalSummaryClient(record) {

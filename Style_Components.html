@@ -969,6 +969,34 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
   .field:last-child { margin-bottom: 0; }
   .field-hint { font-size: 11px; color: var(--text-faint); margin-top: 6px; line-height: 1.4; }
 
+  .chemical-nama-fixed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .chemical-nama-fixed::after {
+    content: "Permanen";
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-faint);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 9px;
+  }
+
   input[type="text"], input[type="number"], select {
     width: 100%;
     background: var(--panel-2);
