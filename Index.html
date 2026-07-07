@@ -3189,8 +3189,22 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
 
     cabangListCache.forEach(function (item) {
       var row = document.createElement("div");
-      row.className = "pick-cabang-row";
+
+      // Outlet Jasa Setrika yang cuma pakai Setrika Uap tidak punya komponen
+      // listrik apa pun untuk dihitung (tidak ada mesin cuci/pengering, dan
+      // setrika uap tidak berbiaya listrik) - tombol Listrik dinonaktifkan
+      // KHUSUS untuk kombinasi ini. Kategori/mesin lain tidak terpengaruh.
+      var setrikaRows = Array.isArray(item.mesinSetrika) ? item.mesinSetrika : [];
+      var adaSetrikaListrik = setrikaRows.some(function (m) { return m.jenis === "listrik"; });
+      var disableForListrik = view.kategoriBiayaAktif === "listrik" &&
+        isSetrikaOnlyKategori(item.kategoriLayanan) && !adaSetrikaListrik;
+
+      row.className = "pick-cabang-row" + (disableForListrik ? " disabled" : "");
       row.onclick = function () {
+        if (disableForListrik) {
+          showToast("Outlet ini kategori Jasa Setrika dengan Setrika Uap - tidak ada komponen listrik untuk dihitung.", "");
+          return;
+        }
         if (view.kategoriBiayaAktif === "listrik") { openListrikForm(item.id); }
         else if (view.kategoriBiayaAktif === "air") { openAirForm(item.id); }
         else if (view.kategoriBiayaAktif === "notaKasir") { openNotaKasirForm(item.id); }
@@ -4676,7 +4690,8 @@ function selectGasCustom() {
     var setrikaCard = document.getElementById("listrikSetrikaCard");
     if (setrikaCard) {
       var adaSetrikaListrik = (listrikCabangCache.mesinSetrika || []).some(function (m) { return m.jenis === "listrik"; });
-      showSetrika = isKiloanKategori(listrikCabangCache.kategoriLayanan) && adaSetrikaListrik;
+      var kategoriBolehSetrika = isKiloanKategori(listrikCabangCache.kategoriLayanan) || isSetrikaOnlyKategori(listrikCabangCache.kategoriLayanan);
+      showSetrika = kategoriBolehSetrika && adaSetrikaListrik;
       setrikaCard.style.display = showSetrika ? "" : "none";
       if (showSetrika) {
         renderListrikRincianSetrika("listrikRincianSetrika", summary.setrika);

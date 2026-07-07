@@ -52,6 +52,13 @@ Jika tampilan gas, listrik, air, atau admin/nota bermasalah, mulai cek dari file
   .pick-cabang-row .name { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; }
   .pick-cabang-row .arrow { color: var(--text-faint); }
 
+  .pick-cabang-row.disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .pick-cabang-row.disabled:hover { border-color: var(--border); }
+  .pick-cabang-row.disabled .name { color: var(--text-faint); }
+
   .gas-card {
     background: var(--panel);
     border: 1px solid var(--border);
