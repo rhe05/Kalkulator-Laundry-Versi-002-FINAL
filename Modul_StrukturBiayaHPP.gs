@@ -756,15 +756,21 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
   const airSetrikaPerLoad = toPerLoad(toPerKgSetrika(normalized.kiloan.airSetrikaRpPerJam));
   const gasSetrikaPerLoad = toPerLoad(toPerKgSetrika(normalized.kiloan.gasSetrikaRpPerJam));
   const listrikSetrikaPerLoad = toPerLoad(getStrukturHPPSetrikaPerKg_(normalized));
+  // Saling eksklusif sesuai jenis mesin setrika di Profil Outlet: kalau ada
+  // mesin setrika LISTRIK, tampilkan "Listrik Setrika" saja (Air Setrika &
+  // Gas Setrika disembunyikan, karena setrika listrik tidak butuh air/gas
+  // untuk memanaskan). Kalau tidak ada (berarti setrika uap), tampilkan Air
+  // Setrika & Gas Setrika saja.
   const buildSetrikaComponents_ = function () {
-    const comps = [
+    if (normalized.kiloan.adaMesinSetrikaListrik) {
+      return [
+        { key: "listrik_setrika", label: "Listrik Setrika per Load", amount: listrikSetrikaPerLoad, note: "" },
+      ];
+    }
+    return [
       { key: "air_setrika", label: "Air Setrika per Load", amount: airSetrikaPerLoad, note: setrikaNote },
       { key: "gas_setrika", label: "Gas Setrika per Load", amount: gasSetrikaPerLoad, note: "" },
     ];
-    if (normalized.kiloan.adaMesinSetrikaListrik) {
-      comps.push({ key: "listrik_setrika", label: "Listrik Setrika per Load", amount: listrikSetrikaPerLoad, note: "" });
-    }
-    return comps;
   };
 
   // Khusus HPP Cuci Saja: Packing diwakili "Plastik HD" saja (baris gabungan
