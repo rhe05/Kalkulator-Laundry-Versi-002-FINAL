@@ -203,15 +203,6 @@ function getDashboardMasterBiayaSummary(cabangId) {
         }
       } catch (e) {}
       if (chemicalComplete) lengkapCount++; else missing.push("Chemical");
-
-      let packingComplete = false;
-      try {
-        if (typeof listBiayaPacking === "function") {
-          const packingRes = listBiayaPacking(cabangId);
-          packingComplete = !!(packingRes && packingRes.ok && packingRes.data && Array.isArray(packingRes.data.items) && packingRes.data.items.length > 0);
-        }
-      } catch (e) {}
-      if (packingComplete) lengkapCount++; else missing.push("Packing");
       // Ambil nilai biaya per load per komponen
       const komponenBiaya = [];
       let totalBiayaPerLoad = 0;
@@ -310,32 +301,6 @@ function getDashboardMasterBiayaSummary(cabangId) {
         }
       } catch(e) {}
 
-      try {
-        if (typeof listBiayaPacking === "function") {
-          const packingRes = listBiayaPacking(cabangId);
-          if (packingRes && packingRes.ok && packingRes.data && packingRes.data.items) {
-            // Akumulasi biayaPerLoad item packing utk layanan KILOAN saja:
-            // item non-plastik (Isolasi, dll) selalu ikut; item plastik
-            // (Plastik HD/PP/Jinjing/custom) cuma ikut kalau dicentang
-            // layanan "kiloan". Plastik Jinjing yang cuma dicentang Bed
-            // Cover sengaja TIDAK diikutkan di sini.
-            let packingTotalPerLoad = 0;
-            dashboardArray_(packingRes.data.items).forEach(function(p) {
-              const record = p.record || {};
-              const s = p.summary || {};
-              const isPlastik = typeof isPackingPlastikNama_ === "function" ? isPackingPlastikNama_(record.nama) : false;
-              const layananArr = Array.isArray(record.layananPacking) ? record.layananPacking : ["kiloan", "bed_cover"];
-              const included = !isPlastik || layananArr.indexOf("kiloan") >= 0;
-              if (included) packingTotalPerLoad += dashboardNumber_(s.biayaPerLoad, 0);
-            });
-            if (packingComplete) {
-              komponenBiaya.push({ key: "packing", label: "Packing", biayaPerLoad: dashboardRound2_(packingTotalPerLoad) });
-              totalBiayaPerLoad += packingTotalPerLoad;
-            }
-          }
-        }
-      } catch(e) {}
-
       totalBiayaPerLoad = dashboardRound2_(totalBiayaPerLoad);
       komponenBiaya.forEach(function(k) {
         k.persen = totalBiayaPerLoad > 0 ? dashboardRound2_(k.biayaPerLoad / totalBiayaPerLoad * 100) : 0;
@@ -345,8 +310,8 @@ function getDashboardMasterBiayaSummary(cabangId) {
         cabangId: cabangId,
         namaLaundry: dashboardOutletName_(item),
         lengkapCount: lengkapCount,
-        totalKomponen: 6,
-        isComplete: lengkapCount === 6,
+        totalKomponen: 5,
+        isComplete: lengkapCount === 5,
         missing: missing,
         komponenBiaya: komponenBiaya,
         totalBiayaPerLoad: totalBiayaPerLoad

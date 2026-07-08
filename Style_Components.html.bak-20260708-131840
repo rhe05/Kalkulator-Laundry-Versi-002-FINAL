@@ -717,7 +717,6 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
   .mb-progress-fill.mb-air { background: var(--sage); }
   .mb-progress-fill.mb-nota { background: var(--text-dim); }
   .mb-progress-fill.mb-chemical { background: var(--indigo, #6366f1); }
-  .mb-progress-fill.mb-packing { background: var(--clay, #A3765C); }
 
   .mb-missing {
     font-size: 10.5px;
