@@ -3854,8 +3854,7 @@ function selectGasCustom() {
       if (!res || !res.ok) { handleBackendError(res, actionLabel); return; }
       showToast("Data biaya gas tersimpan.", "ok");
       setSaveStatus("Tersimpan", "ok");
-      showScreen("masterBiaya");
-      refreshBiayaPickCabangList();
+      openGasList(view.gasCabangId);
     }
 
     if (view.gasIsNew) {
@@ -4266,8 +4265,7 @@ function selectGasCustom() {
       if (!res || !res.ok) { handleBackendError(res, actionLabel); return; }
       showToast("Data biaya chemical tersimpan.", "ok");
       setSaveStatus("Tersimpan", "ok");
-      showScreen("masterBiaya");
-      refreshBiayaPickCabangList();
+      openChemicalList(view.chemicalCabangId);
     }
 
     if (view.chemicalIsNew) {
@@ -4713,8 +4711,7 @@ function selectGasCustom() {
       if (!res || !res.ok) { handleBackendError(res, actionLabel); return; }
       showToast("Data biaya packing tersimpan.", "ok");
       setSaveStatus("Tersimpan", "ok");
-      showScreen("masterBiaya");
-      refreshBiayaPickCabangList();
+      openPackingList(view.packingCabangId);
     }
 
     if (view.packingIsNew) {
@@ -5031,8 +5028,6 @@ function selectGasCustom() {
         listrikFormState = res.data.record;
         showToast("Data biaya listrik tersimpan.", "ok");
         setSaveStatus("Tersimpan", "ok");
-        showScreen("masterBiaya");
-        refreshBiayaPickCabangList();
       })
       .withFailureHandler(function (err) {
         if (btn) { btn.disabled = false; btn.textContent = "Simpan perubahan"; }
@@ -5428,8 +5423,6 @@ function selectGasCustom() {
         renderNotaKasirPreview();
         showToast("Data biaya nota/ kasir tersimpan.", "ok");
         setSaveStatus("Tersimpan", "ok");
-        showScreen("masterBiaya");
-        refreshBiayaPickCabangList();
       })
       .withFailureHandler(function (err) {
         window.clearTimeout(saveTimeout);
@@ -5652,8 +5645,6 @@ function renderAirPreview() {
 
       airFormState = res.data.record;
       renderAirForm();
-      showScreen("masterBiaya");
-      refreshBiayaPickCabangList();
     })
     .withFailureHandler(function (err) {
       if (saveBtn) {
