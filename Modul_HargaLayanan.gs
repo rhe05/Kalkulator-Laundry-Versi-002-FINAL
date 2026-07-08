@@ -374,6 +374,10 @@ function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, ko
       item.hppPerKg = round2_(hppPerKg);
       item.marginPerKg = marginPerKg;
       item.marginPercentPerKg = marginPercentPerKg;
+      // Kapasitas kg mesin cuci per 1x load - dipakai frontend utk simulasi
+      // "order minimal X Kg" (idealnya order = kapasitas 1x jalan mesin,
+      // supaya HPP Per Load benar-benar tertutup, bukan cuma dari 1 Kg saja).
+      item.kapasitasKgPerLoad = round2_(kapasitasKgPerLoad);
 
       // Field utama (hpp/margin/marginPercent/status) dipakai jadi badge &
       // progress bar ringkasan (sebelum di-klik buka detail) - HARUS basis
@@ -406,6 +410,9 @@ function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, ko
       item.hppPerKg = round2_(hppPerKg);
       item.marginPerKg = marginPerKg;
       item.marginPercentPerKg = marginPercentPerKg;
+      // Kapasitas kg mesin setrika per 1 jam - dipakai frontend utk simulasi
+      // "order minimal X Kg per jam", supaya HPP Per Jam benar-benar tertutup.
+      item.setrikaKapasitasKgPerJam = round2_(setrikaKapasitasKgPerJam);
     }
 
     items.push(item);

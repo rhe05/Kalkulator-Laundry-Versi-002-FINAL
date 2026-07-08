@@ -2318,16 +2318,30 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
             var detailRow = function (label, value) {
               return '<div class="hl-detail-row"><span class="hl-detail-label">' + escapeHtml(label) + '</span><span class="hl-detail-value">' + value + '</span></div>';
             };
-            var kgRow = function (label, value) {
-              return '<div class="hl-detail-row"><span class="hl-detail-label">' + escapeHtml(label) + '</span><span class="hl-detail-value hl-detail-value-highlight">' + value + '</span></div>';
+            var hargaJualCard = function () {
+              return '<div class="hl-detail-hargajual"><span class="hl-detail-hargajual-label">Harga Jual Per Kg</span><span class="hl-detail-hargajual-value">' + money0(item.hargaJualPerKg) + '</span></div>';
             };
             var detailHtml;
             if (item.hppPerLoad !== undefined) {
               // Kategori Drop Off/Kiloan & Hybrid: HPP sumbernya per load
               // (biaya sekali jalan mesin), Harga Jual per Kg (yang dibayar
-              // pelanggan) - dipisah 2 kotak warna beda supaya jelas kelihatan
-              // ini dua basis yang berbeda, bukan angka polos berderet.
-              var minKgLoad = item.hargaJualPerKg > 0 ? (item.hppPerLoad / item.hargaJualPerKg) : 0;
+              // pelanggan) - dipisah kotak warna beda + kartu Harga Jual
+              // tersendiri, plus simulasi order minimal = kapasitas 1x jalan
+              // mesin (bukan cuma 1 Kg), supaya HPP Per Load benar-benar
+              // tertutup - ini baru hitungan variable cost, belum fixed cost,
+              // jadi jangan ambil untung tipis dari order kecil.
+              var kapLoad = item.kapasitasKgPerLoad || 0;
+              var insightLoad = '';
+              if (kapLoad > 0 && item.hargaJualPerKg > 0) {
+                var hargaJual1Kg = item.hargaJualPerKg;
+                var margin1Kg = round2(hargaJual1Kg - item.hppPerLoad);
+                var hargaJualMin = round2(item.hargaJualPerKg * kapLoad);
+                insightLoad =
+                  '<div class="hl-detail-insight">' +
+                    'Kalau cuma order 1 Kg: ' + money0(hargaJual1Kg) + ' &minus; HPP Per Load ' + money0(item.hppPerLoad) + ' = ' + money0(margin1Kg) + ' (masih sangat tipis, mesin tetap dihitung 1x jalan penuh).<br>' +
+                    'Karena ini baru hitungan variable cost (belum fixed cost), disarankan order minimal <b>' + formatNum(kapLoad, 1) + ' Kg</b> (kapasitas 1x jalan mesin Anda): ' + money0(item.hargaJualPerKg) + ' &times; ' + formatNum(kapLoad, 1) + ' = ' + money0(hargaJualMin) + ' &minus; HPP Per Load ' + money0(item.hppPerLoad) + ' = <b>' + money0(item.marginPerLoad) + '</b>.' +
+                  '</div>';
+              }
               detailHtml =
                 '<div class="hl-detail-group hl-detail-group-load">' +
                   '<div class="hl-detail-group-title">Basis Per Load <span class="hl-detail-group-hint">&middot; biaya sekali jalan mesin</span></div>' +
@@ -2336,17 +2350,28 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
                   detailRow('% Margin Per Load', formatPercent(item.marginPercentPerLoad, 1)) +
                 '</div>' +
                 '<div class="hl-detail-group hl-detail-group-kg">' +
-                  '<div class="hl-detail-group-title">Basis Per Kg <span class="hl-detail-group-hint">&middot; harga jual ke pelanggan</span></div>' +
-                  kgRow('Harga Jual Per Kg', money0(item.hargaJualPerKg)) +
+                  '<div class="hl-detail-group-title">Basis Per Kg <span class="hl-detail-group-hint">&middot; hitungan per Kg cucian</span></div>' +
                   detailRow('HPP Per Kg', money0(item.hppPerKg)) +
                   detailRow('Margin Per Kg', money0(item.marginPerKg)) +
                   detailRow('% Margin Per Kg', formatPercent(item.marginPercentPerKg, 1)) +
                 '</div>' +
-                (minKgLoad > 0 ? '<div class="hl-detail-insight">Supaya HPP Per Load (' + money0(item.hppPerLoad) + ') tertutup, order per transaksi idealnya minimal <b>' + formatNum(minKgLoad, 1) + ' Kg</b>. Di bawah itu, hasil jual belum menutup biaya sekali jalan mesin.</div>' : '');
+                hargaJualCard() +
+                insightLoad;
             } else if (item.hppPerJam !== undefined) {
               // Kategori Jasa Setrika: HPP sumbernya per Kg, "per Jam"
               // dikonversi lewat kapasitas kg/jam mesin setrika.
-              var minKgJam = item.hargaJualPerKg > 0 ? (item.hppPerJam / item.hargaJualPerKg) : 0;
+              var kapJam = item.setrikaKapasitasKgPerJam || 0;
+              var insightJam = '';
+              if (kapJam > 0 && item.hargaJualPerKg > 0) {
+                var hargaJual1KgJam = item.hargaJualPerKg;
+                var margin1KgJam = round2(hargaJual1KgJam - item.hppPerJam);
+                var hargaJualMinJam = round2(item.hargaJualPerKg * kapJam);
+                insightJam =
+                  '<div class="hl-detail-insight">' +
+                    'Kalau cuma 1 Kg dalam 1 jam: ' + money0(hargaJual1KgJam) + ' &minus; HPP Per Jam ' + money0(item.hppPerJam) + ' = ' + money0(margin1KgJam) + ' (masih sangat tipis, mesin tetap dihitung 1 jam penuh).<br>' +
+                    'Karena ini baru hitungan variable cost (belum fixed cost), disarankan minimal <b>' + formatNum(kapJam, 1) + ' Kg</b> disetrika per jam (kapasitas mesin Anda): ' + money0(item.hargaJualPerKg) + ' &times; ' + formatNum(kapJam, 1) + ' = ' + money0(hargaJualMinJam) + ' &minus; HPP Per Jam ' + money0(item.hppPerJam) + ' = <b>' + money0(item.marginPerJam) + '</b>.' +
+                  '</div>';
+              }
               detailHtml =
                 '<div class="hl-detail-group hl-detail-group-load">' +
                   '<div class="hl-detail-group-title">Basis Per Jam <span class="hl-detail-group-hint">&middot; biaya mesin setrika 1 jam</span></div>' +
@@ -2355,13 +2380,13 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
                   detailRow('% Margin Per Jam', formatPercent(item.marginPercentPerJam, 1)) +
                 '</div>' +
                 '<div class="hl-detail-group hl-detail-group-kg">' +
-                  '<div class="hl-detail-group-title">Basis Per Kg <span class="hl-detail-group-hint">&middot; harga jual ke pelanggan</span></div>' +
-                  kgRow('Harga Jual Per Kg', money0(item.hargaJualPerKg)) +
+                  '<div class="hl-detail-group-title">Basis Per Kg <span class="hl-detail-group-hint">&middot; hitungan per Kg setrika</span></div>' +
                   detailRow('HPP Per Kg', money0(item.hppPerKg)) +
                   detailRow('Margin Per Kg', money0(item.marginPerKg)) +
                   detailRow('% Margin Per Kg', formatPercent(item.marginPercentPerKg, 1)) +
                 '</div>' +
-                (minKgJam > 0 ? '<div class="hl-detail-insight">Supaya HPP Per Jam (' + money0(item.hppPerJam) + ') tertutup, dalam 1 jam setrika idealnya minimal <b>' + formatNum(minKgJam, 1) + ' Kg</b> yang disetrika.</div>' : '');
+                hargaJualCard() +
+                insightJam;
             } else {
               detailHtml =
                 detailRow('HPP', money0(item.hpp)) +

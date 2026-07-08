@@ -1647,6 +1647,22 @@ Jika membuat fitur baru, pakai class komponen umum dari file ini terlebih dahulu
   .hl-detail-group-kg .hl-detail-group-title { color: var(--sage); }
   .hl-detail-group-hint { font-weight: 400; text-transform: none; color: var(--text-faint); letter-spacing: normal; }
   .hl-detail-value-highlight { color: var(--sage); font-weight: 700; }
+
+  /* Kartu tersendiri utk Harga Jual Per Kg - warna beda lagi (volt) dari
+     kotak Per Load (brass) & Per Kg (sage), supaya jelas ini angka yang
+     pemilik laundry ATUR sendiri, bukan hasil hitungan otomatis. */
+  .hl-detail-hargajual {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: rgba(var(--volt-rgb, 217, 194, 75), 0.12);
+    border: 1px solid rgba(var(--volt-rgb, 217, 194, 75), 0.3);
+  }
+  .hl-detail-hargajual-label { font-size: 10.5px; font-weight: 700; color: var(--text); }
+  .hl-detail-hargajual-value { font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
   .hl-detail-insight {
     font-size: 10.5px;
     line-height: 1.5;

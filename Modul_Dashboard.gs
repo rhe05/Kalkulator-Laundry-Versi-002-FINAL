@@ -529,6 +529,8 @@ function getDashboardHargaLayananSummary(cabangId) {
           if (svc.hppPerJam !== undefined) row.hppPerJam = dashboardRound2_(dashboardNumber_(svc.hppPerJam, 0));
           if (svc.marginPerJam !== undefined) row.marginPerJam = dashboardRound2_(dashboardNumber_(svc.marginPerJam, 0));
           if (svc.marginPercentPerJam !== undefined) row.marginPercentPerJam = dashboardRound2_(dashboardNumber_(svc.marginPercentPerJam, 0));
+          if (svc.kapasitasKgPerLoad !== undefined) row.kapasitasKgPerLoad = dashboardRound2_(dashboardNumber_(svc.kapasitasKgPerLoad, 0));
+          if (svc.setrikaKapasitasKgPerJam !== undefined) row.setrikaKapasitasKgPerJam = dashboardRound2_(dashboardNumber_(svc.setrikaKapasitasKgPerJam, 0));
           return row;
         });
       const totalLayanan = layanan.length;
