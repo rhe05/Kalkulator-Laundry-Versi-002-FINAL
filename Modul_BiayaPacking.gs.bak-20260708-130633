@@ -80,7 +80,6 @@ function defaultBiayaPacking_() {
     ukuranPanjang: 0,
     ukuranLebar: 0,
     kapKgPerLembar: 0,
-    kapPerOrderan: 0,
     layananPacking: ["kiloan", "bed_cover"],
     createdAt: null,
     updatedAt: null,
@@ -109,16 +108,6 @@ function isPackingJinjingBedCoverLocked_(record) {
   const nama = String(record && record.nama || "").trim().toLowerCase();
   const layanan = Array.isArray(record && record.layananPacking) ? record.layananPacking : [];
   return nama === "plastik jinjing" && layanan.indexOf("bed_cover") >= 0;
-}
-
-/**
- * isPackingIsolasiNama_: true kalau nama item persis "Isolasi". Item ini
- * dijual per ROLL (bukan per kemasan/isi seperti plastik), jadi Isi per
- * Kemasan & Satuan tidak dipakai. Basis hitungnya beda total dari item
- * packing lain, lihat computeBiayaPackingSummary_.
- */
-function isPackingIsolasiNama_(nama) {
-  return String(nama || "").trim().toLowerCase() === "isolasi";
 }
 
 // ============================================================================
@@ -327,7 +316,6 @@ function sanitizeBiayaPacking_(input) {
   out.ukuranPanjang = clamp_(toNumber_(input && input.ukuranPanjang, 0), 0, 10000);
   out.ukuranLebar = clamp_(toNumber_(input && input.ukuranLebar, 0), 0, 10000);
   out.kapKgPerLembar = clamp_(toNumber_(input && input.kapKgPerLembar, 0), 0, 10000);
-  out.kapPerOrderan = clamp_(toNumber_(input && input.kapPerOrderan, 0), 0, 10000);
   out.layananPacking = sanitizePackingLayanan_(input && input.layananPacking);
 
   out.createdAt = (input && input.createdAt) || null;
@@ -363,17 +351,6 @@ function validateBiayaPacking_(data) {
   if (data.hargaBeli <= 0) {
     return { valid: false, message: "Harga beli per kemasan harus lebih dari 0." };
   }
-
-  if (isPackingIsolasiNama_(data.nama)) {
-    if (data.kapKgPerLembar <= 0) {
-      return { valid: false, message: "Kap Kg Per Roll harus lebih dari 0." };
-    }
-    if (data.kapPerOrderan <= 0) {
-      return { valid: false, message: "Kap Per Orderan harus lebih dari 0." };
-    }
-    return { valid: true, message: "" };
-  }
-
   if (data.isiKemasan <= 0) {
     return { valid: false, message: "Isi per kemasan harus lebih dari 0." };
   }
@@ -398,23 +375,6 @@ function validateBiayaPacking_(data) {
 // karena itu murni soal agregasi lintas-item, bukan kalkulasi 1 item.
 //
 function computeBiayaPackingSummary_(record) {
-  if (isPackingIsolasiNama_(record.nama)) {
-    const biayaPerLoadIsolasi = record.kapKgPerLembar > 0
-      ? round2_(record.hargaBeli / record.kapKgPerLembar)
-      : 0;
-    const biayaPerKgIsolasi = record.kapPerOrderan > 0
-      ? round2_(biayaPerLoadIsolasi / record.kapPerOrderan)
-      : 0;
-
-    return {
-      hargaPerUnit: biayaPerLoadIsolasi,
-      biayaPerLoad: biayaPerLoadIsolasi,
-      biayaPerKg: biayaPerKgIsolasi,
-      kapKgLocked: false,
-      statusValid: record.kapKgPerLembar > 0 && record.kapPerOrderan > 0,
-    };
-  }
-
   const hargaPerLembar = record.isiKemasan > 0
     ? round2_(record.hargaBeli / record.isiKemasan)
     : 0;

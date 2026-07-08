@@ -708,7 +708,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
               </div>
             </div>
             <div class="field">
-              <label for="packingHargaBeli" id="packingHargaBeliLabel">Harga beli per kemasan (Rp)</label>
+              <label for="packingHargaBeli">Harga beli per kemasan (Rp)</label>
               <input type="text" inputmode="numeric" pattern="[0-9]*" id="packingHargaBeli" placeholder="Contoh: 25.000">
             </div>
           </div>
@@ -722,7 +722,7 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
             <div class="field-hint">Kalau plastik ini cuma dipakai untuk salah satu layanan (mis. Bed Cover pakai Plastik Jinjing, kiloan pakai Plastik HD/PP), centang sesuai pemakaian supaya HPP tiap layanan tidak ikut kebebanan biaya plastik yang tidak dipakainya.</div>
           </div>
 
-          <div class="row2" id="packingIsiSatuanWrap">
+          <div class="row2">
             <div class="field">
               <label for="packingIsiKemasan">Isi per kemasan</label>
               <input type="number" inputmode="decimal" min="0" step="0.01" id="packingIsiKemasan" placeholder="Contoh: 1000">
@@ -744,32 +744,20 @@ Setelah tahap ini dites aman, tahap berikutnya adalah memecah CSS per fitur.
               <span class="ukuran-x">X</span>
               <input type="number" inputmode="decimal" min="0" step="0.1" id="packingUkuranLebar" placeholder="mis. 75">
             </div>
-            <div class="field-hint" id="packingUkuranHint">Ukuran lembar dalam cm, contoh 50 x 75.</div>
+            <div class="field-hint">Ukuran lembar dalam cm, contoh 50 x 75.</div>
           </div>
 
           <div class="row2">
             <div class="field">
-              <div id="packingHargaPerLembarWrap">
-                <label>Harga Per Lembar</label>
-                <div class="chemical-nama-fixed" id="packingHargaPerLembar" style="font-weight:600;">Rp 0</div>
-              </div>
-              <div id="packingKapPerOrderanWrap" style="display:none;">
-                <div style="display:flex; align-items:center; gap:4px; margin-bottom:6px;">
-                  <label for="packingKapPerOrderan" style="margin-bottom:0;">Kap Per Orderan</label>
-                  <span class="profil-kpi-okupansi" style="margin-top:0;">
-                    <button type="button" class="okupansi-info-btn" onclick="toggleOkupansiTooltip(this, event)" aria-label="Info Kap Per Orderan">?</button>
-                    <div class="okupansi-tooltip">Per Orderan bisa diisi berapa Kg</div>
-                  </span>
-                </div>
-                <input type="number" inputmode="decimal" min="0" step="0.01" id="packingKapPerOrderan" placeholder="Contoh: 5">
-              </div>
+              <label>Harga Per Lembar</label>
+              <div class="chemical-nama-fixed" id="packingHargaPerLembar" style="font-weight:600;">Rp 0</div>
             </div>
             <div class="field">
               <div style="display:flex; align-items:center; gap:4px; margin-bottom:6px;">
-                <label for="packingKapKgPerLembar" id="packingKapKgPerLembarLabel" style="margin-bottom:0;">Kap Kg Per Lembar</label>
+                <label for="packingKapKgPerLembar" style="margin-bottom:0;">Kap Kg Per Lembar</label>
                 <span class="profil-kpi-okupansi" style="margin-top:0;">
                   <button type="button" class="okupansi-info-btn" onclick="toggleOkupansiTooltip(this, event)" aria-label="Info Kap Kg Per Lembar">?</button>
-                  <div class="okupansi-tooltip" id="packingKapKgPerLembarTooltip">Per Lembar bisa diisi berapa Kg</div>
+                  <div class="okupansi-tooltip">Per Lembar bisa diisi berapa Kg</div>
                 </span>
               </div>
               <input type="number" inputmode="decimal" min="0" step="0.01" id="packingKapKgPerLembar" placeholder="Contoh: 0.5">
@@ -4467,7 +4455,6 @@ function selectGasCustom() {
       ukuranPanjang: 0,
       ukuranLebar: 0,
       kapKgPerLembar: 0,
-      kapPerOrderan: 0,
       layananPacking: ["kiloan", "bed_cover"],
       createdAt: null,
       updatedAt: null
@@ -4482,10 +4469,6 @@ function selectGasCustom() {
     var nama = ((record && record.nama) || "").trim().toLowerCase();
     var layanan = Array.isArray(record && record.layananPacking) ? record.layananPacking : [];
     return nama === "plastik jinjing" && layanan.indexOf("bed_cover") >= 0;
-  }
-
-  function isPackingIsolasiNama(nama) {
-    return (nama || "").trim().toLowerCase() === "isolasi";
   }
 
   function isPackingFixedNama(nama) {
@@ -4545,7 +4528,6 @@ function selectGasCustom() {
     document.getElementById("packingUkuranPanjang").value = packingFormState.ukuranPanjang || "";
     document.getElementById("packingUkuranLebar").value = packingFormState.ukuranLebar || "";
     document.getElementById("packingKapKgPerLembar").value = packingFormState.kapKgPerLembar || "";
-    document.getElementById("packingKapPerOrderan").value = packingFormState.kapPerOrderan || "";
     var layananArr = Array.isArray(packingFormState.layananPacking) ? packingFormState.layananPacking : [];
     var kiloanCb = document.getElementById("packingLayananKiloan");
     var bedCoverCb = document.getElementById("packingLayananBedCover");
@@ -4570,46 +4552,9 @@ function selectGasCustom() {
 
     var layananWrap = document.getElementById("packingLayananWrap");
     if (layananWrap) layananWrap.style.display = isPackingPlastikNama(packingFormState.nama) ? "" : "none";
-
-    var isIsolasi = isPackingIsolasiNama(packingFormState.nama);
-
-    var hargaBeliLabel = document.getElementById("packingHargaBeliLabel");
-    if (hargaBeliLabel) hargaBeliLabel.textContent = isIsolasi ? "Harga Per Roll (Rp)" : "Harga beli per kemasan (Rp)";
-
-    var isiSatuanWrap = document.getElementById("packingIsiSatuanWrap");
-    if (isiSatuanWrap) isiSatuanWrap.style.display = isIsolasi ? "none" : "";
-
-    var ukuranHint = document.getElementById("packingUkuranHint");
-    if (ukuranHint) ukuranHint.textContent = isIsolasi
-      ? "Yard (yd) adalah satuan panjang yang umum digunakan pada roll isolasi."
-      : "Ukuran lembar dalam cm, contoh 50 x 75.";
-
-    var hargaLembarWrap = document.getElementById("packingHargaPerLembarWrap");
-    var kapOrderanWrap = document.getElementById("packingKapPerOrderanWrap");
-    if (hargaLembarWrap) hargaLembarWrap.style.display = isIsolasi ? "none" : "";
-    if (kapOrderanWrap) kapOrderanWrap.style.display = isIsolasi ? "" : "none";
-
-    var kapKgLabel = document.getElementById("packingKapKgPerLembarLabel");
-    var kapKgTooltip = document.getElementById("packingKapKgPerLembarTooltip");
-    if (kapKgLabel) kapKgLabel.textContent = isIsolasi ? "Kap Kg Per Roll" : "Kap Kg Per Lembar";
-    if (kapKgTooltip) kapKgTooltip.innerHTML = isIsolasi
-      ? "Isi perkiraan jumlah order untuk 1 roll solasi.<br>Contoh: 1 roll cukup 50 orderan, maka harga 1 roll dibagi 50."
-      : "Per Lembar bisa diisi berapa Kg";
   }
 
   function computeBiayaPackingSummaryClient(record) {
-    if (isPackingIsolasiNama(record.nama)) {
-      var biayaPerLoadIsolasi = record.kapKgPerLembar > 0 ? round2(record.hargaBeli / record.kapKgPerLembar) : 0;
-      var biayaPerKgIsolasi = record.kapPerOrderan > 0 ? round2(biayaPerLoadIsolasi / record.kapPerOrderan) : 0;
-      return {
-        hargaPerUnit: biayaPerLoadIsolasi,
-        biayaPerLoad: biayaPerLoadIsolasi,
-        biayaPerKg: biayaPerKgIsolasi,
-        kapKgLocked: false,
-        statusValid: record.kapKgPerLembar > 0 && record.kapPerOrderan > 0
-      };
-    }
-
     var hargaPerLembar = record.isiKemasan > 0 ? round2(record.hargaBeli / record.isiKemasan) : 0;
     var kapKgLocked = isPackingJinjingBedCoverLocked(record);
     var biayaPerKg = (!kapKgLocked && record.kapKgPerLembar > 0) ? round2(hargaPerLembar / record.kapKgPerLembar) : 0;
@@ -4639,9 +4584,7 @@ function selectGasCustom() {
     if (lockNote) lockNote.style.display = summary.kapKgLocked ? "block" : "none";
 
     var warnEl = document.getElementById("pfWarning");
-    if (isPackingIsolasiNama(packingFormState.nama)) {
-      warnEl.style.display = "none";
-    } else if (!summary.statusValid) {
+    if (!summary.statusValid) {
       warnEl.style.display = "block";
       warnEl.textContent = "Isi kemasan dan Kap Kg Per Lembar harus lebih dari 0 supaya biaya bisa dihitung.";
     } else {
@@ -4686,10 +4629,6 @@ function selectGasCustom() {
     });
     document.getElementById("packingKapKgPerLembar").addEventListener("input", function (e) {
       packingFormState.kapKgPerLembar = Number(e.target.value) || 0;
-      renderPackingFormPreview();
-    });
-    document.getElementById("packingKapPerOrderan").addEventListener("input", function (e) {
-      packingFormState.kapPerOrderan = Number(e.target.value) || 0;
       renderPackingFormPreview();
     });
   }
