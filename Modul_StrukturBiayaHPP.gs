@@ -374,7 +374,7 @@ function normalizeStrukturHPPInput_(sources) {
   const chemicalItems = sources.chemical && Array.isArray(sources.chemical.items) ? sources.chemical.items : [];
   const packingItems = sources.packing && Array.isArray(sources.packing.items) ? sources.packing.items : [];
   const packingPerKgKiloan = sumStrukturHPPPackingBiayaPerKg_(packingItems, "kiloan");
-  const packingBedCoverSums = sumStrukturHPPPackingForBedCover_(packingItems);
+  const packingItemsBedCover = listStrukturHPPPackingItemsForBedCover_(packingItems);
 
   const listrikSetrikaRows = Array.isArray(listrikSummary.setrika) ? listrikSummary.setrika : [];
   const mesinSetrikaSemua = Array.isArray(cabang.mesinSetrika) ? cabang.mesinSetrika : [];
@@ -419,8 +419,7 @@ function normalizeStrukturHPPInput_(sources) {
       parfumPerKg: strukturHPPRound2_(findStrukturHPPChemicalBiayaPerKg_(chemicalItems, "Parfum")),
       packingPerKgKiloan: strukturHPPRound2_(packingPerKgKiloan),
       packingItemsKiloan: listStrukturHPPPackingItemsPerKg_(packingItems, "kiloan"),
-      packingPerKgBedCoverConverted: strukturHPPRound2_(packingBedCoverSums.perKgConverted),
-      packingPerLoadBedCoverDirect: strukturHPPRound2_(packingBedCoverSums.perLoadDirect),
+      packingItemsBedCover: packingItemsBedCover,
       setrikaRpPerJam: strukturHPPRound2_(setrikaRpPerJam),
       setrikaKapasitasKgPerJam: strukturHPPRound2_(setrikaKapasitasKgPerJam),
       airSetrikaRpPerJam: strukturHPPRound2_(airSetrikaRpPerJam),
@@ -488,20 +487,19 @@ function strukturHPPSlug_(text) {
 }
 
 /**
- * sumStrukturHPPPackingForBedCover_: khusus utk layanan Bed Cover, item
- * plastik yang DIKUNCI (isPackingJinjingBedCoverLocked_ true — nama persis
- * "Plastik Jinjing" + dicentang Bed Cover) TIDAK dikonversi lewat Kap Kg Per
- * Lembar, karena asumsinya 1 lembar = 1 Bed Cover (bukan takaran per Kg
- * cucian). Biayanya diambil langsung dari biayaPerLoad (harga per lembar),
- * dijumlah terpisah (perLoadDirect) dari item bed-cover lain yang masih pakai
- * basis per-Kg biasa (perKgConverted, nanti dikonversi ke per-load di
- * buildBedCoverHPPService_ pakai kapasitasKgPerLoad seperti sebelumnya).
+ * listStrukturHPPPackingItemsForBedCover_: rincian item packing per baris utk
+ * layanan Bed Cover (dulu cuma dijumlah jadi satu baris "Packing" gabungan).
+ * Item plastik yang DIKUNCI (isPackingJinjingBedCoverLocked_ true — nama
+ * persis "Plastik Jinjing" + dicentang Bed Cover) TIDAK dikonversi lewat Kap
+ * Kg Per Lembar, karena asumsinya 1 lembar = 1 Bed Cover (bukan takaran per
+ * Kg cucian) - biayanya diambil langsung dari biayaPerLoad (harga per
+ * lembar). Item lain yang dicentang Bed Cover (mis. Plastik HD/PP) tetap
+ * basis per-Kg biasa, dikonversi ke per-load di buildBedCoverHPPService_
+ * pakai kapasitasKgPerLoad seperti komponen lain.
  */
-function sumStrukturHPPPackingForBedCover_(items) {
-  let perKgConverted = 0;
-  let perLoadDirect = 0;
-  if (!Array.isArray(items)) return { perKgConverted: perKgConverted, perLoadDirect: perLoadDirect };
-
+function listStrukturHPPPackingItemsForBedCover_(items) {
+  if (!Array.isArray(items)) return [];
+  const list = [];
   for (let i = 0; i < items.length; i++) {
     const entry = items[i] || {};
     const record = entry.record || {};
@@ -516,13 +514,15 @@ function sumStrukturHPPPackingForBedCover_(items) {
     const isLocked = typeof isPackingJinjingBedCoverLocked_ === "function"
       ? isPackingJinjingBedCoverLocked_(record)
       : false;
-    if (isLocked) {
-      perLoadDirect += strukturHPPNumber_(summary.biayaPerLoad, 0);
-    } else {
-      perKgConverted += strukturHPPNumber_(summary.biayaPerKg, 0);
-    }
+
+    list.push({
+      nama: record.nama || "Packing",
+      isLocked: isLocked,
+      biayaPerKg: strukturHPPRound2_(strukturHPPNumber_(summary.biayaPerKg, 0)),
+      biayaPerLoad: strukturHPPRound2_(strukturHPPNumber_(summary.biayaPerLoad, 0)),
+    });
   }
-  return { perKgConverted: perKgConverted, perLoadDirect: perLoadDirect };
+  return list;
 }
 
 function findStrukturHPPChemicalBiayaPerKg_(items, nama) {
@@ -760,15 +760,22 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
   // mesin setrika LISTRIK, tampilkan "Listrik Setrika" saja (Air Setrika &
   // Gas Setrika disembunyikan, karena setrika listrik tidak butuh air/gas
   // untuk memanaskan). Kalau tidak ada (berarti setrika uap), tampilkan Air
-  // Setrika & Gas Setrika saja.
-  const buildSetrikaComponents_ = function () {
-    if (normalized.kiloan.adaMesinSetrikaListrik) {
-      return [
-        { key: "listrik_setrika", label: "Listrik Setrika per Load", amount: listrikSetrikaPerLoad, note: "" },
-      ];
-    }
-    return [
+  // Setrika & Gas Setrika saja. Dipecah jadi 3 helper terpisah (bukan 1 blok)
+  // supaya tiap komponen bisa disisipkan ke grup kategorinya masing-masing
+  // (Air/Listrik/Gas dikelompokkan bareng, lihat susunan komponen tiap
+  // layanan di bawah).
+  const airSetrikaComponents_ = function () {
+    return normalized.kiloan.adaMesinSetrikaListrik ? [] : [
       { key: "air_setrika", label: "Air Setrika per Load", amount: airSetrikaPerLoad, note: setrikaNote },
+    ];
+  };
+  const listrikSetrikaComponents_ = function () {
+    return normalized.kiloan.adaMesinSetrikaListrik ? [
+      { key: "listrik_setrika", label: "Listrik Setrika per Load", amount: listrikSetrikaPerLoad, note: "" },
+    ] : [];
+  };
+  const gasSetrikaComponents_ = function () {
+    return normalized.kiloan.adaMesinSetrikaListrik ? [] : [
       { key: "gas_setrika", label: "Gas Setrika per Load", amount: gasSetrikaPerLoad, note: "" },
     ];
   };
@@ -801,6 +808,10 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
     };
   });
 
+  // Susunan komponen dikelompokkan per kategori (Air bareng Air, Listrik
+  // bareng Listrik, Gas bareng Gas, Plastik/Packing bareng Plastik), dan
+  // "Biaya App Kasir & Nota" selalu di baris PALING BAWAH, supaya konsisten
+  // & gampang dicari di semua layanan.
   const cuciSaja = calculateHPPService_(
     STRUKTUR_HPP_SERVICE_KEYS_.CUCI_SAJA,
     "HPP Cuci Saja",
@@ -808,10 +819,11 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
       { key: "air_washer", label: "Air Washer per Load", amount: airPerLoad, note: "" },
       { key: "listrik_washer", label: "Listrik Washer per Load", amount: washerPerLoad, note: "" },
       { key: "listrik_pompa", label: "Listrik Pompa per Load", amount: pompaPerLoad, note: "" },
-      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
       { key: "deterjen", label: "Deterjen per Load", amount: deterjenPerLoad, note: kgNote },
       { key: "softener", label: "Softener per Load", amount: softenerPerLoad, note: "" },
-    ].concat(packingComponentsCuciSaja),
+    ].concat(packingComponentsCuciSaja, [
+      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
+    ]),
     STRUKTUR_HPP_UNIT_LABEL_
   );
 
@@ -824,10 +836,11 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
       { key: "listrik_pompa", label: "Listrik Pompa per Load", amount: pompaPerLoad, note: "" },
       { key: "listrik_dryer", label: "Listrik Dryer per Load", amount: dryerPerLoad, note: "" },
       { key: "gas_dryer", label: "Gas Dryer per Load", amount: gasPerLoad, note: "" },
-      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
       { key: "deterjen", label: "Deterjen per Load", amount: deterjenPerLoad, note: kgNote },
       { key: "softener", label: "Softener per Load", amount: softenerPerLoad, note: "" },
-    ].concat(packingComponentsCuciKeringLipat),
+    ].concat(packingComponentsCuciKeringLipat, [
+      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
+    ]),
     STRUKTUR_HPP_UNIT_LABEL_
   );
 
@@ -836,22 +849,25 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
     "HPP Cuci Kering Setrika",
     [
       { key: "air_washer", label: "Air Washer per Load", amount: airPerLoad, note: "" },
+    ].concat(airSetrikaComponents_(), [
       { key: "listrik_washer", label: "Listrik Washer per Load", amount: washerPerLoad, note: "" },
       { key: "listrik_pompa", label: "Listrik Pompa per Load", amount: pompaPerLoad, note: "" },
       { key: "listrik_dryer", label: "Listrik Dryer per Load", amount: dryerPerLoad, note: "" },
+    ], listrikSetrikaComponents_(), [
       { key: "gas_dryer", label: "Gas Dryer per Load", amount: gasPerLoad, note: "" },
-    ].concat(buildSetrikaComponents_(), [
-      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
+    ], gasSetrikaComponents_(), [
       { key: "deterjen", label: "Deterjen per Load", amount: deterjenPerLoad, note: kgNote },
       { key: "softener", label: "Softener per Load", amount: softenerPerLoad, note: "" },
-    ]).concat(packingComponentsCuciKeringLipat),
+    ]).concat(packingComponentsCuciKeringLipat, [
+      { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: "" },
+    ]),
     STRUKTUR_HPP_UNIT_LABEL_
   );
 
   const setrikaSaja = calculateHPPService_(
     STRUKTUR_HPP_SERVICE_KEYS_.SETRIKA_SAJA,
     "HPP Setrika Saja",
-    buildSetrikaComponents_().concat([
+    airSetrikaComponents_().concat(listrikSetrikaComponents_(), gasSetrikaComponents_(), [
       { key: "app_nota", label: "Biaya App Kasir & Nota per Load", amount: appNotaPerLoad, note: kgNote },
     ]),
     STRUKTUR_HPP_UNIT_LABEL_
@@ -893,32 +909,47 @@ function buildJasaSetrikaHPPStructure_(normalized) {
 
 /**
  * buildBedCoverHPPService_: dihitung PER ITEM (1 Bed Cover = 1 load penuh,
- * sesuai keputusan user), BUKAN per Kg. HPP Cuci & HPP Kering diambil dari
- * komponen mesin per load (tanpa nota, supaya nota tidak dobel dihitung).
- * Chemical & Packing (aslinya per Kg) dikonversi ke per load dengan dikali
- * kapasitasKgPerLoad.
+ * sesuai keputusan user), BUKAN per Kg. Rinciannya sengaja dibuat semirip
+ * mungkin dengan HPP Cuci Kering Lipat (Air Washer/Listrik Washer/Listrik
+ * Pompa/Listrik Dryer/Gas Dryer terpisah, bukan digabung "HPP Cuci"/"HPP
+ * Kering"), plus Parfum (khusus Bed Cover). Bedanya cuma di bagian Plastik:
+ * mengikuti centang layanan Bed Cover di Master Biaya Packing - kalau
+ * centang Plastik HD/PP maka tampil per item basis per-Kg (dikonversi ke
+ * per-load), kalau centang "Plastik Jinjing" maka tampil 1 baris basis
+ * per-lembar langsung (1 lembar = 1 Bed Cover, TIDAK dikonversi per-Kg).
  */
 function buildBedCoverHPPService_(normalized) {
   const kg = normalized.kiloan.kapasitasKgPerLoad;
   const toPerLoad = function (perKgValue) {
     return strukturHPPRound2_(perKgValue * kg);
   };
+  const kgNote = kg <= 0 ? "Kapasitas kg mesin cuci belum diisi." : "";
 
-  const hppCuciPerLoad = normalized.air.biayaPerLoad + normalized.listrik.washerPerLoad + normalized.listrik.pompaPerLoad;
-  const hppKeringPerLoad = normalized.listrik.dryerPerLoad + normalized.gas.biayaPerLoad;
+  const packingItemsBedCover = Array.isArray(normalized.kiloan.packingItemsBedCover) ? normalized.kiloan.packingItemsBedCover : [];
+  const packingComponentsBedCover = packingItemsBedCover.map(function (item, idx) {
+    return {
+      key: "packing_" + strukturHPPSlug_(item.nama) + "_" + idx,
+      label: item.nama,
+      amount: item.isLocked ? item.biayaPerLoad : toPerLoad(item.biayaPerKg),
+      note: "",
+    };
+  });
 
   return calculateHPPService_(
     STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER,
     "HPP Bed Cover",
     [
-      { key: "app_nota", label: "Biaya App Kasir & Nota", amount: normalized.notaKasir.biayaPerLoad, note: "" },
-      { key: "hpp_cuci", label: "HPP Cuci", amount: strukturHPPRound2_(hppCuciPerLoad), note: "" },
-      { key: "hpp_kering", label: "HPP Kering", amount: strukturHPPRound2_(hppKeringPerLoad), note: "" },
-      { key: "deterjen", label: "Deterjen", amount: toPerLoad(normalized.kiloan.deterjenPerKg), note: kg <= 0 ? "Kapasitas kg mesin cuci belum diisi." : "" },
+      { key: "air_washer", label: "Air Washer", amount: normalized.air.biayaPerLoad, note: "" },
+      { key: "listrik_washer", label: "Listrik Washer", amount: normalized.listrik.washerPerLoad, note: "" },
+      { key: "listrik_pompa", label: "Listrik Pompa", amount: normalized.listrik.pompaPerLoad, note: "" },
+      { key: "listrik_dryer", label: "Listrik Dryer", amount: normalized.listrik.dryerPerLoad, note: "" },
+      { key: "gas_dryer", label: "Gas Dryer", amount: normalized.gas.biayaPerLoad, note: "" },
+      { key: "deterjen", label: "Deterjen", amount: toPerLoad(normalized.kiloan.deterjenPerKg), note: kgNote },
       { key: "softener", label: "Softener", amount: toPerLoad(normalized.kiloan.softenerPerKg), note: "" },
       { key: "parfum", label: "Parfum", amount: toPerLoad(normalized.kiloan.parfumPerKg), note: "" },
-      { key: "packing", label: "Packing", amount: strukturHPPRound2_(toPerLoad(normalized.kiloan.packingPerKgBedCoverConverted) + normalized.kiloan.packingPerLoadBedCoverDirect), note: "" },
-    ],
+    ].concat(packingComponentsBedCover, [
+      { key: "app_nota", label: "Biaya App Kasir & Nota", amount: normalized.notaKasir.biayaPerLoad, note: "" },
+    ]),
     STRUKTUR_HPP_UNIT_LABEL_ITEM_
   );
 }
