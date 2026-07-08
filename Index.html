@@ -6678,7 +6678,7 @@ window.saveAirForm = saveAirForm;
           '</div>' +
           '<div class="field" style="margin-bottom:0;">' +
             '<label>Harga Jual</label>' +
-            '<input type="number" inputmode="decimal" min="0" step="1" data-harga-layanan-key="' + escapeHtml(key) + '" value="' + Number(item.hargaJual || 0) + '" oninput="onHargaLayananInput()">' +
+            '<input type="text" inputmode="numeric" pattern="[0-9]*" data-harga-layanan-key="' + escapeHtml(key) + '" value="' + (Number(item.hargaJual || 0) > 0 ? Number(item.hargaJual || 0).toLocaleString("id-ID") : "") + '" oninput="onHargaLayananInput(event)">' +
           '</div>' +
         '</div>' +
 
@@ -6720,7 +6720,14 @@ window.saveAirForm = saveAirForm;
     box.style.display = "block";
   }
 
-  function onHargaLayananInput() {
+  function onHargaLayananInput(evt) {
+    var input = evt && evt.target;
+    if (input) {
+      var digitsOnly = input.value.replace(/[^0-9]/g, "");
+      var numVal = Number(digitsOnly) || 0;
+      input.value = numVal > 0 ? numVal.toLocaleString("id-ID") : "";
+    }
+
     refreshHargaLayananPreview();
     setSaveStatus("Belum disimpan", "busy");
 
@@ -6740,7 +6747,7 @@ window.saveAirForm = saveAirForm;
       if (!input) return;
 
       var hpp = Number(card.getAttribute("data-hpp") || 0);
-      var hargaJual = Number(input.value || 0);
+      var hargaJual = Number(String(input.value || "0").replace(/[^0-9]/g, ""));
       hargaJual = isFinite(hargaJual) && hargaJual > 0 ? hargaJual : 0;
 
       var margin = hargaJual - hpp;
@@ -6773,7 +6780,7 @@ window.saveAirForm = saveAirForm;
 
     inputs.forEach(function (input) {
       var key = input.getAttribute("data-harga-layanan-key");
-      var value = Number(input.value || 0);
+      var value = Number(String(input.value || "0").replace(/[^0-9]/g, ""));
       hargaJual[key] = isFinite(value) && value > 0 ? value : 0;
     });
 
