@@ -38,6 +38,12 @@ function dashboardArray_(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function dashboardFormatRp_(value) {
+  var num = Math.round(dashboardNumber_(value, 0));
+  var sign = num < 0 ? "-" : "";
+  return sign + "Rp" + Math.abs(num).toLocaleString("id-ID");
+}
+
 function dashboardGetCabangRows_() {
   if (typeof listCabang !== "function") {
     return {
@@ -876,6 +882,16 @@ function getDashboardBEPSummary(cabangId) {
         }
       } else if (marginPerLoad <= 0) {
         warnings.push("Margin kontribusi belum aman. Harga jual belum cukup untuk menutup HPP.");
+        // Rincian per layanan supaya kelihatan jelas layanan mana yang
+        // menyeret rata-rata jadi negatif (bukan cuma "pokoknya negatif").
+        weighted.services.forEach(function (s) {
+          var marginService = s.harga - s.hpp;
+          warnings.push(
+            s.title + " (" + dashboardRound2_(s.percent) + "% kontribusi): Harga " +
+            dashboardFormatRp_(s.harga) + " - HPP " + dashboardFormatRp_(s.hpp) +
+            " = margin " + dashboardFormatRp_(marginService) + (marginService < 0 ? " (RUGI)" : "")
+          );
+        });
       }
     }
 
