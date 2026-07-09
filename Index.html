@@ -33,7 +33,15 @@ PETA LENGKAP FILE -- baca ini dulu sebelum mencari sesuatu di project ini:
 STYLE (CSS, sudah ada sebelum pemecahan ini):
   Style_Tokens.html            variabel warna/spacing/radius dasar
   Style_Base.html               reset & style elemen dasar (body, tipografi)
-  Style_Components.html         komponen umum (button, card, panel, dashboard)
+  Style_Components.html         komponen umum lintas fitur (button, card,
+                                panel, toast, confirm modal, outlet picker) --
+                                TIDAK termasuk style Dashboard, lihat baris di bawah.
+  Style_Module_Dashboard.html   style khusus layar Dashboard/Menu (screenMenu):
+                                menu-grid, profil-outlet-card, bep-card, kartu
+                                mini Master Biaya/HargaLayanan/FixedCost versi
+                                ringkas di dashboard, footer-bar. (Catatan: HPP
+                                sudah punya kartu mini sendiri di
+                                Style_Module_HPP.html, tidak dipindah ke sini.)
   Style_Module_MasterBiaya.html style khusus layar Master Biaya
   Style_Module_HPP.html         style khusus layar Struktur HPP
   Style_Module_FixedCost.html   style khusus layar Biaya Tetap Outlet
@@ -122,6 +130,7 @@ RIWAYAT PEMECAHAN FILE INI:
 <?!= include('Style_Tokens') ?>
 <?!= include('Style_Base') ?>
 <?!= include('Style_Components') ?>
+<?!= include('Style_Module_Dashboard') ?>
 
 <?!= include('Style_Module_MasterBiaya') ?>
 <?!= include('Style_Module_HPP') ?>
