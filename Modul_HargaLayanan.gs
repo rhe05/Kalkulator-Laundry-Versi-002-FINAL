@@ -62,7 +62,7 @@ function getHargaLayanan(cabangId) {
     const konversi = hppResult && hppResult.ok && hppResult.data && hppResult.data.konversi
       ? hppResult.data.konversi
       : null;
-    const layanan = buildHargaLayananItems_(kategoriFinal, hppMap, stored.hargaJual || {}, aktifMap, konversi);
+    const layanan = buildHargaLayananItems_(kategoriFinal, hppMap, stored.hargaJual || {}, aktifMap, konversi, stored.minimumOrderKg || {});
 
     return {
       ok: true,
@@ -112,6 +112,7 @@ function saveHargaLayanan(cabangId, payload) {
     const record = {
       cabangId: cleanCabangId,
       hargaJual: cleanPayload.hargaJual,
+      minimumOrderKg: cleanPayload.minimumOrderKg,
       updatedAt: new Date().toISOString(),
     };
 
@@ -140,17 +141,18 @@ function readHargaLayananRecord_(cabangId) {
     const sheet = ensureDataSheet_();
     const raw = readKey_(sheet, getHargaLayananKey_(cabangId));
     if (!raw) {
-      return { cabangId: cabangId, hargaJual: {}, updatedAt: "" };
+      return { cabangId: cabangId, hargaJual: {}, minimumOrderKg: {}, updatedAt: "" };
     }
 
     const parsed = JSON.parse(raw);
     return {
       cabangId: parsed && parsed.cabangId ? String(parsed.cabangId) : cabangId,
       hargaJual: parsed && parsed.hargaJual && typeof parsed.hargaJual === "object" ? parsed.hargaJual : {},
+      minimumOrderKg: parsed && parsed.minimumOrderKg && typeof parsed.minimumOrderKg === "object" ? parsed.minimumOrderKg : {},
       updatedAt: parsed && parsed.updatedAt ? String(parsed.updatedAt) : "",
     };
   } catch (err) {
-    return { cabangId: cabangId, hargaJual: {}, updatedAt: "" };
+    return { cabangId: cabangId, hargaJual: {}, minimumOrderKg: {}, updatedAt: "" };
   }
 }
 
@@ -325,11 +327,12 @@ function getHargaLayananDefinitions_(kategori, aktifMap) {
   return defs;
 }
 
-function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, konversi) {
+function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, konversi, storedMinimumOrderKg) {
   const defs = getHargaLayananDefinitions_(kategori, aktifMap);
   const items = [];
   const kapasitasKgPerLoad = toNumber_(konversi && konversi.kapasitasKgPerLoad, 0);
   const setrikaKapasitasKgPerJam = toNumber_(konversi && konversi.setrikaKapasitasKgPerJam, 0);
+  const minimumOrderKgMap = storedMinimumOrderKg && typeof storedMinimumOrderKg === "object" ? storedMinimumOrderKg : {};
 
   defs.forEach(function (def) {
     const hppItem = hppMap[def.hppSourceKey] || null;
@@ -415,6 +418,36 @@ function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, ko
       item.setrikaKapasitasKgPerJam = round2_(setrikaKapasitasKgPerJam);
     }
 
+    // Minimum Order (Kg) -- diisi manual oleh user (beda dari kapasitasKgPerLoad
+    // yang otomatis dari mesin), dipakai utk hitung margin card utama:
+    // margin = (hargaJual per Kg x minimumOrderKg) - HPP per siklus (per
+    // Load/Jam, BUKAN per Kg). Cuma berlaku utk layanan berbasis per Kg
+    // (kiloan non-Bed Cover & Jasa Setrika) -- Self Service & Bed Cover sudah
+    // per Load/per item langsung, tidak butuh perkalian ini.
+    if (def.unitLabel === "per kg" && (item.hppPerLoad !== undefined || item.hppPerJam !== undefined)) {
+      const minimumOrderKg = Math.max(0, toNumber_(minimumOrderKgMap[def.key], 0));
+      item.minimumOrderKg = round2_(minimumOrderKg);
+
+      if (minimumOrderKg > 0) {
+        const hppPerSiklus = item.hppPerLoad !== undefined ? item.hppPerLoad : item.hppPerJam;
+        const omzetMinimumOrder = round2_(hargaJual * minimumOrderKg);
+        const marginMinimumOrder = round2_(omzetMinimumOrder - hppPerSiklus);
+        const marginPercentMinimumOrder = omzetMinimumOrder > 0 ? round2_((marginMinimumOrder / omzetMinimumOrder) * 100) : 0;
+
+        item.omzetMinimumOrder = omzetMinimumOrder;
+        item.marginMinimumOrder = marginMinimumOrder;
+        item.marginPercentMinimumOrder = marginPercentMinimumOrder;
+
+        // Margin card utama (dipakai badge status & progress bar) ditimpa
+        // pakai hasil kali minimum order ini -- inilah margin yang benar-
+        // benar dibayar pelanggan dalam satu transaksi, bukan cuma per Kg.
+        item.margin = marginMinimumOrder;
+        item.marginPercent = marginPercentMinimumOrder;
+        item.status = getHargaLayananMarginStatus_(marginMinimumOrder, marginPercentMinimumOrder);
+        item.statusLabel = getHargaLayananMarginStatusLabel_(marginMinimumOrder, marginPercentMinimumOrder);
+      }
+    }
+
     items.push(item);
   });
 
@@ -438,7 +471,9 @@ function getHargaLayananMarginStatusLabel_(margin, marginPercent) {
 function sanitizeHargaLayananPayload_(payload) {
   const input = payload && typeof payload === "object" ? payload : {};
   const hargaJualInput = input.hargaJual && typeof input.hargaJual === "object" ? input.hargaJual : {};
+  const minimumOrderKgInput = input.minimumOrderKg && typeof input.minimumOrderKg === "object" ? input.minimumOrderKg : {};
   const hargaJual = {};
+  const minimumOrderKg = {};
   const allowedKeys = [
     "cuci_saja",
     "kering_saja",
@@ -451,9 +486,10 @@ function sanitizeHargaLayananPayload_(payload) {
 
   allowedKeys.forEach(function (key) {
     hargaJual[key] = Math.max(0, round2_(toNumber_(hargaJualInput[key], 0)));
+    minimumOrderKg[key] = Math.max(0, round2_(toNumber_(minimumOrderKgInput[key], 0)));
   });
 
-  return { hargaJual: hargaJual };
+  return { hargaJual: hargaJual, minimumOrderKg: minimumOrderKg };
 }
 
 function buildHargaLayananWarnings_(hppResult, layanan) {

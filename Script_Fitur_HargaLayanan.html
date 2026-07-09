@@ -230,8 +230,16 @@ menjalankan bootApp().
     var statusLabel = item.statusLabel || "Impas";
     var key = item.key || "";
 
+    // Layanan berbasis per Kg (kiloan non-Bed Cover & Jasa Setrika) punya HPP
+    // per siklus (Load/Jam) terpisah dari HPP per Kg -- Minimum Order (Kg)
+    // cuma relevan utk jenis ini. Self Service & Bed Cover sudah per
+    // Load/per item langsung, tidak butuh perkalian minimum order.
+    var isKgBased = item.hppPerLoad !== undefined || item.hppPerJam !== undefined;
+    var hppPerSiklus = item.hppPerLoad !== undefined ? item.hppPerLoad : (item.hppPerJam !== undefined ? item.hppPerJam : item.hpp);
+    var minimumOrderKg = Number(item.minimumOrderKg || 0);
+
     return (
-      '<div class="hl-service-card" data-harga-layanan-card="' + escapeHtml(key) + '" data-hpp="' + Number(item.hpp || 0) + '">' +
+      '<div class="hl-service-card" data-harga-layanan-card="' + escapeHtml(key) + '" data-hpp="' + Number(item.hpp || 0) + '" data-hpp-siklus="' + Number(hppPerSiklus || 0) + '">' +
         '<div class="hl-service-top">' +
           '<div>' +
             '<div class="hl-service-name">' + escapeHtml(item.title || "-") + '</div>' +
@@ -250,6 +258,14 @@ menjalankan bootApp().
             '<input type="text" inputmode="numeric" pattern="[0-9]*" data-harga-layanan-key="' + escapeHtml(key) + '" value="' + (Number(item.hargaJual || 0) > 0 ? Number(item.hargaJual || 0).toLocaleString("id-ID") : "") + '" oninput="onHargaLayananInput(event)">' +
           '</div>' +
         '</div>' +
+
+        (isKgBased ?
+          '<div class="field" style="margin-bottom:12px;">' +
+            '<label>Minimum Order (Kg)</label>' +
+            '<input type="number" inputmode="decimal" min="0" step="0.1" data-harga-layanan-minorder-key="' + escapeHtml(key) + '" value="' + (minimumOrderKg > 0 ? minimumOrderKg : "") + '" placeholder="Contoh: 3" oninput="onHargaLayananInput(event)">' +
+            '<div class="field-hint">Margin di bawah dihitung dari Harga Jual &times; Minimum Order, dikurangi HPP per siklus mesin.</div>' +
+          '</div>'
+        : '') +
 
         '<div class="hl-metric-grid">' +
           '<div class="hl-metric highlight">' +
@@ -315,12 +331,23 @@ menjalankan bootApp().
       var input = card.querySelector("[data-harga-layanan-key]");
       if (!input) return;
 
-      var hpp = Number(card.getAttribute("data-hpp") || 0);
       var hargaJual = Number(String(input.value || "0").replace(/[^0-9]/g, ""));
       hargaJual = isFinite(hargaJual) && hargaJual > 0 ? hargaJual : 0;
 
-      var margin = hargaJual - hpp;
-      var marginPercent = hargaJual > 0 ? (margin / hargaJual) * 100 : 0;
+      var minOrderInput = card.querySelector("[data-harga-layanan-minorder-key]");
+      var minimumOrderKg = minOrderInput ? toNumber(minOrderInput.value, 0) : 0;
+
+      var margin, omzet;
+      if (minOrderInput && minimumOrderKg > 0) {
+        var hppSiklus = Number(card.getAttribute("data-hpp-siklus") || 0);
+        omzet = hargaJual * minimumOrderKg;
+        margin = omzet - hppSiklus;
+      } else {
+        var hpp = Number(card.getAttribute("data-hpp") || 0);
+        omzet = hargaJual;
+        margin = hargaJual - hpp;
+      }
+      var marginPercent = omzet > 0 ? (margin / omzet) * 100 : 0;
       var statusInfo = getHargaLayananStatusClient(margin, marginPercent);
 
       var marginEl = card.querySelector(".hl-margin-value");
@@ -353,7 +380,15 @@ menjalankan bootApp().
       hargaJual[key] = isFinite(value) && value > 0 ? value : 0;
     });
 
-    return { hargaJual: hargaJual };
+    var minOrderInputs = document.querySelectorAll("[data-harga-layanan-minorder-key]");
+    var minimumOrderKg = {};
+
+    minOrderInputs.forEach(function (input) {
+      var key = input.getAttribute("data-harga-layanan-minorder-key");
+      minimumOrderKg[key] = toNumber(input.value, 0);
+    });
+
+    return { hargaJual: hargaJual, minimumOrderKg: minimumOrderKg };
   }
 
   function saveHargaLayananFromInputs() {
