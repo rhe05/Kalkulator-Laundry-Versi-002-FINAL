@@ -721,6 +721,17 @@ menjalankan bootApp().
         } else {
           var chartSvg = buildBepChartSvg(d);
           html = '<div class="bep-card">' +
+            '<div class="bep-hero">' +
+              '<span class="bep-hero-label">Target Break Even</span>' +
+              '<div class="bep-hero-row">' +
+                '<span class="bep-hero-value">' + escapeHtml(formatNum(d.bepLoadPerBulan, 0)) + '</span>' +
+                '<span class="bep-hero-unit">load/bulan</span>' +
+              '</div>' +
+              '<div class="bep-hero-omset">' +
+                '<span>' + money0(d.bepOmsetPerBulan) + '</span>' +
+                '<span class="bep-hero-omset-label">omset/bulan</span>' +
+              '</div>' +
+            '</div>' +
             (chartSvg ? '<div class="bep-chart-wrap">' + chartSvg +
               '<div class="bep-chart-legend">' +
                 '<span class="bep-legend-item"><span class="bep-legend-dot sage"></span>Omset</span>' +
@@ -729,31 +740,21 @@ menjalankan bootApp().
             '</div>' : '') +
             '<div class="bep-section">' +
               '<div class="bep-row">' +
-                '<div class="bep-item">' +
-                  '<span class="bep-label">Load / Bulan</span>' +
-                  '<span class="bep-value">' + escapeHtml(formatNum(d.bepLoadPerBulan, 0)) + '</span>' +
-                '</div>' +
-                '<div class="bep-item">' +
-                  '<span class="bep-label">Omset / Bulan</span>' +
-                  '<span class="bep-value bep-omset">' + money0(d.bepOmsetPerBulan) + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<div class="bep-row">' +
-                '<div class="bep-item">' +
+                '<div class="bep-item bep-item-sub">' +
                   '<span class="bep-label">Load / Minggu</span>' +
                   '<span class="bep-value">' + escapeHtml(formatNum(d.bepLoadPerMinggu, 0)) + '</span>' +
                 '</div>' +
-                '<div class="bep-item">' +
+                '<div class="bep-item bep-item-sub">' +
                   '<span class="bep-label">Omset / Minggu</span>' +
                   '<span class="bep-value bep-omset">' + money0(d.bepOmsetPerMinggu) + '</span>' +
                 '</div>' +
               '</div>' +
               '<div class="bep-row">' +
-                '<div class="bep-item">' +
+                '<div class="bep-item bep-item-sub">' +
                   '<span class="bep-label">Load / Hari</span>' +
                   '<span class="bep-value">' + escapeHtml(formatNum(d.bepLoadPerHari, 0)) + '</span>' +
                 '</div>' +
-                '<div class="bep-item">' +
+                '<div class="bep-item bep-item-sub">' +
                   '<span class="bep-label">Omset / Hari</span>' +
                   '<span class="bep-value bep-omset">' + money0(d.bepOmsetPerHari) + '</span>' +
                 '</div>' +
