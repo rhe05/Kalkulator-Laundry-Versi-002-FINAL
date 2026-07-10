@@ -115,6 +115,7 @@ function getDashboardCabangSummary(cabangId) {
         okupansiKering: okupansiKering,
         totalUnitSetrika: dashboardNumber_(setrikaSummary.totalUnit, 0),
         kapasitasSetrikaKgPerJam: dashboardRound2_(setrikaSummary.kapasitasKgPerJam),
+        kgSetrikaPerBulan: dashboardRound2_(setrikaSummary.kgPerBulan),
         jenisSetrika: mesinSetrika.length ? String(mesinSetrika[0].jenis || "") : "",
         okupansiSetrika: okupansiSetrika
       };

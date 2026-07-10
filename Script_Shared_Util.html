@@ -453,7 +453,7 @@ menjalankan bootApp().
     };
   }
 
-  function computeGroupSetrika(rows, okupansiPersen) {
+  function computeGroupSetrika(rows, totalMenitPerHari, okupansiPersen) {
     var totalUnit = 0;
     var kapasitasMaksimalKgPerJam = 0;
     for (var i = 0; i < rows.length; i++) {
@@ -463,10 +463,16 @@ menjalankan bootApp().
       kapasitasMaksimalKgPerJam += (Number(m.kapasitasKgPerJam) || 0) * unit;
     }
     var fraksi = Math.min(Math.max(Number(okupansiPersen) || 0, 0), 100) / 100;
+    var kapasitasKgPerJam = kapasitasMaksimalKgPerJam * fraksi;
+    var jamPerHari = (Number(totalMenitPerHari) || 0) / 60;
+    var kgPerHari = kapasitasKgPerJam * jamPerHari;
     return {
       totalUnit: totalUnit,
       kapasitasMaksimalKgPerJam: round2(kapasitasMaksimalKgPerJam),
-      kapasitasKgPerJam: round2(kapasitasMaksimalKgPerJam * fraksi)
+      kapasitasKgPerJam: round2(kapasitasKgPerJam),
+      kgPerHari: round2(kgPerHari),
+      kgPerMinggu: round2(kgPerHari * 7),
+      kgPerBulan: round2(kgPerHari * 7 * 4)
     };
   }
 
@@ -477,7 +483,7 @@ menjalankan bootApp().
       totalJamPerHari: round2(totalMenit / 60),
       cuci: computeGroupLoad(cabang.mesinCuci, totalMenit, cabang.okupansi.cuciPersen),
       kering: computeGroupLoad(cabang.mesinPengering, totalMenit, cabang.okupansi.keringPersen),
-      setrika: computeGroupSetrika(cabang.mesinSetrika || [], cabang.okupansi.setrikaPersen)
+      setrika: computeGroupSetrika(cabang.mesinSetrika || [], totalMenit, cabang.okupansi.setrikaPersen)
     };
   }
 

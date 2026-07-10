@@ -142,6 +142,9 @@ menjalankan bootApp().
         document.getElementById("rSetrikaUnit").textContent = summary.setrika.totalUnit;
         document.getElementById("rSetrikaMax").innerHTML = formatNum(summary.setrika.kapasitasMaksimalKgPerJam) + "<span class=\"unit\">kg</span>";
         document.getElementById("rSetrikaJam").textContent = formatNum(summary.setrika.kapasitasKgPerJam) + " kg";
+        document.getElementById("rSetrikaHari").textContent = formatNum(summary.setrika.kgPerHari) + " kg";
+        document.getElementById("rSetrikaMinggu").textContent = formatNum(summary.setrika.kgPerMinggu) + " kg";
+        document.getElementById("rSetrikaBulan").textContent = formatNum(summary.setrika.kgPerBulan) + " kg";
         renderSetrikaSummaryDetail("rSetrikaDetail", cabang.mesinSetrika || []);
       }
     }
@@ -390,6 +393,9 @@ menjalankan bootApp().
     document.getElementById("outSetrikaUnit").textContent = summary.setrika.totalUnit;
     document.getElementById("outSetrikaMax").innerHTML = formatNum(summary.setrika.kapasitasMaksimalKgPerJam) + "<span class=\"unit\">kg</span>";
     document.getElementById("outSetrikaJam").textContent = formatNum(summary.setrika.kapasitasKgPerJam) + " kg";
+    document.getElementById("outSetrikaHari").textContent = formatNum(summary.setrika.kgPerHari) + " kg";
+    document.getElementById("outSetrikaMinggu").textContent = formatNum(summary.setrika.kgPerMinggu) + " kg";
+    document.getElementById("outSetrikaBulan").textContent = formatNum(summary.setrika.kgPerBulan) + " kg";
 
     renderDurasiReadout();
   }

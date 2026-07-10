@@ -371,7 +371,7 @@ function computeSummary_(cabang) {
     totalJamPerHari: round2_(totalMenit / 60),
     cuci: computeGroupLoad_(cabang.mesinCuci, totalMenit, cabang.okupansi.cuciPersen),
     kering: computeGroupLoad_(cabang.mesinPengering, totalMenit, cabang.okupansi.keringPersen),
-    setrika: computeSetrikaCapacity_(cabang.mesinSetrika, cabang.okupansi.setrikaPersen),
+    setrika: computeSetrikaCapacity_(cabang.mesinSetrika, totalMenit, cabang.okupansi.setrikaPersen),
   };
 }
 
@@ -407,7 +407,7 @@ function computeGroupLoad_(rows, totalMenitPerHari, okupansiPersen) {
   };
 }
 
-function computeSetrikaCapacity_(rows, okupansiPersen) {
+function computeSetrikaCapacity_(rows, totalMenitPerHari, okupansiPersen) {
   let totalUnit = 0;
   let kapasitasMaksimalKgPerJam = 0;
 
@@ -420,10 +420,15 @@ function computeSetrikaCapacity_(rows, okupansiPersen) {
 
   const okupansiFraksi = clamp_(okupansiPersen, 0, 100) / 100;
   const kapasitasKgPerJam = kapasitasMaksimalKgPerJam * okupansiFraksi;
+  const jamPerHari = toNumber_(totalMenitPerHari, 0) / 60;
+  const kgPerHari = kapasitasKgPerJam * jamPerHari;
 
   return {
     totalUnit: totalUnit,
     kapasitasMaksimalKgPerJam: round2_(kapasitasMaksimalKgPerJam),
     kapasitasKgPerJam: round2_(kapasitasKgPerJam),
+    kgPerHari: round2_(kgPerHari),
+    kgPerMinggu: round2_(kgPerHari * 7),
+    kgPerBulan: round2_(kgPerHari * 7 * 4),
   };
 }

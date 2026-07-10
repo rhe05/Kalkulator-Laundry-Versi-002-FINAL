@@ -326,8 +326,8 @@ menjalankan bootApp().
                 '<div class="profil-kpi-item setrika">' +
                   '<span class="profil-kpi-label">Kap. Setrika</span>' +
                   '<div class="profil-kpi-value-row">' +
-                    '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.kapasitasSetrikaKgPerJam || 0)) + '</span>' +
-                    '<span class="profil-kpi-unit">kg/jam</span>' +
+                    '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.kgSetrikaPerBulan || 0)) + '</span>' +
+                    '<span class="profil-kpi-unit">kg/bln</span>' +
                   '</div>' +
                   '<div class="profil-kpi-okupansi">Okupansi ' + escapeHtml(String(row.okupansiSetrika || 0)) + '%</div>' +
                 '</div>';
