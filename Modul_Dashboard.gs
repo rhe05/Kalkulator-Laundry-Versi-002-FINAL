@@ -945,13 +945,24 @@ function omzetBepBulanan_selisihRelatif_(omzetBep, totalBiayaBep) {
 
 // ----------------------------------------------------------------------------
 // POTENSI OMSET: estimasi omset/biaya produksi/profit di KAPASITAS PENUH
-// outlet, dengan basis load-equivalent yang sama seperti BEP (mix % kontribusi
-// per layanan). Kapasitas maksimum dibatasi oleh mesin yang jadi BOTTLENECK
-// (cuci/pengering/setrika) sesuai kombinasi layanan yang dipilih -- misalnya
-// "Cuci Kering Setrika" pakai 3 mesin sekaligus, "Cuci Saja" cuma pakai mesin
-// cuci. Kapasitas mentah mesin (loadMaksimalPerHari/loadPerBulan) SUMBER
-// KEBENARAN TUNGGAL-nya tetap computeGroupLoad_ di Modul_Cabang.gs, TIDAK
-// dihitung ulang dengan cara lain di sini.
+// outlet, dihitung PER LAYANAN aktif lalu dijumlahkan (bukan lagi 1 angka
+// bottleneck gabungan dikali rata-rata harga). Alur per layanan:
+//   1. Kapasitas mesin (load/bulan utk cuci & pengering, kg/bulan utk
+//      setrika) - field yang sama dipakai kartu Profil Outlet & BEP, sumber
+//      kebenaran tunggal tetap computeGroupLoad_/computeSetrikaCapacity_ di
+//      Modul_Cabang.gs, TIDAK dihitung ulang dengan cara lain di sini.
+//   2. Layanan yang pakai >1 mesin (mis. Cuci Kering Lipat = cuci+kering)
+//      dibatasi mesin yang lebih sedikit (bottleneck antar mesin YANG
+//      DIPAKAI LAYANAN ITU SENDIRI, bukan berbagi kapasitas dgn layanan lain).
+//   3. Layanan berbasis Load (harga/HPP per Kg di kategori Kiloan/Hybrid)
+//      dikonversi ke Kg pakai Minimum Order (Kg) dari Harga Layanan. Layanan
+//      yang sumbernya sudah Kg (Setrika) dipakai langsung tanpa konversi.
+//      Self Service (harga/HPP per Load) tidak perlu konversi sama sekali.
+//   4. Kapasitas (dlm satuan yang sama dgn harga/HPP layanan itu) dikali
+//      Kontribusi % (mix BEP) dikali Harga Layanan -> omset layanan itu;
+//      dikali HPP -> biaya produksi layanan itu. Dijumlahkan semua layanan
+//      aktif -> total Estimasi Omset/Biaya Produksi, lalu Profit = Omset -
+//      Biaya - Fixed Cost.
 // ----------------------------------------------------------------------------
 
 function bepMachineUsageMap_(key) {
@@ -979,76 +990,114 @@ function getDashboardPotensiOmsetSummary(cabangId) {
       warnings.push("Fixed cost belum diisi.");
     }
 
+    // weighted dipakai HANYA utk daftar layanan aktif + Kontribusi % (mix
+    // BEP) + validasi kelengkapan (total mix 100%, harga/HPP terisi) - SATU-
+    // SATUNYA tempat menghitung itu, tidak diduplikasi di sini. rataHPP/
+    // rataHarga miliknya TIDAK dipakai lagi utk rumus Potensi Omset (basisnya
+    // "per order" campuran, beda satuan dgn perhitungan per-Kg/per-Load di
+    // bawah), tapi tetap diteruskan ke output data (dulu juga tampil di sana).
     var weighted = getBepWeightedServiceData_(cabangId);
     warnings = warnings.concat(weighted.warnings);
     var activeServices = weighted.services;
-    var rataHPP = weighted.rataHPP;
-    var rataHarga = weighted.rataHarga;
 
-    // Kapasitas mentah mesin cuci & pengering (load/bulan, okupansi sudah
-    // termasuk) - persis field yang sama dipakai kartu Profil Outlet.
+    // Kapasitas mentah mesin (load/bulan utk cuci & pengering, kg/bulan utk
+    // setrika - field kgSetrikaPerBulan sudah okupansi-adjusted), persis yang
+    // dipakai kartu Profil Outlet.
     var cabangRow = (cabangRes && cabangRes.ok && cabangRes.data && cabangRes.data.rows && cabangRes.data.rows.length)
       ? cabangRes.data.rows[0] : null;
-    var washerCapacityPerBulan = cabangRow ? dashboardNumber_(cabangRow.loadCuciPerBulan, 0) : 0;
-    var dryerCapacityPerBulan = cabangRow ? dashboardNumber_(cabangRow.loadKeringPerBulan, 0) : 0;
+    var washerLoadPerBulan = cabangRow ? dashboardNumber_(cabangRow.loadCuciPerBulan, 0) : 0;
+    var dryerLoadPerBulan = cabangRow ? dashboardNumber_(cabangRow.loadKeringPerBulan, 0) : 0;
+    var setrikaKgPerBulan = cabangRow ? dashboardNumber_(cabangRow.kgSetrikaPerBulan, 0) : 0;
 
-    // Kapasitas setrika aslinya kg/jam (bukan "load") - dikonversi ke
-    // load-equivalent/bulan lewat kapasitasKgPerLoad, anchor yang sama dipakai
-    // semua konversi per-Kg <-> per-Load di Modul_StrukturBiayaHPP.gs.
-    var setrikaCapacityPerBulan = 0;
-    var kapasitasKgPerLoad = 0;
-    if (typeof getStrukturBiayaHPP === "function") {
-      var hppFullRes = getStrukturBiayaHPP(cabangId);
-      if (hppFullRes && hppFullRes.ok && hppFullRes.data && hppFullRes.data.konversi) {
-        kapasitasKgPerLoad = dashboardNumber_(hppFullRes.data.konversi.kapasitasKgPerLoad, 0);
+    // Detail harga/HPP/minimum order MENTAH per layanan (per Kg utk Kiloan/
+    // Jasa Setrika, per Load utk Self Service) - dibaca ulang dari Harga
+    // Layanan di sini supaya dapat angka aslinya, BUKAN versi "per order"
+    // (omzetMinimumOrder) yang dipakai kartu BEP.
+    var hargaDetailByKey = {};
+    if (typeof getHargaLayanan === "function") {
+      var hargaDetailRes = getHargaLayanan(cabangId);
+      if (hargaDetailRes && hargaDetailRes.ok && hargaDetailRes.data && hargaDetailRes.data.layanan) {
+        hargaDetailRes.data.layanan.forEach(function (item) {
+          if (item && item.key) hargaDetailByKey[item.key] = item;
+        });
       }
     }
-    if (cabangRow && kapasitasKgPerLoad > 0) {
-      var totalMenitPerHari = dashboardNumber_(cabangRow.jamTutupMenit, 0) - dashboardNumber_(cabangRow.jamBukaMenit, 0);
-      if (totalMenitPerHari < 0) totalMenitPerHari += 24 * 60;
-      var totalJamPerHari = totalMenitPerHari / 60;
-      var okupansiSetrikaFraksi = Math.max(0, Math.min(100, dashboardNumber_(cabangRow.okupansiSetrika, 0))) / 100;
-      var kapasitasSetrikaKgPerJam = dashboardNumber_(cabangRow.kapasitasSetrikaKgPerJam, 0);
-      var setrikaKgPerBulan = kapasitasSetrikaKgPerJam * okupansiSetrikaFraksi * totalJamPerHari * 30;
-      setrikaCapacityPerBulan = dashboardRound2_(setrikaKgPerBulan / kapasitasKgPerLoad);
+
+    var totalOmzet = 0;
+    var totalBiaya = 0;
+    var totalKapasitasKontribusi = 0;
+    var incompleteCapacity = [];
+
+    if (weighted.ok) {
+      activeServices.forEach(function (s) {
+        var detail = hargaDetailByKey[s.key];
+        if (!detail) return;
+
+        var usage = bepMachineUsageMap_(s.key);
+        var isKgBased = detail.unitLabel === "per kg";
+        var minimumOrderKg = dashboardNumber_(detail.minimumOrderKg, 0);
+
+        // Kapasitas mesin (basis Load) yang dipakai layanan ini - kalau
+        // butuh 2 mesin sekaligus (cuci+kering), dibatasi mesin yang lebih
+        // sedikit (bottleneck ANTAR MESIN LAYANAN INI SENDIRI).
+        var candidateLoad = [];
+        if (usage.washer) candidateLoad.push(washerLoadPerBulan);
+        if (usage.dryer) candidateLoad.push(dryerLoadPerBulan);
+        var kapasitasLoad = candidateLoad.length ? Math.min.apply(null, candidateLoad) : 0;
+
+        var kapasitasUnit = 0; // satuan sama dengan hargaJual/hpp layanan ini
+        if (!isKgBased) {
+          // Self Service: harga & HPP sudah per Load, kapasitas load langsung dipakai.
+          kapasitasUnit = kapasitasLoad;
+        } else if (usage.washer || usage.dryer) {
+          // Kiloan/Hybrid berbasis mesin cuci/pengering (Cuci Saja, Cuci
+          // Kering Lipat, Cuci Kering Setrika): load dikonversi ke Kg pakai
+          // Minimum Order (Kg) milik layanan ini sendiri.
+          if (minimumOrderKg <= 0) {
+            incompleteCapacity.push(detail.title + " (Minimum Order Kg belum diisi di Harga Layanan)");
+          } else {
+            kapasitasUnit = kapasitasLoad * minimumOrderKg;
+            // Cuci Kering Setrika juga pakai mesin setrika - kapasitas
+            // dibatasi lagi oleh kapasitas setrika (sudah dalam Kg).
+            if (usage.setrika && setrikaKgPerBulan > 0) {
+              kapasitasUnit = Math.min(kapasitasUnit, setrikaKgPerBulan);
+            }
+          }
+        } else if (usage.setrika) {
+          // Setrika Saja: kapasitas sudah dalam Kg, TIDAK perlu dikalikan Minimum Order.
+          kapasitasUnit = setrikaKgPerBulan;
+        }
+
+        var pct = dashboardNumber_(s.percent, 0) / 100;
+        var kapasitasKontribusi = kapasitasUnit * pct;
+        var hargaPerUnit = dashboardNumber_(detail.hargaJual, 0);
+        var hppPerUnit = dashboardNumber_(detail.hpp, 0);
+
+        totalOmzet += kapasitasKontribusi * hargaPerUnit;
+        totalBiaya += kapasitasKontribusi * hppPerUnit;
+        totalKapasitasKontribusi += kapasitasKontribusi;
+      });
     }
 
-    var capacityByMachine = { washer: washerCapacityPerBulan, dryer: dryerCapacityPerBulan, setrika: setrikaCapacityPerBulan };
-
-    // usageShare = total mix% layanan aktif yang memakai mesin tsb.
-    var usageShare = { washer: 0, dryer: 0, setrika: 0 };
-    activeServices.forEach(function (s) {
-      var usage = bepMachineUsageMap_(s.key);
-      var pct = dashboardNumber_(s.percent, 0) / 100;
-      usageShare.washer += usage.washer * pct;
-      usageShare.dryer += usage.dryer * pct;
-      usageShare.setrika += usage.setrika * pct;
-    });
-
-    // Total transaksi maksimum = dibatasi mesin paling cepat "penuh"
-    // (bottleneck), bukan penjumlahan sederhana semua kapasitas mesin.
-    var candidateLoads = [];
-    ["washer", "dryer", "setrika"].forEach(function (m) {
-      if (usageShare[m] > 0 && capacityByMachine[m] > 0) {
-        candidateLoads.push(capacityByMachine[m] / usageShare[m]);
-      }
-    });
-
-    var maksimalTransaksiPerBulan = (weighted.ok && candidateLoads.length) ? Math.min.apply(null, candidateLoads) : 0;
-    if (weighted.ok && !maksimalTransaksiPerBulan) {
-      warnings.push("Kapasitas mesin belum bisa dihitung - cek Profil Outlet & konversi kapasitas kg per load.");
+    if (incompleteCapacity.length) {
+      warnings = warnings.concat(incompleteCapacity);
     }
 
-    var estimasiOmsetPerBulan = rataHarga * maksimalTransaksiPerBulan;
-    var estimasiBiayaProduksiPerBulan = rataHPP * maksimalTransaksiPerBulan;
+    var estimasiOmsetPerBulan = totalOmzet;
+    var estimasiBiayaProduksiPerBulan = totalBiaya;
     var estimasiProfitPerBulan = estimasiOmsetPerBulan - estimasiBiayaProduksiPerBulan - fixedCostPerBulan;
+
+    var isComplete = weighted.ok && !incompleteCapacity.length && totalKapasitasKontribusi > 0;
+    if (weighted.ok && !incompleteCapacity.length && totalKapasitasKontribusi <= 0) {
+      warnings.push("Kapasitas mesin belum bisa dihitung - cek Profil Outlet & Minimum Order di Harga Layanan.");
+    }
 
     return {
       ok: true,
       data: {
-        maksimalTransaksiPerBulan: dashboardRound2_(maksimalTransaksiPerBulan),
-        rataHPP: dashboardRound2_(rataHPP),
-        rataHarga: dashboardRound2_(rataHarga),
+        maksimalTransaksiPerBulan: dashboardRound2_(totalKapasitasKontribusi),
+        rataHPP: dashboardRound2_(weighted.rataHPP),
+        rataHarga: dashboardRound2_(weighted.rataHarga),
         fixedCostPerBulan: fixedCostPerBulan,
         estimasiOmsetPerBulan: dashboardRound2_(estimasiOmsetPerBulan),
         estimasiBiayaProduksiPerBulan: dashboardRound2_(estimasiBiayaProduksiPerBulan),
@@ -1057,7 +1106,7 @@ function getDashboardPotensiOmsetSummary(cabangId) {
           return { key: s.key, title: s.title, percent: s.percent };
         }),
         warnings: warnings,
-        isComplete: weighted.ok && maksimalTransaksiPerBulan > 0
+        isComplete: isComplete
       }
     };
   } catch (err) {
