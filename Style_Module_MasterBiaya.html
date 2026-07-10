@@ -250,6 +250,14 @@ Jika tampilan gas, listrik, air, atau admin/nota bermasalah, mulai cek dari file
      screen lain tidak terpengaruh. */
   body:has(#screenForm.active) .wrap { width: min(100%, 1080px); }
 
+  /* screenList & screenRingkasan (juga bagian dari fitur Profil Outlet) sudah
+     lama punya rule grid 2 kolom (baris 237-239 di atas), tapi TIDAK PERNAH
+     kepakai selama ini karena .wrap-nya tidak pernah ikut dilebarkan spt
+     screenForm -- akibatnya tetap kelihatan versi HP walau di layar
+     desktop lebar. Disamakan di sini, screen lain tidak terpengaruh. */
+  body:has(#screenList.active) .wrap,
+  body:has(#screenRingkasan.active) .wrap { width: min(100%, 1080px); }
+
   @media (min-width: 1100px) {
     .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
     .layout-grid .col-input { display: flex; flex-direction: column; }
