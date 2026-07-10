@@ -1027,6 +1027,7 @@ function getDashboardPotensiOmsetSummary(cabangId) {
     var totalBiaya = 0;
     var totalKapasitasKontribusi = 0;
     var incompleteCapacity = [];
+    var serviceDetailByKey = {};
 
     if (weighted.ok) {
       activeServices.forEach(function (s) {
@@ -1072,10 +1073,25 @@ function getDashboardPotensiOmsetSummary(cabangId) {
         var kapasitasKontribusi = kapasitasUnit * pct;
         var hargaPerUnit = dashboardNumber_(detail.hargaJual, 0);
         var hppPerUnit = dashboardNumber_(detail.hpp, 0);
+        var omzetLayanan = kapasitasKontribusi * hargaPerUnit;
+        var biayaLayanan = kapasitasKontribusi * hppPerUnit;
 
-        totalOmzet += kapasitasKontribusi * hargaPerUnit;
-        totalBiaya += kapasitasKontribusi * hppPerUnit;
+        totalOmzet += omzetLayanan;
+        totalBiaya += biayaLayanan;
         totalKapasitasKontribusi += kapasitasKontribusi;
+
+        // Rincian per layanan utk dropdown "Kontribusi Omset per Layanan" -
+        // supaya user bisa lihat Kapasitas x Harga = Omset per baris, bukan
+        // cuma total gabungan.
+        serviceDetailByKey[s.key] = {
+          unit: isKgBased ? "kg" : "load",
+          kapasitasTotal: dashboardRound2_(kapasitasUnit),
+          kapasitasKontribusi: dashboardRound2_(kapasitasKontribusi),
+          hargaPerUnit: dashboardRound2_(hargaPerUnit),
+          hppPerUnit: dashboardRound2_(hppPerUnit),
+          omzetLayanan: dashboardRound2_(omzetLayanan),
+          biayaLayanan: dashboardRound2_(biayaLayanan)
+        };
       });
     }
 
@@ -1103,7 +1119,19 @@ function getDashboardPotensiOmsetSummary(cabangId) {
         estimasiBiayaProduksiPerBulan: dashboardRound2_(estimasiBiayaProduksiPerBulan),
         estimasiProfitPerBulan: dashboardRound2_(estimasiProfitPerBulan),
         serviceMix: activeServices.map(function (s) {
-          return { key: s.key, title: s.title, percent: s.percent };
+          var d = serviceDetailByKey[s.key] || null;
+          return {
+            key: s.key,
+            title: s.title,
+            percent: s.percent,
+            unit: d ? d.unit : "",
+            kapasitasTotal: d ? d.kapasitasTotal : 0,
+            kapasitasKontribusi: d ? d.kapasitasKontribusi : 0,
+            hargaPerUnit: d ? d.hargaPerUnit : 0,
+            hppPerUnit: d ? d.hppPerUnit : 0,
+            omzetLayanan: d ? d.omzetLayanan : 0,
+            biayaLayanan: d ? d.biayaLayanan : 0
+          };
         }),
         warnings: warnings,
         isComplete: isComplete

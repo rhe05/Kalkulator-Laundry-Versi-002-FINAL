@@ -781,9 +781,21 @@ menjalankan bootApp().
         var serviceMix = Array.isArray(d.serviceMix) ? d.serviceMix : [];
 
         var mixListHtml = serviceMix.map(function (s) {
-          return '<div class="potensi-mix-row">' +
-            '<span class="potensi-mix-row-title">' + escapeHtml(s.title || s.key) + '</span>' +
-            '<span class="potensi-mix-row-percent">' + escapeHtml(formatNum(s.percent, 0)) + '%</span>' +
+          var unitLabel = s.unit === 'kg' ? 'Kg' : 'Load';
+          var detailHtml =
+            '<div class="potensi-mix-detail-row"><span class="potensi-mix-detail-label">Kapasitas (kontribusi ' + escapeHtml(formatNum(s.percent, 0)) + '%)</span><span class="potensi-mix-detail-value">' + formatNum(s.kapasitasKontribusi) + ' ' + escapeHtml(unitLabel) + '</span></div>' +
+            '<div class="potensi-mix-detail-row"><span class="potensi-mix-detail-label">Harga Layanan</span><span class="potensi-mix-detail-value">' + money0(s.hargaPerUnit) + ' / ' + escapeHtml(unitLabel) + '</span></div>' +
+            '<div class="potensi-mix-detail-row potensi-mix-detail-highlight"><span class="potensi-mix-detail-label">Estimasi Omset</span><span class="potensi-mix-detail-value">' + money0(s.omzetLayanan) + '</span></div>' +
+            '<div class="potensi-mix-detail-row"><span class="potensi-mix-detail-label">HPP Layanan</span><span class="potensi-mix-detail-value">' + money0(s.hppPerUnit) + ' / ' + escapeHtml(unitLabel) + '</span></div>' +
+            '<div class="potensi-mix-detail-row"><span class="potensi-mix-detail-label">Estimasi Biaya Produksi</span><span class="potensi-mix-detail-value">' + money0(s.biayaLayanan) + '</span></div>';
+
+          return '<div class="potensi-mix-item">' +
+            '<div class="potensi-mix-row" onclick="togglePotensiMixDetail(this, event)">' +
+              '<span class="potensi-mix-row-title">' + escapeHtml(s.title || s.key) + '</span>' +
+              '<span class="potensi-mix-row-percent">' + escapeHtml(formatNum(s.percent, 0)) + '%</span>' +
+              '<span class="potensi-mix-arrow">&#9662;</span>' +
+            '</div>' +
+            '<div class="potensi-mix-detail">' + detailHtml + '</div>' +
           '</div>';
         }).join('');
 

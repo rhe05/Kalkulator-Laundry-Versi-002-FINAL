@@ -168,6 +168,13 @@ menjalankan bootApp().
     card.classList.toggle("is-open");
   }
 
+  window.togglePotensiMixDetail = function (row, evt) {
+    if (evt) evt.stopPropagation();
+    var item = row.closest(".potensi-mix-item");
+    if (!item) return;
+    item.classList.toggle("is-open");
+  }
+
   function buildBepChartSvg(d) {
     var fixedCost = Number(d.fixedCostPerBulan) || 0;
     var hpp = Number(d.rataHPP) || 0;
