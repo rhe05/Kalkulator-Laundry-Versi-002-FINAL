@@ -234,7 +234,6 @@ Jika tampilan gas, listrik, air, atau admin/nota bermasalah, mulai cek dari file
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .footer-bar { justify-content: flex-end; padding: 16px 32px; }
     .footer-bar .wrap-inner { max-width: 320px; }
-    #screenGasList .gas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   }
 
   /* Form Profil Outlet (screenForm) baru pecah 2 kolom di layar yang benar-benar
@@ -258,6 +257,21 @@ Jika tampilan gas, listrik, air, atau admin/nota bermasalah, mulai cek dari file
   /* screenMasterBiaya (gerbang pilih Kategori Biaya + Pilih Cabang) - sama
      kasusnya, .wrap dilebarkan khusus utk screen ini saja. */
   body:has(#screenMasterBiaya.active) .wrap { width: min(100%, 1080px); }
+
+  /* Semua layar isian Master Biaya (Gas/Listrik/Air/Chemical/Packing/Nota) -
+     sama persis kasusnya, .wrap tidak pernah ikut dilebarkan jadi tetap
+     kejepit versi HP walau di layar desktop. Rule ini AMAN tanpa @media
+     krn width:min(100%,1080px) otomatis balik ke 100% sendiri di layar
+     sempit (HP tidak berubah). */
+  body:has(#screenGasList.active) .wrap,
+  body:has(#screenGasForm.active) .wrap,
+  body:has(#screenListrikForm.active) .wrap,
+  body:has(#screenAirForm.active) .wrap,
+  body:has(#screenNotaKasirForm.active) .wrap,
+  body:has(#screenChemicalList.active) .wrap,
+  body:has(#screenChemicalForm.active) .wrap,
+  body:has(#screenPackingList.active) .wrap,
+  body:has(#screenPackingForm.active) .wrap { width: min(100%, 1080px); }
 
   @media (min-width: 1100px) {
     .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
@@ -288,6 +302,36 @@ Jika tampilan gas, listrik, air, atau admin/nota bermasalah, mulai cek dari file
        ganjil di grid 2 kolom - dibuat selebar penuh supaya tidak "nggantung"
        sendirian di kolom kiri dgn ruang kosong besar di sebelahnya. */
     #screenRingkasan .ringkasan-grid #rSetrikaWrap:not(.ringkasan-solo) { grid-column: 1 / -1; }
+
+    /* Daftar Gas/Chemical/Packing (semuanya reuse class .gas-grid) jadi
+       grid 2 kolom di desktop, sama alasannya spt daftar cabang di atas -
+       breakpoint dinaikkan ke 1100px (dulu 760px cuma utk Gas & tidak
+       pernah kepakai krn .wrap belum dilebarkan). */
+    #screenGasList .gas-grid,
+    #screenChemicalList .gas-grid,
+    #screenPackingList .gas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* Form Gas: pasangkan Harga per tabung + Estimasi pemakaian jadi 1
+       baris (row2 baru, lihat Screen_BiayaGas.html) supaya tidak makan
+       tinggi 2 baris terpisah percuma di layar lebar. */
+    #screenGasForm .row2-desktop { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Form Air: pisah jadi 2 kolom (kiri = pilihan sumber air + input
+       dinamis, kanan = panel Hasil Otomatis - sticky spy tetap kelihatan
+       sambil isi form kiri) - #screenAirForm cuma py 5 anak langsung dgn
+       urutan tetap, jadi aman ditarget lewat grid-column/row eksplisit
+       tanpa perlu ubah HTML sama sekali. */
+    #screenAirForm {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      column-gap: 24px;
+      align-items: start;
+    }
+    #screenAirForm > .list-header { grid-column: 1 / -1; }
+    #screenAirForm > .air-sumber-panel { grid-column: 1; grid-row: 2; }
+    #screenAirForm > #airInputContainer { grid-column: 1; grid-row: 3; }
+    #screenAirForm > .group-divider { grid-column: 2; grid-row: 2; margin-top: 0; }
+    #screenAirForm > .air-result-panel { grid-column: 2; grid-row: 3; position: sticky; top: 24px; }
   }
 
   @media (min-width: 760px) {
