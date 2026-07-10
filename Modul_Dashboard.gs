@@ -44,7 +44,18 @@ function dashboardFormatRp_(value) {
   return sign + "Rp" + Math.abs(num).toLocaleString("id-ID");
 }
 
+// Cache baca-sekali-per-eksekusi: getDashboardFullSummary() memanggil 7
+// fungsi kartu, dan HAMPIR SEMUANYA lewat dashboardGetCabangRows_() sendiri-
+// sendiri -> listCabang() (JSON.parse + computeSummary_ tiap cabang) diulang
+// berkali-kali padahal hasilnya identik dalam satu kali load dashboard.
+// Variabel global Apps Script reset otomatis tiap eksekusi google.script.run
+// baru, jadi aman dari data basi lintas request (pola sama seperti
+// _dataSheetCache_ di Util_Penyimpanan.gs).
+let _dashboardCabangRowsCache_ = null;
+
 function dashboardGetCabangRows_() {
+  if (_dashboardCabangRowsCache_) return _dashboardCabangRowsCache_;
+
   if (typeof listCabang !== "function") {
     return {
       ok: false,
@@ -62,10 +73,11 @@ function dashboardGetCabangRows_() {
     };
   }
 
-  return {
+  _dashboardCabangRowsCache_ = {
     ok: true,
     data: dashboardArray_(res.data)
   };
+  return _dashboardCabangRowsCache_;
 }
 
 function dashboardOutletName_(item) {

@@ -235,20 +235,41 @@ menjalankan bootApp().
     var mySeq = dashboardRequestSeq;
 
     setDashboardAllLoading(skipCabangCardLoading);
+
+    // Optimasi kecepatan: dulu getDashboardFullSummary() BARU ditembak
+    // SETELAH listCabang() selesai (2 round-trip berurutan). Kalau sudah ada
+    // outlet id dari sesi sebelumnya (var di memori atau localStorage),
+    // langsung tembak getDashboardFullSummary() BARENGAN dgn listCabang()
+    // (paralel) -- motong 1 round-trip network penuh dari waktu loading
+    // dashboard. listCabang() tetap jalan spt biasa utk cabangListCache &
+    // outlet picker; kalau ternyata id itu sudah tidak valid lagi (outlet
+    // baru dihapus), listCabang() yang menentukan ulang & memicu fetch
+    // susulan otomatis (self-healing, lihat pengecekan beforeId di bawah).
+    var fastOutletId = dashboardSelectedOutletId || getStoredOutletId_();
+    var firedFast = false;
+    if (fastOutletId) {
+      dashboardSelectedOutletId = fastOutletId;
+      fetchDashboardFullSummary_(mySeq);
+      firedFast = true;
+    }
+
     google.script.run
       .withSuccessHandler(function (res) {
         if (mySeq !== dashboardRequestSeq) return;
+        var beforeId = dashboardSelectedOutletId;
         if (res && res.ok) {
           cabangListCache = res.data || [];
           ensureDashboardOutletSelection_();
         } else {
           cabangListCache = [];
         }
-        fetchDashboardFullSummary_(mySeq);
+        if (!firedFast || dashboardSelectedOutletId !== beforeId) {
+          fetchDashboardFullSummary_(mySeq);
+        }
       })
       .withFailureHandler(function () {
         if (mySeq !== dashboardRequestSeq) return;
-        fetchDashboardFullSummary_(mySeq);
+        if (!firedFast) fetchDashboardFullSummary_(mySeq);
       })
       .listCabang();
   }
