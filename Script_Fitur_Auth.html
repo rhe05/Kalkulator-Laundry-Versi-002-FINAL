@@ -199,6 +199,7 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
     if (logoutBtnEl) logoutBtnEl.style.display = "none";
     var footerEl = document.getElementById("footerBar");
     if (footerEl) footerEl.style.display = "none";
+    if (typeof sidebarHide_ === "function") sidebarHide_();
     authGoTo("login");
   };
 
@@ -215,6 +216,7 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
     if (appRootEl) appRootEl.style.display = "block";
     if (appHeaderEl) appHeaderEl.style.display = "flex";
     if (logoutBtnEl) logoutBtnEl.style.display = "inline-flex";
+    if (typeof sidebarShow_ === "function") sidebarShow_();
     showScreen("menu");
   }
 </script>

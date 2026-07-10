@@ -30,6 +30,9 @@ menjalankan bootApp().
     if (name === "menu" && typeof refreshDashboard === "function") {
       refreshDashboard();
     }
+    if (typeof updateSidebarActive_ === "function") {
+      updateSidebarActive_(name);
+    }
     renderFooter();
   }
 

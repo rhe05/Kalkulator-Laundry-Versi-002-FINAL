@@ -1,0 +1,117 @@
+<!--
+===============================================================================
+FILE: Style_Module_Sidebar.html
+PROJECT: Kalkulator Laundry Versi 002
+FUNGSI: Style sidebar navigasi - KHUSUS DESKTOP (>=1100px). HP TIDAK PERNAH
+menampilkan sidebar ini (dijaga 2 lapis: default display:none, DAN
+@media(max-width:1099px){display:none!important} supaya walau ada bug
+lain sidebar tidak pernah nongol di HP - lihat catatan insiden Form Air
+sebelumnya).
+===============================================================================
+-->
+<style>
+  .app-sidebar {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    flex-direction: column;
+    padding: 18px 14px;
+    gap: 18px;
+    z-index: 40;
+    overflow-y: auto;
+    transition: width 0.18s ease;
+  }
+  .app-sidebar.is-visible { display: flex; }
+
+  .sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .sidebar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+  .sidebar-brand svg {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--brass);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .sidebar-brand-text {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-toggle-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--text-dim);
+  }
+  .sidebar-toggle-btn:hover { border-color: var(--sage); color: var(--sage); }
+  .sidebar-toggle-btn svg { transition: transform 0.2s ease; }
+
+  .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+  .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    text-align: left;
+    width: 100%;
+  }
+  .sidebar-nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .sidebar-nav-item.active { background: var(--sage-dim); color: var(--sage); font-weight: 700; }
+  .sidebar-nav-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+  .sidebar-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .sidebar-bottom { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
+  .sidebar-logout-item:hover { background: var(--red-dim); color: var(--red); }
+
+  /* Ciutkan: cuma ikon, label & teks brand disembunyikan. */
+  .app-sidebar.collapsed { width: 68px; }
+  .app-sidebar.collapsed .sidebar-brand-text,
+  .app-sidebar.collapsed .sidebar-nav-label { display: none; }
+  .app-sidebar.collapsed .sidebar-nav-item { justify-content: center; }
+  .app-sidebar.collapsed .sidebar-toggle-btn svg { transform: rotate(180deg); }
+
+  /* Geser seluruh konten (.wrap) ke kanan supaya tidak ketiban sidebar -
+     HANYA aktif kalau sidebar benar-benar tampil (class .is-visible, diatur
+     JS cuma saat sudah login & desktop - lihat Script_Fitur_Sidebar.html). */
+  body:has(.app-sidebar.is-visible) { padding-left: 264px; transition: padding-left 0.18s ease; }
+  body:has(.app-sidebar.is-visible.collapsed) { padding-left: 92px; }
+
+  /* Jaring pengaman HP: apa pun state class-nya, sidebar WAJIB tidak
+     tampil & body WAJIB tidak ikut digeser di bawah 1100px. */
+  @media (max-width: 1099px) {
+    .app-sidebar { display: none !important; }
+    body:has(.app-sidebar) { padding-left: clamp(12px, 4vw, 16px) !important; }
+  }
+</style>

@@ -1,0 +1,97 @@
+<!--
+===============================================================================
+FILE: Script_Fitur_Sidebar.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Sidebar navigasi - KHUSUS DESKTOP.
+
+FUNGSI:
+- sidebarGoTo(section): pintu masuk baru yang manggil fungsi open...() yang
+  SAMA PERSIS dipakai card Dashboard - tidak ada layar baru, tidak ada logic
+  baru, cuma cara masuk tambahan.
+- toggleSidebar(): ciutkan/lebarkan, status disimpan localStorage supaya
+  tidak balik ke lebar penuh tiap pindah layar (cuma berubah saat tombol
+  diklik, sesuai permintaan).
+- updateSidebarActive_(screenName): dipanggil dari showScreen() (SATU baris
+  tambahan, guarded typeof) supaya menu yang aktif di sidebar ikut ter-highlight
+  correctly, layar apapun yang lagi dibuka (termasuk kalau dibuka dari card
+  Dashboard di HP, bukan cuma dari klik sidebar).
+- sidebarShow_()/sidebarHide_(): dipanggil dari Script_Fitur_Auth.html
+  (authEnterApp_/authLogout) - sidebar cuma tampil kalau sudah login.
+
+Include SETELAH Script_Shared_Navigasi.html & Script_Fitur_Auth.html (butuh
+showScreen/authLogout sudah terdefinisi lebih dulu utk referensi function),
+SEBELUM Script_Boot_Main.html.
+===============================================================================
+-->
+<script>
+"use strict";
+  var SIDEBAR_COLLAPSE_KEY_ = "klSidebarCollapsed";
+
+  // Peta screen (key SCREEN_ELEMENT_ID di Script_Shared_Util.html) -> bagian
+  // sidebar mana yang harus ter-highlight aktif.
+  var SIDEBAR_SECTION_BY_SCREEN_ = {
+    menu: "menu",
+    list: "cabang", ringkasan: "cabang", form: "cabang",
+    masterBiaya: "masterBiaya",
+    gasList: "masterBiaya", gasForm: "masterBiaya",
+    chemicalList: "masterBiaya", chemicalForm: "masterBiaya",
+    packingList: "masterBiaya", packingForm: "masterBiaya",
+    listrikForm: "masterBiaya", airForm: "masterBiaya", notaKasirForm: "masterBiaya",
+    strukturHPPList: "strukturHPP", strukturHPPDetail: "strukturHPP",
+    hargaLayananList: "hargaLayanan", hargaLayananDetail: "hargaLayanan",
+    biayaTetapList: "biayaTetap", biayaTetapForm: "biayaTetap"
+  };
+
+  window.sidebarGoTo = function (section) {
+    switch (section) {
+      case "menu": showScreen("menu"); break;
+      case "cabang": if (typeof openScreenCabangList === "function") openScreenCabangList(); break;
+      case "masterBiaya": if (typeof openScreenMasterBiaya === "function") openScreenMasterBiaya(); break;
+      case "strukturHPP": if (typeof openStrukturHPPOutletList === "function") openStrukturHPPOutletList(); break;
+      case "hargaLayanan": if (typeof openHargaLayananOutletList === "function") openHargaLayananOutletList(); break;
+      case "biayaTetap": if (typeof openBiayaTetapOutletList === "function") openBiayaTetapOutletList(); break;
+    }
+  };
+
+  function updateSidebarActive_(screenName) {
+    var section = SIDEBAR_SECTION_BY_SCREEN_[screenName] || "menu";
+    var items = document.querySelectorAll(".sidebar-nav-item[data-sidebar-section]");
+    items.forEach(function (el) {
+      el.classList.toggle("active", el.getAttribute("data-sidebar-section") === section);
+    });
+  }
+
+  function sidebarIsCollapsed_() {
+    try {
+      return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY_) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  window.toggleSidebar = function () {
+    var el = document.getElementById("appSidebar");
+    if (!el) return;
+    var collapsed = el.classList.toggle("collapsed");
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY_, collapsed ? "1" : "0");
+    } catch (e) {}
+  };
+
+  // sidebarShow_/sidebarHide_: dipanggil dari authEnterApp_()/authLogout()
+  // di Script_Fitur_Auth.html - sidebar cuma tampil setelah login sukses,
+  // sembunyi lagi begitu logout (di HP tetap tidak pernah tampil sama
+  // sekali, dijaga CSS @media di Style_Module_Sidebar.html).
+  function sidebarShow_() {
+    var el = document.getElementById("appSidebar");
+    if (!el) return;
+    el.classList.add("is-visible");
+    if (sidebarIsCollapsed_()) el.classList.add("collapsed");
+    updateSidebarActive_(view.screen);
+  }
+
+  function sidebarHide_() {
+    var el = document.getElementById("appSidebar");
+    if (el) el.classList.remove("is-visible");
+  }
+</script>

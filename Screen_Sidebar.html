@@ -1,0 +1,70 @@
+<!--
+===============================================================================
+FILE: Screen_Sidebar.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Sidebar navigasi - KHUSUS DESKTOP (>=1100px), tidak tampil di HP sama sekali.
+
+FUNGSI:
+Menu tetap di sisi kiri, alternatif cara masuk ke 6 bagian aplikasi yang
+sama persis dengan card Dashboard (Profil Outlet/Master Biaya/Struktur HPP/
+Harga Layanan/Biaya Tetap) - tidak membuat layar baru, cuma pintu masuk baru
+yang manggil fungsi open...() yang sudah ada.
+
+Ditaruh DILUAR #appRoot (sejajar .wrap di Index.html) supaya bisa fixed
+position penuh dari atas ke bawah viewport, terlepas dari lebar .wrap yang
+berubah-ubah per layar.
+
+Di-include dari Index.html. Jangan tambah tag <script>/<style> di file ini.
+===============================================================================
+-->
+<nav class="app-sidebar" id="appSidebar" aria-label="Navigasi utama">
+  <div class="sidebar-top">
+    <div class="sidebar-brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect x="7" y="5" width="18" height="22" rx="4"></rect>
+        <path d="M11 9h2"></path>
+        <path d="M17 9h4"></path>
+        <circle cx="16" cy="18" r="6"></circle>
+        <path d="M12.5 18c1.2-1.4 2.4-1.4 3.5 0s2.3 1.4 3.5 0"></path>
+      </svg>
+      <span class="sidebar-brand-text">Kalkulator Laundry</span>
+    </div>
+    <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" aria-label="Ciutkan/lebarkan sidebar">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-nav">
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="menu" onclick="sidebarGoTo('menu')">
+      <span class="sidebar-nav-icon">&#127968;</span>
+      <span class="sidebar-nav-label">Dashboard</span>
+    </button>
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="cabang" onclick="sidebarGoTo('cabang')">
+      <span class="sidebar-nav-icon">&#127981;</span>
+      <span class="sidebar-nav-label">Profil Outlet</span>
+    </button>
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="masterBiaya" onclick="sidebarGoTo('masterBiaya')">
+      <span class="sidebar-nav-icon">&#128293;</span>
+      <span class="sidebar-nav-label">Master Biaya</span>
+    </button>
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="strukturHPP" onclick="sidebarGoTo('strukturHPP')">
+      <span class="sidebar-nav-icon">&#128202;</span>
+      <span class="sidebar-nav-label">Struktur Biaya HPP</span>
+    </button>
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="hargaLayanan" onclick="sidebarGoTo('hargaLayanan')">
+      <span class="sidebar-nav-icon">&#128176;</span>
+      <span class="sidebar-nav-label">Harga Layanan</span>
+    </button>
+    <button type="button" class="sidebar-nav-item" data-sidebar-section="biayaTetap" onclick="sidebarGoTo('biayaTetap')">
+      <span class="sidebar-nav-icon">&#128179;</span>
+      <span class="sidebar-nav-label">Biaya Tetap Outlet</span>
+    </button>
+  </div>
+
+  <div class="sidebar-bottom">
+    <button type="button" class="sidebar-nav-item sidebar-logout-item" onclick="authLogout()">
+      <span class="sidebar-nav-icon">&#8618;</span>
+      <span class="sidebar-nav-label">Keluar</span>
+    </button>
+  </div>
+</nav>
