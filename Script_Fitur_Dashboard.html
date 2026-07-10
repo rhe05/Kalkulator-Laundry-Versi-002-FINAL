@@ -831,9 +831,6 @@ menjalankan bootApp().
           '</div>';
         } else {
           html = '<div class="potensi-card">' +
-            '<div class="potensi-top">' +
-              '<span class="potensi-top-label">Estimasi di kapasitas penuh</span>' +
-            '</div>' +
             '<div class="potensi-estimate">' +
               '<div class="potensi-estimate-row"><span class="potensi-estimate-label">Estimasi Omset</span><span class="potensi-estimate-value">' + money0(d.estimasiOmsetPerBulan) + '</span></div>' +
               '<div class="potensi-estimate-row"><span class="potensi-estimate-label">Biaya Produksi (Variable Cost)</span><span class="potensi-estimate-value potensi-estimate-minus">&minus; ' + money0(d.estimasiBiayaProduksiPerBulan) + '</span></div>' +
@@ -841,8 +838,11 @@ menjalankan bootApp().
               '<div class="potensi-estimate-row potensi-estimate-row-profit"><span class="potensi-estimate-label">Estimasi Profit</span><span class="potensi-estimate-value ' + (d.estimasiProfitPerBulan >= 0 ? 'potensi-profit-pos' : 'potensi-profit-neg') + '">' + money0(d.estimasiProfitPerBulan) + '</span></div>' +
             '</div>' +
             (mixListHtml ? '<div class="potensi-mix-list">' +
-              '<div class="potensi-mix-title">Kontribusi Omset per Layanan</div>' +
-              mixListHtml +
+              '<div class="potensi-mix-head" onclick="togglePotensiMixList(this, event)">' +
+                '<span class="potensi-mix-title">Kontribusi Omset per Layanan</span>' +
+                '<span class="potensi-mix-list-arrow">&#9662;</span>' +
+              '</div>' +
+              '<div class="potensi-mix-list-body">' + mixListHtml + '</div>' +
             '</div>' : '') +
             (warnings.length > 0 ? '<div class="bep-warning">' + warnings.map(function(w) { return escapeHtml(w); }).join(" · ") + '</div>' : "") +
             '<div class="potensi-basis-note">' +

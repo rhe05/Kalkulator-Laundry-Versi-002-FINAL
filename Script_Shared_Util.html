@@ -182,6 +182,13 @@ menjalankan bootApp().
     note.classList.toggle("is-open");
   }
 
+  window.togglePotensiMixList = function (head, evt) {
+    if (evt) evt.stopPropagation();
+    var wrap = head.closest(".potensi-mix-list");
+    if (!wrap) return;
+    wrap.classList.toggle("is-open");
+  }
+
   function buildBepChartSvg(d) {
     var fixedCost = Number(d.fixedCostPerBulan) || 0;
     var hpp = Number(d.rataHPP) || 0;

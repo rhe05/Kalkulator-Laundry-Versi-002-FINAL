@@ -765,21 +765,6 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     width: 100%;
   }
 
-  .potensi-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .potensi-top-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-faint);
-  }
-
   .potensi-estimate {
     display: flex;
     flex-direction: column;
@@ -820,7 +805,14 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
   .potensi-mix-list {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+  }
+
+  .potensi-mix-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
   }
 
   .potensi-mix-title {
@@ -829,8 +821,34 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-faint);
-    margin-bottom: 2px;
   }
+
+  .potensi-mix-list-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .potensi-mix-list.is-open .potensi-mix-list-arrow { transform: rotate(180deg); }
+
+  .potensi-mix-list-body {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  .potensi-mix-list.is-open .potensi-mix-list-body { display: flex; }
 
   .potensi-mix-item { border-bottom: 1px solid var(--border); padding-bottom: 4px; }
   .potensi-mix-item:last-of-type { border-bottom: none; padding-bottom: 0; }
