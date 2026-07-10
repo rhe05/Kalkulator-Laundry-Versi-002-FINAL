@@ -82,11 +82,8 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     .desktop-kpi-value.pos { color: var(--sage); }
     .desktop-kpi-value.neg { color: var(--red); }
 
-    /* Grafik BEP dilebarkan (1.8fr), Master Biaya dikecilkan (1fr) - SVG
-       grafiknya (.bep-chart-svg) sudah width:100% + preserveAspectRatio="none"
-       di Script_Shared_Util.html, jadi otomatis presisi mengisi penuh
-       berapa pun lebar barunya, tidak perlu diubah lagi. */
-    .desktop-summary-row { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; align-items: start; }
+    /* Grafik BEP dilebarkan lagi (2.4fr), Master Biaya dikecilkan lagi (0.9fr). */
+    .desktop-summary-row { display: grid; grid-template-columns: 2.4fr 0.9fr; gap: 16px; align-items: start; }
     .desktop-summary-panel {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -96,18 +93,27 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     }
     .desktop-summary-full { width: 100%; }
 
-    /* Harga Layanan di panel ringkasan desktop: kartu per layanan sejajar
-       ke samping (grid), bukan ditumpuk ke bawah spt versi kartu ringkas
-       HP - DIBATASI ke #desktopHargaLayanan saja (id spesifik), .hl-item
-       di card ringkas HP (#dashboardHargaLayananSummary) TIDAK ikut berubah. */
+    /* Grafik BEP di panel desktop: .bep-chart-svg bawaan (dipakai bareng
+       kartu ringkas HP) tingginya fixed 120px - begitu kolomnya dilebarkan
+       (2.4fr), rasio lebar:tinggi jadi terlalu ekstrem & grafiknya
+       kelihatan "penyet". Tinggi dinaikkan KHUSUS di dalam #desktopBepChart
+       supaya proporsinya presisi lagi - kartu ringkas HP (#dashboardBEPSummary)
+       TIDAK ikut berubah krn scoped ke id ini saja. */
+    #desktopBepChart .bep-chart-svg { height: 260px; }
+
+    /* Harga Layanan di panel ringkasan desktop: SELALU 1 baris sejajar
+       berapa pun jumlah kartunya (flex nowrap, bukan grid auto-fit yang
+       bisa pecah ke baris baru) - DIBATASI ke #desktopHargaLayanan saja,
+       .hl-item di card ringkas HP (#dashboardHargaLayananSummary) TIDAK
+       ikut berubah. */
     #desktopHargaLayanan {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      display: flex;
+      flex-wrap: nowrap;
       gap: 12px;
       align-items: start;
     }
-    #desktopHargaLayanan .hl-item { margin-bottom: 0; }
-    #desktopHargaLayanan .hl-note { grid-column: 1 / -1; }
+    #desktopHargaLayanan .hl-item { margin-bottom: 0; flex: 1 1 0; min-width: 0; }
+    #desktopHargaLayanan .hl-note { flex-shrink: 0; }
 
     .desktop-panel-title {
       font-family: var(--font-display);
