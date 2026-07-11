@@ -62,6 +62,14 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
        s/d monitor besar), tanpa perlu redesign ulang tiap kali. DIBATASI
        ke body:has(#screenMenu.active) - HP TIDAK PERNAH masuk breakpoint
        ini & layar lain (Master Biaya dst) TIDAK ikut jadi fixed-height. */
+    /* html sudah punya overflow-x:clip eksplisit (Style_Base.html) - begitu
+       html men-declare overflow apapun (bukan "visible" bawaan), browser
+       BERHENTI mem-propagate overflow:hidden dari body ke viewport (aturan
+       spec CSS overflow propagation). Makanya body overflow:hidden SAJA
+       tidak cukup menghentikan scroll halaman - overflow-y wajib diset
+       eksplisit juga di html supaya benar-benar tidak ada scrollbar
+       halaman. HP tidak pernah masuk breakpoint ini. */
+    html:has(#screenMenu.active) { overflow-y: hidden; }
     body:has(#screenMenu.active) {
       height: 100vh;
       overflow: hidden;
@@ -150,7 +158,11 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     }
     .desktop-kpi-number {
       font-family: var(--font-display);
-      font-size: 30px;
+      /* clamp, bukan angka tetap 30px - supaya angka 7 digit (mis.
+         "7.065.000") TIDAK terpotong "..." di jendela browser yang tidak
+         selebar 1600px penuh (mis. laptop/window kecil) - ukuran ikut
+         menyesuaikan lebar kartu, tetap besar & presisi di layar lebar. */
+      font-size: clamp(18px, 1.5vw, 27px);
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.02em;
