@@ -343,13 +343,85 @@ divider, mesin, okupansi + tooltip).
       border-radius: 999px; padding: 2px 8px; margin: 0 2px; white-space: nowrap; flex-shrink: 0;
     }
 
-    /* Satu kartu besar penampung profil outlet + sedikit diperbesar supaya
-       lega di layar lebar (bukan sekecil kartu ringkas HP). */
+    /* Satu kartu besar penampung profil outlet. */
     #screenList .profil-outlet-desktop-panel { padding: 22px 24px; }
     #screenList .profil-outlet-card { gap: 16px; }
-    #screenList .profil-outlet-kpi { padding: 18px 22px; }
-    #screenList .profil-kpi-value { font-size: 26px; }
-    #screenList .profil-mesin-count { font-size: 22px; }
+
+    /* Grid rincian: cuci/pengering/setrika berdampingan (auto-fit -> 1 kolom
+       kalau cuma setrika, 2 kolom cuci+kering, 3 kolom kalau ada setrika).
+       Muat 1 layar tanpa scroll di lebar >=1100px. */
+    #screenList .profil-outlet-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      gap: 14px;
+    }
+    #screenList .profil-detail-panel {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    #screenList .profil-detail-head {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #screenList .profil-detail-head.sage { color: var(--sage); }
+    #screenList .profil-detail-head.brass { color: var(--brass); }
+    #screenList .profil-detail-head.volt { color: var(--volt); }
+    #screenList .profil-detail-topstats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    #screenList .profil-detail-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+    #screenList .profil-detail-stat .k {
+      font-size: 10px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 600;
+    }
+    #screenList .profil-detail-stat .v {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    #screenList .profil-detail-stat .v small { font-size: 10px; font-weight: 500; color: var(--text-faint); }
+    #screenList .profil-detail-scale { display: flex; flex-direction: column; }
+    #screenList .profil-detail-scale .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+    }
+    #screenList .profil-detail-scale .row:last-child { border-bottom: none; }
+    #screenList .profil-detail-scale .row .k { color: var(--text-dim); }
+    #screenList .profil-detail-scale .row .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+    #screenList .profil-detail-scale .row.hi .v { color: var(--brass); }
+    #screenList .profil-detail-okupansi {
+      font-size: 11px;
+      color: var(--text-faint);
+      border-top: 1px dashed var(--border);
+      padding-top: 8px;
+    }
 
     /* Baris tombol Edit/Hapus di dalam kartu (menggantikan footer bar). */
     #screenList .profil-outlet-desktop-actions {

@@ -114,14 +114,103 @@ menjalankan bootApp().
     }
     if (actions) actions.style.display = "";
 
-    host.innerHTML = (typeof buildProfilOutletCardHtml_ === "function")
-      ? buildProfilOutletCardHtml_(mapCabangRowToProfilSummary_(current))
-      : "";
+    host.innerHTML = buildProfilOutletDetailHtml_(current);
 
     var delBtn = document.getElementById("profilOutletDeleteBtn");
     var editBtn = document.getElementById("profilOutletEditBtn");
     if (delBtn) delBtn.onclick = function () { openConfirmDelete(current.id); };
     if (editBtn) editBtn.onclick = function () { openFormEdit(current.id); };
+  }
+
+  /**
+   * buildProfilOutletDetailHtml_: kartu Profil Outlet DESKTOP versi LENGKAP -
+   * rincian kapasitas per hari / minggu / bulan untuk cuci, pengering, DAN
+   * setrika. Dibangun langsung dari item.summary (hasil computeSummary_ di
+   * listCabang) supaya setrika ikut tampil - beda dgn kartu Dashboard yang
+   * ringkas (hanya per bulan) & sengaja dibiarkan apa adanya.
+   *
+   * Catatan: dulu setrika tidak muncul karena listCabang TIDAK mengirim
+   * field top-level "totalUnitSetrika" (hanya totalUnitCuci/ Pengering), jadi
+   * mapCabangRowToProfilSummary_ selalu menganggap unit setrika = 0. Di sini
+   * kita pakai summary.setrika.totalUnit yang memang tersedia.
+   */
+  function buildProfilOutletDetailHtml_(item) {
+    var summary = item.summary || {};
+    var okup = item.okupansi || {};
+    var kategori = item.kategoriLayanan || "";
+
+    var setrikaOnly = (typeof isSetrikaOnlyKategori === "function")
+      ? isSetrikaOnlyKategori(kategori) : (kategori === "jasa_setrika");
+    var kiloan = (typeof isKiloanKategori === "function")
+      ? isKiloanKategori(kategori) : (kategori === "drop_off" || kategori === "hybrid");
+
+    var setrikaSum = summary.setrika || {};
+    var showSetrika = (kiloan || setrikaOnly) && Number(setrikaSum.totalUnit || 0) > 0;
+
+    var totalMenit = computeDurasiOperasional(item.jamBukaMenit, item.jamTutupMenit);
+    var jamText = formatJam(item.jamBukaMenit) + " – " + formatJam(item.jamTutupMenit) +
+      " · " + formatNum(totalMenit / 60) + " jam";
+    var katLabel = (typeof KATEGORI_LABEL !== "undefined" && KATEGORI_LABEL[kategori])
+      ? KATEGORI_LABEL[kategori] : (kategori || "-");
+
+    var panels = "";
+    if (!setrikaOnly) {
+      panels += buildProfilLoadPanel_("Mesin Cuci", "sage", summary.cuci || {}, okup.cuciPersen);
+      panels += buildProfilLoadPanel_("Mesin Pengering", "brass", summary.kering || {}, okup.keringPersen);
+    }
+    if (showSetrika) {
+      panels += buildProfilSetrikaPanel_(setrikaSum, okup.setrikaPersen);
+    }
+    if (!panels) {
+      panels = '<div class="dashboard-empty">Belum ada mesin ditambahkan untuk outlet ini.</div>';
+    }
+
+    return (
+      '<div class="profil-outlet-card">' +
+        '<div class="profil-outlet-meta">' +
+          '<span class="profil-outlet-kategori">' + escapeHtml(katLabel) + '</span>' +
+          '<span class="profil-outlet-jam">' + escapeHtml(jamText) + '</span>' +
+        '</div>' +
+        '<div class="profil-outlet-detail-grid">' + panels + '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildProfilLoadPanel_(title, tone, g, okupPersen) {
+    return (
+      '<div class="profil-detail-panel">' +
+        '<div class="profil-detail-head ' + tone + '">' + escapeHtml(title) + '</div>' +
+        '<div class="profil-detail-topstats">' +
+          '<div class="profil-detail-stat"><span class="k">Total unit</span><span class="v">' + escapeHtml(String(g.totalUnit || 0)) + '</span></div>' +
+          '<div class="profil-detail-stat"><span class="k">Maksimal / hari</span><span class="v">' + escapeHtml(formatNum(g.loadMaksimalPerHari || 0)) + ' <small>load</small></span></div>' +
+        '</div>' +
+        '<div class="profil-detail-scale">' +
+          '<div class="row hi"><span class="k">Load per hari</span><span class="v">' + escapeHtml(formatNum(g.loadPerHari || 0)) + ' load</span></div>' +
+          '<div class="row"><span class="k">Load per minggu</span><span class="v">' + escapeHtml(formatNum(g.loadPerMinggu || 0)) + ' load</span></div>' +
+          '<div class="row"><span class="k">Load per bulan</span><span class="v">' + escapeHtml(formatNum(g.loadPerBulan || 0)) + ' load</span></div>' +
+        '</div>' +
+        '<div class="profil-detail-okupansi">Okupansi ' + escapeHtml(String(Number(okupPersen) || 0)) + '%</div>' +
+      '</div>'
+    );
+  }
+
+  function buildProfilSetrikaPanel_(g, okupPersen) {
+    return (
+      '<div class="profil-detail-panel">' +
+        '<div class="profil-detail-head volt">Mesin Setrika</div>' +
+        '<div class="profil-detail-topstats">' +
+          '<div class="profil-detail-stat"><span class="k">Total unit</span><span class="v">' + escapeHtml(String(g.totalUnit || 0)) + '</span></div>' +
+          '<div class="profil-detail-stat"><span class="k">Maksimal / jam</span><span class="v">' + escapeHtml(formatNum(g.kapasitasMaksimalKgPerJam || 0)) + ' <small>kg</small></span></div>' +
+        '</div>' +
+        '<div class="profil-detail-scale">' +
+          '<div class="row hi"><span class="k">Kg per jam</span><span class="v">' + escapeHtml(formatNum(g.kapasitasKgPerJam || 0)) + ' kg</span></div>' +
+          '<div class="row"><span class="k">Kg per hari</span><span class="v">' + escapeHtml(formatNum(g.kgPerHari || 0)) + ' kg</span></div>' +
+          '<div class="row"><span class="k">Kg per minggu</span><span class="v">' + escapeHtml(formatNum(g.kgPerMinggu || 0)) + ' kg</span></div>' +
+          '<div class="row"><span class="k">Kg per bulan</span><span class="v">' + escapeHtml(formatNum(g.kgPerBulan || 0)) + ' kg</span></div>' +
+        '</div>' +
+        '<div class="profil-detail-okupansi">Okupansi ' + escapeHtml(String(Number(okupPersen) || 0)) + '%</div>' +
+      '</div>'
+    );
   }
 
   /* Fungsi umum tahap 5 dipindahkan ke file Script_Shared_*.html. */
