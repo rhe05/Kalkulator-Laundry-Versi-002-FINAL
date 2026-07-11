@@ -567,13 +567,6 @@ menjalankan bootApp().
 
   function renderDashboardMasterBiayaCard(res, targetId) {
         targetId = targetId || "dashboardMasterBiayaSummary";
-        // Panel ringkasan eksekutif desktop ("desktopMasterBiaya") butuh baris
-        // "Total Biaya / Load" di atas breakdown - kartu ringkas HP
-        // ("dashboardMasterBiayaSummary") TIDAK ikut berubah (isDesktopPanel
-        // dicek dari targetId, bukan lebar layar, jadi 100% aman utk mobile).
-        // Angka totalnya cuma penjumlahan biayaPerLoad yang SUDAH ada di
-        // data komponen (tidak ada rumus/backend baru).
-        var isDesktopPanel = targetId === "desktopMasterBiaya";
         if (!res || !res.ok) {
           setDashboardCardError(targetId, res && res.error ? res.error : "Data master biaya belum bisa dibaca.");
           return;
@@ -606,16 +599,7 @@ menjalankan bootApp().
               '</div>' +
             '</div>';
           }).join('');
-          var totalHtml = '';
-          if (isDesktopPanel) {
-            var totalPerLoad = komponen.reduce(function (s, k) { return s + (Number(k.biayaPerLoad) || 0); }, 0);
-            totalHtml = '<div class="mb-desktop-total">' +
-              '<div class="mb-desktop-total-label">Total Biaya / Load</div>' +
-              '<div class="mb-desktop-total-value">' + money0(totalPerLoad) + '</div>' +
-            '</div>';
-          }
           return '<div class="mb-card">' +
-            totalHtml +
             (komponen.length > 0 ? '<div class="mb-komponen-list">' + komponenHtml + '</div>' : '') +
           '</div>';
         }).join('');
