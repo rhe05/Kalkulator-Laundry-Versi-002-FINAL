@@ -240,19 +240,6 @@ menjalankan bootApp().
     var badgeX = Math.min(Math.max(xBep - badgeW / 2, plotL), plotR - badgeW);
     var badgeY = Math.max(yBep - badgeH - 7, plotT - 8);
 
-    // Anti-tabrakan label FC/VC di tepi kanan: garis Fixed Cost (horizontal)
-    // & Variable Cost (diagonal) bisa berakhir hampir sejajar. Kalau jarak
-    // vertikalnya < 11px, label FC digeser 22px ke kiri MENYUSURI garis
-    // horizontalnya sendiri - asosiasi tetap jelas, tidak lagi menimpa VC.
-    var fcLabelX = (Math.abs(yCost0 - yVarMax) < 11) ? (plotR - 22) : plotR;
-
-    // Halo teks: stroke warna panel dilukis DI BELAKANG huruf (paint-order:
-    // stroke) supaya label tetap terbaca walau berdiri di atas garis putus-
-    // putus - pengganti "label pill" ala chart library profesional tanpa
-    // perlu menghitung lebar teks. Murni keterbacaan label (HP & desktop),
-    // geometri chart tidak berubah sama sekali.
-    var halo = ' stroke="var(--panel-2)" stroke-width="3" paint-order="stroke" stroke-linejoin="round"';
-
     return '<svg viewBox="0 0 ' + w + ' ' + h + '" class="bep-chart-svg" preserveAspectRatio="none">' +
       '<defs>' +
         '<linearGradient id="bepLossGrad" x1="0" y1="0" x2="0" y2="1">' +
@@ -273,15 +260,15 @@ menjalankan bootApp().
       '<line x1="' + plotL + '" y1="' + plotB + '" x2="' + plotR + '" y2="' + plotB + '" stroke="var(--text-dim)" stroke-width="1.5"></line>' +
 
       '<line x1="' + plotL + '" y1="' + yCost0 + '" x2="' + plotR + '" y2="' + yCost0 + '" stroke="var(--text-faint)" stroke-width="1" stroke-dasharray="4,3"></line>' +
-      '<text x="' + (plotL + 3) + '" y="' + (yCost0 - 5) + '" font-size="8" fill="var(--text-faint)"' + halo + '>' + escapeHtml(formatJutaChart_(fixedCost)) + '</text>' +
-      '<text x="' + fcLabelX + '" y="' + (yCost0 - 5) + '" font-size="9" font-weight="700" fill="var(--text-dim)" text-anchor="end"' + halo + '>FC</text>' +
+      '<text x="' + plotL + '" y="' + (yCost0 - 5) + '" font-size="8" fill="var(--text-faint)">' + escapeHtml(formatJutaChart_(fixedCost)) + '</text>' +
+      '<text x="' + plotR + '" y="' + (yCost0 - 5) + '" font-size="9" font-weight="700" fill="var(--text-dim)" text-anchor="end">FC</text>' +
 
       '<line x1="' + x0 + '" y1="' + yRev0 + '" x2="' + xMax + '" y2="' + yVarMax + '" stroke="var(--volt)" stroke-width="1.5" stroke-dasharray="4,3"></line>' +
-      '<text x="' + plotR + '" y="' + (yVarMax - 5) + '" font-size="9" font-weight="700" fill="var(--volt)" text-anchor="end"' + halo + '>VC</text>' +
+      '<text x="' + plotR + '" y="' + (yVarMax - 5) + '" font-size="9" font-weight="700" fill="var(--volt)" text-anchor="end">VC</text>' +
 
       '<line x1="' + plotL + '" y1="' + yBep + '" x2="' + xBep + '" y2="' + yBep + '" stroke="var(--sage)" stroke-width="1" stroke-dasharray="3,3"></line>' +
       '<line x1="' + (plotL - 3) + '" y1="' + yBep + '" x2="' + (plotL + 3) + '" y2="' + yBep + '" stroke="var(--sage)" stroke-width="1.5"></line>' +
-      '<text x="' + (plotL + 3) + '" y="' + (yBep - 5) + '" font-size="8" font-weight="700" fill="var(--sage)"' + halo + '>' + escapeHtml(formatJutaChart_(bepY)) + '</text>' +
+      '<text x="' + plotL + '" y="' + (yBep - 5) + '" font-size="8" font-weight="700" fill="var(--sage)">' + escapeHtml(formatJutaChart_(bepY)) + '</text>' +
 
       '<line x1="' + xBep + '" y1="' + yBep + '" x2="' + xBep + '" y2="' + plotB + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"></line>' +
       '<line x1="' + x0 + '" y1="' + yCost0 + '" x2="' + xMax + '" y2="' + yCostMax + '" stroke="var(--brass)" stroke-width="2" stroke-linecap="round"></line>' +
