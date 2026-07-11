@@ -396,6 +396,11 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     flex-shrink: 0;
   }
 
+  /* Badge kategori laundry (mis. "Hybrid") di sebelah nama outlet.
+     Default HIDDEN -> di HP tidak muncul sama sekali (tampilan HP tidak
+     berubah). Dimunculkan hanya di desktop, lihat @media di bawah. */
+  .outlet-kategori-badge { display: none; }
+
   .outlet-filter-pill.single-outlet {
     cursor: default;
   }
@@ -1806,6 +1811,41 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
     .desktop-kpi-card { padding: 13px 16px 12px; }
     .desktop-kpi-label { margin-bottom: 7px; }
     .desktop-kpi-number { font-size: clamp(17px, 1.3vw, 24px); }
+    /* "Rp" inline mepet nominal (jarak rapat) - font Rp kecil, angka besar. */
+    .desktop-kpi-number-row { gap: 3px; align-items: baseline; }
+    .desktop-kpi-currency { font-size: 12px; }
+    /* Keterangan kecil di bawah nominal tiap KPI (Rugi/Impas/Untung, margin,
+       rumus, target BEP dll) - biar orang awam paham. */
+    .desktop-kpi-note {
+      font-size: 10px;
+      color: var(--text-faint);
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+    .desktop-kpi-note .kpi-note-status { font-weight: 700; color: var(--text-dim); }
+    .desktop-kpi-note .kpi-note-sub { display: block; color: var(--text-faint); margin-top: 1px; }
+    .desktop-kpi-note.note-untung .kpi-note-status { color: var(--sage); }
+    .desktop-kpi-note.note-rugi .kpi-note-status { color: var(--red); }
+    .desktop-kpi-note.note-impas .kpi-note-status { color: var(--brass); }
+    /* Kategori laundry tampil di desktop: pelebaran pill dibuka (HP tetap
+       max-width 140px) supaya nama + badge muat 1 baris. */
+    body:has(#screenMenu.active) .outlet-filter-pill { max-width: none; }
+    body:has(#screenMenu.active) .outlet-kategori-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--brass);
+      background: rgba(var(--brass-rgb, 180, 130, 60), 0.10);
+      border: 1px solid rgba(var(--brass-rgb, 180, 130, 60), 0.22);
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin: 0 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
     .desktop-summary-row { gap: 14px; min-height: 230px; }
     .desktop-summary-panel { padding: 13px 16px 11px; }
     .desktop-panel-title { margin-bottom: 8px; }

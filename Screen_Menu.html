@@ -21,6 +21,7 @@ tag <script> atau <style> di file ini -- itu tugas file Style_*/Script_*.
           <div class="dashboard-filter-right">
             <button class="outlet-filter-pill" type="button" id="dashboardOutletFilter" onclick="openOutletPicker()">
               <span class="outlet-filter-name">Syakira Laundry</span>
+              <span class="outlet-kategori-badge" id="dashboardOutletKategori"></span>
               <svg class="outlet-filter-arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                 <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -108,22 +109,27 @@ tag <script> atau <style> di file ini -- itu tugas file Style_*/Script_*.
           <div class="desktop-kpi-card kpi-omset">
             <div class="desktop-kpi-label">Estimasi Omset</div>
             <div class="desktop-kpi-value" id="desktopKpiOmset">-</div>
+            <div class="desktop-kpi-note" id="desktopKpiOmsetNote"></div>
           </div>
           <div class="desktop-kpi-card kpi-profit">
             <div class="desktop-kpi-label">Estimasi Profit</div>
             <div class="desktop-kpi-value" id="desktopKpiProfit">-</div>
+            <div class="desktop-kpi-note" id="desktopKpiProfitNote"></div>
           </div>
           <div class="desktop-kpi-card kpi-bep-load">
             <div class="desktop-kpi-label">Target BEP Load</div>
             <div class="desktop-kpi-value" id="desktopKpiBepLoad">-</div>
+            <div class="desktop-kpi-note">Load per bulan yang harus dicapai agar BEP</div>
           </div>
           <div class="desktop-kpi-card kpi-bep-omset">
             <div class="desktop-kpi-label">Target BEP Omset</div>
             <div class="desktop-kpi-value" id="desktopKpiBepOmset">-</div>
+            <div class="desktop-kpi-note">Target omset agar BEP (Fixed Cost + Variable Cost)</div>
           </div>
           <div class="desktop-kpi-card kpi-fixed-cost">
             <div class="desktop-kpi-label">Total Fixed Cost</div>
             <div class="desktop-kpi-value" id="desktopKpiFixedCost">-</div>
+            <div class="desktop-kpi-note">Pengeluaran tetap per bulan</div>
           </div>
         </div>
 
