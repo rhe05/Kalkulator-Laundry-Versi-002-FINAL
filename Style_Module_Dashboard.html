@@ -1820,8 +1820,13 @@ Master Biaya/HPP/FixedCost/HargaLayanan, tapi isinya sudah kemasukan itu semua.
        tumbuh lebih tinggi -> garis lebih tegak/proporsional. Semua discope
        ke panel BEP saja. */
     .desktop-summary-panel:has(#desktopBepChart) .desktop-panel-title { font-size: 11px; margin-bottom: 0; }
-    #desktopBepChart .bep-chart-wrap { padding: 6px 12px 4px; }
-    #desktopBepChart .bep-chart-legend { margin-top: 4px; }
+    #desktopBepChart .bep-chart-wrap { padding: 6px 12px 2px; }
+    /* Legenda "Omset / Total Biaya" disembunyikan SEMENTARA (permintaan
+       user) - discope #desktopBepChart saja, legenda kartu HP
+       (#dashboardBEPSummary) TIDAK ikut hilang. Tingginya otomatis jadi
+       milik grafik: .bep-chart-svg (flex:1) memuai mengisi seluruh tinggi
+       chart-wrap -> grafik lebih tinggi lagi. */
+    #desktopBepChart .bep-chart-legend { display: none; }
     /* Master Biaya desktop: SEMUA komponen (Gas/Chemical/Listrik/Packing/
        Air/Nota) harus tampil. Sebelumnya .mb-komponen-list pakai
        justify-content:space-between (dari aturan dasar di atas) + flex:1 -
