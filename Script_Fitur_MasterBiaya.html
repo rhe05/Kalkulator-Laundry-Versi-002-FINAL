@@ -204,7 +204,11 @@ menjalankan bootApp().
   function buildGasCardBodyHtml_(gasCard) {
     var metaRowsHtml =
       '<div class="meta-row"><span class="meta-label">Harga per tabung</span><span class="meta-val">' + money0(gasCard.hargaPerTabung) + '</span></div>' +
-      '<div class="meta-row"><span class="meta-label">Estimasi pemakaian</span><span class="meta-val">' + escapeHtml(formatNum(gasCard.estimasiPemakaianJam)) + ' jam</span></div>';
+      '<div class="meta-row"><span class="meta-label">Estimasi pemakaian</span><span class="meta-val">' + escapeHtml(formatNum(gasCard.estimasiPemakaianJam)) + ' jam</span></div>' +
+      '<div class="meta-row"><span class="meta-label">Biaya per jam</span><span class="meta-val">' + money0(gasCard.biayaPerJam) + '</span></div>' +
+      '<div class="meta-row"><span class="meta-label">Biaya per menit</span><span class="meta-val">' + money0(gasCard.biayaPerMenit) + '</span></div>' +
+      (gasCard.hasDryerRef ? '<div class="meta-row"><span class="meta-label">Acuan Dryer</span><span class="meta-val">' + escapeHtml(formatNum(gasCard.dryerRefDurasiMenit)) + ' menit</span></div>' : '') +
+      (gasCard.hasSetrikaRef ? '<div class="meta-row"><span class="meta-label">Acuan Setrika Uap</span><span class="meta-val">' + escapeHtml(formatNum(gasCard.setrikaKapasitasKgPerJam)) + ' kg/jam</span></div>' : '');
 
     var gridCellsHtml =
       '<div class="gas-result-cell"><div class="label">Konversi waktu</div><div class="val">' + escapeHtml(formatNum(gasCard.konversiMenit)) + '<span class="unit">menit</span></div></div>' +
@@ -213,11 +217,12 @@ menjalankan bootApp().
     // Dua sel highlight DIJEJER 2 kolom (bukan ditumpuk 1 kolom penuh spt
     // kartu Gas asli) kalau keduanya ada - kartu ini di grid Master Biaya
     // desktop berbagi tinggi baris dgn 5 kartu lain (grid-auto-rows:1fr),
-    // jadi harus lebih padat vertikal supaya tidak kepotong (overflow:
-    // hidden). Kalau cuma satu yang ada, tetap 1 kolom penuh spt biasa.
+    // jadi harus lebih padat vertikal supaya tidak kepotong. Kalau cuma
+    // satu yang ada, tetap 1 kolom penuh spt biasa. Persentase kontribusi
+    // ke total biaya produksi ditampilkan sbg unit di bawah nominal.
     var highlightCellsHtml =
-      (gasCard.hasDryerRef ? '<div class="gas-result-cell highlight"><div class="label">Biaya Gas Dryer Per Load</div><div class="val">' + money0(gasCard.biayaGasDryerPerLoad) + '</div></div>' : '') +
-      (gasCard.hasSetrikaRef ? '<div class="gas-result-cell highlight"><div class="label">Biaya Gas Setrika Per Jam</div><div class="val">' + money0(gasCard.biayaGasSetrikaPerJam) + '</div></div>' : '');
+      (gasCard.hasDryerRef ? '<div class="gas-result-cell highlight"><div class="label">Biaya Gas Dryer Per Load</div><div class="val">' + money0(gasCard.biayaGasDryerPerLoad) + '<span class="unit">' + escapeHtml(String(Number(gasCard.persenDryerPerLoad || 0))) + '% dari total</span></div></div>' : '') +
+      (gasCard.hasSetrikaRef ? '<div class="gas-result-cell highlight"><div class="label">Biaya Gas Setrika Per Jam</div><div class="val">' + money0(gasCard.biayaGasSetrikaPerJam) + '<span class="unit">' + escapeHtml(String(Number(gasCard.persenSetrikaPerJam || 0))) + '% dari total</span></div></div>' : '');
     var bothHighlights = gasCard.hasDryerRef && gasCard.hasSetrikaRef;
     var highlightHtml = highlightCellsHtml
       ? '<div class="gas-result-grid"' + (bothHighlights ? '' : ' style="grid-template-columns:1fr;"') + '>' + highlightCellsHtml + '</div>'
@@ -228,7 +233,7 @@ menjalankan bootApp().
       : '';
 
     return (
-      metaRowsHtml +
+      '<div class="meta-rows-scroll">' + metaRowsHtml + '</div>' +
       '<div class="gas-card-result">' +
         '<div class="gas-result-grid">' + gridCellsHtml + '</div>' +
         highlightHtml +
@@ -260,7 +265,7 @@ menjalankan bootApp().
               '<div class="val">' + money0(k.biayaPerLoad) + '<span class="unit">' + escapeHtml(String(Number(k.persen || 0))) + '% dari total</span></div>' +
             '</div>' +
           '</div>';
-        bodyHtml = detailRowsHtml + '<div class="gas-card-result">' + resultHtml + '</div>';
+        bodyHtml = '<div class="meta-rows-scroll">' + detailRowsHtml + '</div>' + '<div class="gas-card-result">' + resultHtml + '</div>';
       } else {
         bodyHtml =
           '<div class="gas-card-result">' +

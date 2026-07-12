@@ -211,15 +211,23 @@ utama & DesktopDensity (scoped); file ini gaya dasar (dipakai bareng HP).
       min-height: 0;
     }
     .mb-desktop-card.is-empty { opacity: 0.78; }
-    .mb-desktop-card .gas-card-top { margin-bottom: 6px; }
-    .mb-desktop-card .meta-row { padding: 2px 0; font-size: 11px; }
-    .mb-desktop-card .gas-card-result { margin-top: 6px; padding-top: 6px; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
-    .mb-desktop-card .gas-result-cell { padding: 7px 9px; }
+    .mb-desktop-card .gas-card-top { margin-bottom: 4px; flex-shrink: 0; }
+    /* Baris meta (Harga per tabung/TDL/watt/dll) makin banyak sejak kartu
+       Gas & Listrik dilengkapi detail penuh - area ini scroll internal
+       sendiri kalau kepanjangan, TIDAK memicu scroll halaman/panel (itu
+       tetap terkunci via fitDesktopDashboardToViewport_). gas-card-result
+       (sel highlight nominal utama) tetap flex-shrink:0 supaya SELALU
+       kelihatan di bawah tanpa perlu discroll. */
+    .mb-desktop-card .meta-rows-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0; scrollbar-width: thin; }
+    .mb-desktop-card .meta-row { padding: 1.5px 0; font-size: 10.5px; }
+    .mb-desktop-card .gas-card-result { margin-top: 5px; padding-top: 5px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; }
+    .mb-desktop-card .gas-result-cell { padding: 6px 8px; }
     .mb-desktop-card .gas-result-cell .label { font-size: 9.5px; line-height: 1.25; }
-    .mb-desktop-card .gas-result-cell.highlight .val { font-size: 15px; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
-    .mb-desktop-card .gas-result-grid { margin-bottom: 5px; gap: 5px; }
+    .mb-desktop-card .gas-result-cell.highlight .val { font-size: 14px; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+    .mb-desktop-card .gas-result-cell.highlight .unit { font-size: 9px; }
+    .mb-desktop-card .gas-result-grid { margin-bottom: 4px; gap: 4px; }
     .mb-desktop-card .gas-result-grid:last-child { margin-bottom: 0; }
-    .mb-desktop-more-note { font-size: 9.5px; color: var(--text-faint); margin-top: 3px; }
+    .mb-desktop-more-note { font-size: 9.5px; color: var(--text-faint); margin-top: 3px; flex-shrink: 0; }
 
     /* Titik warna kategori - pengganti .flame-dot yang khusus Gas, di sini
        digeneralisasi per tone lewat variabel --dot-color pada wrapper. */

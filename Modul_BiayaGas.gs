@@ -437,11 +437,13 @@ function computeBiayaGasSummary_(record, cabang) {
 
   const setrika = findMachineById_(cabang.mesinSetrika, record.setrikaRefId);
   const biayaGasSetrikaPerJam = setrika ? biayaPerJam : 0;
+  const setrikaKapasitasKgPerJam = setrika ? toNumber_(setrika.kapasitasKgPerJam, 0) : 0;
 
   return {
     dryerRefNama: dryer ? machineDisplayName_(dryer) : (record.dryerRefId ? "(mesin tidak ditemukan)" : ""),
     dryerRefDurasiMenit: durasiLoadMenit,
     setrikaRefNama: setrika ? setrikaDisplayName_(setrika) : (record.setrikaRefId ? "(mesin tidak ditemukan)" : ""),
+    setrikaKapasitasKgPerJam: setrikaKapasitasKgPerJam,
     konversiMenit: konversiMenit,
     estimasiLoadPemakaian: estimasiLoadPemakaian,
     biayaPerJam: biayaPerJam,

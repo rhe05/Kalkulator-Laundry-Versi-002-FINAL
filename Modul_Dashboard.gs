@@ -235,6 +235,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
       // Ambil nilai biaya per load per komponen
       const komponenBiaya = [];
       let totalBiayaPerLoad = 0;
+      let gasCardRef = null;
 
       try {
         if (typeof listBiayaGas === "function") {
@@ -274,12 +275,19 @@ function getDashboardMasterBiayaSummary(cabangId) {
               estimasiPemakaianJam: dashboardNumber_(gasPrimaryRecord.estimasiPemakaianJam, 0),
               konversiMenit: dashboardRound2_(dashboardNumber_(gasPrimarySummary.konversiMenit, 0)),
               hasDryerRef: !!gasPrimaryRecord.dryerRefId,
+              dryerRefDurasiMenit: dashboardRound2_(dashboardNumber_(gasPrimarySummary.dryerRefDurasiMenit, 0)),
               estimasiLoadPemakaian: dashboardRound2_(dashboardNumber_(gasPrimarySummary.estimasiLoadPemakaian, 0)),
               biayaGasDryerPerLoad: dashboardRound2_(gasTotalPerLoad),
               hasSetrikaRef: !!gasPrimaryRecord.setrikaRefId,
+              setrikaKapasitasKgPerJam: dashboardRound2_(dashboardNumber_(gasPrimarySummary.setrikaKapasitasKgPerJam, 0)),
               biayaGasSetrikaPerJam: dashboardRound2_(gasTotalPerJam),
+              biayaPerJam: dashboardRound2_(dashboardNumber_(gasPrimarySummary.biayaPerJam, 0)),
+              biayaPerMenit: dashboardRound2_(dashboardNumber_(gasPrimarySummary.biayaPerMenit, 0)),
+              persenDryerPerLoad: 0,
+              persenSetrikaPerJam: 0,
               moreCount: Math.max(0, gasItems.length - 1)
             } : null;
+            gasCardRef = gasCard;
 
             if (gasComplete) {
               if (isJasaSetrika) {
@@ -298,6 +306,7 @@ function getDashboardMasterBiayaSummary(cabangId) {
         if (typeof getBiayaListrik === "function") {
           const listrikRes = getBiayaListrik(cabangId);
           if (listrikRes && listrikRes.ok && listrikRes.data && listrikRes.data.summary) {
+            const listrikRecord = listrikRes.data.record || {};
             const cuciArr = Array.isArray(listrikRes.data.summary.cuci) ? listrikRes.data.summary.cuci : [];
             const pengeringArr = Array.isArray(listrikRes.data.summary.pengering) ? listrikRes.data.summary.pengering : [];
             const pompaPerLoad = cuciArr.length > 0 ? dashboardNumber_(cuciArr[0].rpPompaPerLoad, 0) : 0;
@@ -305,11 +314,22 @@ function getDashboardMasterBiayaSummary(cabangId) {
             const dryerPerLoad = pengeringArr.length > 0 ? dashboardNumber_(pengeringArr[0].rpListrikPerLoad, 0) : 0;
             const rataListrik = pompaPerLoad + washerPerLoad + dryerPerLoad;
             if (listrikComplete) {
+              // Watt Setrika Listrik cuma relevan kalau outlet ini benar-benar
+              // punya baris mesin setrika berjenis "listrik" - setrika uap
+              // tidak berbiaya listrik sama sekali (lihat Modul_BiayaListrik.gs).
+              const setrikaRowsListrik_ = dashboardArray_(item.mesinSetrika);
+              const adaSetrikaListrik_ = setrikaRowsListrik_.some(function (m) { return m.jenis === "listrik"; });
               const listrikDetail = [
-                { label: "Pompa Air", amount: dashboardRound2_(pompaPerLoad) },
-                { label: "Washer (Cuci)", amount: dashboardRound2_(washerPerLoad) },
-                { label: "Dryer (Pengering)", amount: dashboardRound2_(dryerPerLoad) }
+                { label: "TDL per kWh", amount: dashboardRound2_(dashboardNumber_(listrikRecord.tdlPerKwh, 0)) },
+                { label: "Watt Mesin Cuci", text: dashboardNumber_(listrikRecord.wattMesinCuci, 0) + " watt" },
+                { label: "Watt Mesin Pengering", text: dashboardNumber_(listrikRecord.wattMesinPengering, 0) + " watt" }
               ];
+              if (adaSetrikaListrik_) {
+                listrikDetail.push({ label: "Watt Setrika Listrik", text: dashboardNumber_(listrikRecord.wattSetrikaListrik, 0) + " watt" });
+              }
+              listrikDetail.push({ label: "Pompa Air / Load", amount: dashboardRound2_(pompaPerLoad) });
+              listrikDetail.push({ label: "Washer (Cuci) / Load", amount: dashboardRound2_(washerPerLoad) });
+              listrikDetail.push({ label: "Dryer (Pengering) / Load", amount: dashboardRound2_(dryerPerLoad) });
               komponenBiaya.push({ key: "listrik", label: "Listrik", biayaPerLoad: dashboardRound2_(rataListrik), detail: listrikDetail });
               totalBiayaPerLoad += rataListrik;
             }
@@ -322,8 +342,19 @@ function getDashboardMasterBiayaSummary(cabangId) {
           if (airRes && airRes.ok && airRes.data && airRes.data.summary) {
             const airPerLoad = dashboardNumber_(airRes.data.summary.biayaPerLoad, 0);
             if (airComplete) {
-              const sumberAirLabel_ = { pdam: "PDAM / Meteran", tangki: "Tangki / Toren", sumur: "Sumur Bor" }[airRes.data.summary.sumberAir] || "-";
-              komponenBiaya.push({ key: "air", label: "Air", biayaPerLoad: dashboardRound2_(airPerLoad), detail: [{ label: "Sumber air", text: sumberAirLabel_ }] });
+              const airRecord = airRes.data.record || {};
+              const airSummary = airRes.data.summary || {};
+              const sumberAirLabel_ = { pdam: "PDAM / Meteran", tangki: "Tangki / Toren", sumur: "Sumur Bor" }[airSummary.sumberAir] || "-";
+              const airDetail = [{ label: "Sumber air", text: sumberAirLabel_ }];
+              if (airSummary.sumberAir === "pdam") {
+                airDetail.push({ label: "Harga per m³", amount: dashboardRound2_(dashboardNumber_(airRecord.hargaPerM3, 0)) });
+                airDetail.push({ label: "Kebutuhan air/load", text: dashboardNumber_(airRecord.kebutuhanAirPerLoad, 0) + " liter" });
+              } else if (airSummary.sumberAir === "tangki") {
+                airDetail.push({ label: "Harga per tangki", amount: dashboardRound2_(dashboardNumber_(airRecord.hargaPerTangki, 0)) });
+                airDetail.push({ label: "Kapasitas tangki", text: dashboardNumber_(airRecord.kapasitasTangkiLiter, 0) + " liter" });
+                airDetail.push({ label: "Kebutuhan air/load", text: dashboardNumber_(airRecord.kebutuhanAirPerLoad, 0) + " liter" });
+              }
+              komponenBiaya.push({ key: "air", label: "Air", biayaPerLoad: dashboardRound2_(airPerLoad), detail: airDetail });
               totalBiayaPerLoad += airPerLoad;
             }
           }
@@ -408,6 +439,10 @@ function getDashboardMasterBiayaSummary(cabangId) {
       komponenBiaya.forEach(function(k) {
         k.persen = totalBiayaPerLoad > 0 ? dashboardRound2_(k.biayaPerLoad / totalBiayaPerLoad * 100) : 0;
       });
+      if (gasCardRef) {
+        gasCardRef.persenDryerPerLoad = totalBiayaPerLoad > 0 ? dashboardRound2_(gasCardRef.biayaGasDryerPerLoad / totalBiayaPerLoad * 100) : 0;
+        gasCardRef.persenSetrikaPerJam = totalBiayaPerLoad > 0 ? dashboardRound2_(gasCardRef.biayaGasSetrikaPerJam / totalBiayaPerLoad * 100) : 0;
+      }
 
       return {
         cabangId: cabangId,
