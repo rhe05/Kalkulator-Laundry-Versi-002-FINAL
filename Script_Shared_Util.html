@@ -151,15 +151,23 @@ menjalankan bootApp().
     if (evt) evt.stopPropagation();
     if (!cabangId || !serviceKey) return;
 
-    google.script.run
-      .withSuccessHandler(function () {
-        if (typeof onDone === "function") onDone();
-        else if (typeof refreshDashboardFast === "function") refreshDashboardFast();
-      })
-      .withFailureHandler(function (err) {
-        showToast(err && err.message ? err.message : "Gagal mengubah status layanan.", "err");
-      })
-      .setHPPLayananAktif(cabangId, serviceKey, nextAktif);
+    // [FIX] Dulu pakai google.script.run langsung (TANPA token sesi) -
+    // backend setHPPLayananAktif WAJIB sessionToken sbg argumen pertama
+    // (dibungkus withTenant_), jadi panggilan lama selalu ditolak diam-diam
+    // (balik {ok:false, code:"UNAUTHORIZED"} sbg respons SUKSES ke google.script.run,
+    // bukan error) - makanya tombol "kelihatan" tidak berfungsi tanpa pesan
+    // error sama sekali. callServer_ menyisipkan token otomatis + res.ok
+    // sekarang benar-benar dicek sebelum refresh.
+    callServer_("setHPPLayananAktif", [cabangId, serviceKey, nextAktif], function (res) {
+      if (!res || !res.ok) {
+        showToast((res && res.error) || "Gagal mengubah status layanan.", "err");
+        return;
+      }
+      if (typeof onDone === "function") onDone();
+      else if (typeof refreshDashboardFast === "function") refreshDashboardFast();
+    }, function (err) {
+      showToast(err && err.message ? err.message : "Gagal mengubah status layanan.", "err");
+    });
   };
 
   window.toggleHlDetail = function (row, evt) {
