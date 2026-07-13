@@ -166,7 +166,6 @@ body:has(#screenBiayaTetapForm.active) .wrap { width: min(100%, 1080px); }
   }
   #screenBiayaTetapList .dashboard-header-top { align-items: center; }
   #screenBiayaTetapList .dashboard-title { font-size: 16px; margin-bottom: 0; letter-spacing: -0.01em; }
-  #screenBiayaTetapList .dashboard-eyebrow { margin-bottom: 2px; }
 
   body:has(#screenBiayaTetapList.active) .outlet-filter-pill { max-width: none; }
   body:has(#screenBiayaTetapList.active) .outlet-kategori-badge {
@@ -195,40 +194,42 @@ body:has(#screenBiayaTetapForm.active) .wrap { width: min(100%, 1080px); }
     justify-content: center;
   }
 
-  /* [2026-07-13] Kartu khusus Biaya Tetap Outlet desktop: langsung terbuka
-     (total per tahun/bulan/hari + tabel per komponen dgn persentase, tanpa
-     tombol panah) dan SENGAJA lebih kecil drpd kartu ".fc-card" di fitur
-     lain (Dashboard, Struktur HPP, Harga Layanan) sesuai revisi tampilan. */
+  /* [2026-07-13, direvisi] Kartu khusus Biaya Tetap Outlet desktop: langsung
+     terbuka (total per tahun/bulan/hari + tabel per komponen dgn
+     persentase, tanpa tombol panah). Ukuran & tipografi DISAMAKAN dgn kartu
+     ".fc-card" di fitur lain (Dashboard/Struktur HPP/Harga Layanan) sesuai
+     revisi - sebelumnya sengaja dibuat lebih kecil, ternyata kurang
+     terbaca. */
   #biayaTetapDesktopContent .fc-outlet-card {
-    max-width: 440px;
+    max-width: 560px;
     width: 100%;
     margin: 0 auto;
     background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    padding: 22px 26px;
   }
   #biayaTetapDesktopContent .fc-outlet-totals {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
     border-bottom: 1px solid var(--border);
   }
   #biayaTetapDesktopContent .fc-outlet-total-item { text-align: center; }
-  #biayaTetapDesktopContent .fc-outlet-total-item .label { font-size: 9.5px; color: var(--text-faint); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
-  #biayaTetapDesktopContent .fc-outlet-total-item .value { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  #biayaTetapDesktopContent .fc-outlet-total-item .label { font-size: 11px; color: var(--text-faint); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  #biayaTetapDesktopContent .fc-outlet-total-item .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
   #biayaTetapDesktopContent .fc-outlet-total-item.highlight .value { color: var(--brass); }
 
   #biayaTetapDesktopContent .fc-outlet-table { width: 100%; border-collapse: collapse; }
   #biayaTetapDesktopContent .fc-outlet-table th {
-    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint);
-    text-align: right; font-weight: 600; padding: 0 0 6px 0;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint);
+    text-align: right; font-weight: 600; padding: 0 0 9px 0;
   }
   #biayaTetapDesktopContent .fc-outlet-table th:first-child { text-align: left; }
   #biayaTetapDesktopContent .fc-outlet-table td {
-    font-size: 11px; padding: 6px 0; border-top: 1px dashed var(--border);
+    font-size: 14px; padding: 10px 0; border-top: 1px dashed var(--border);
     text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dim); white-space: nowrap;
   }
   #biayaTetapDesktopContent .fc-outlet-table td:first-child { text-align: left; color: var(--text); font-weight: 600; white-space: normal; }

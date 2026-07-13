@@ -70,8 +70,10 @@ menjalankan bootApp().
    * layar ini sekarang punya kartu sendiri (buildBiayaTetapDesktopCardHtml_,
    * ".fc-outlet-*" di Style_Module_FixedCost.html): langsung terbuka (tanpa
    * tombol panah), rincian tiap komponen ditampilkan per tahun/bulan/hari +
-   * persentase dalam bentuk tabel, ukuran kartu lebih ringkas drpd kartu
-   * Dashboard. Kartu Fixed Cost di Dashboard (renderDashboardFixedCostCard)
+   * persentase kontribusi (dihitung client-side dari totalPerBulan, backend
+   * tidak mengirim field percent utk endpoint ini) dalam bentuk tabel.
+   * Ukuran & tipografi kartu DISAMAKAN dgn kartu ".fc-card" di fitur lain
+   * (revisi tampilan). Kartu Fixed Cost di Dashboard (renderDashboardFixedCostCard)
    * TIDAK tersentuh sama sekali. Layar ini TIDAK mengisi cabangListCache
    * global (lihat biayaTetapListCache di atas - bentuknya beda), jadi di
    * sini ditarik listCabang() sendiri kalau cabangListCache masih kosong.
@@ -146,11 +148,14 @@ menjalankan bootApp().
     var totalPerHari = toNumber(d.totalPerHari, 0);
     var totalPerTahun = totalPerBulan * 12;
 
+    // getDashboardFixedCostSummary (Modul_Dashboard.gs) hanya mengirim
+    // key/label/amount per komponen (tanpa percent) - dihitung di sini dari
+    // totalPerBulan, formula SAMA dgn renderDashboardFixedCostCard.
     var tableRowsHtml = components.map(function (c) {
       var perBulan = toNumber(c.amount, 0);
       var perTahun = perBulan * 12;
       var perHari = perBulan / 30;
-      var percent = toNumber(c.percent, 0);
+      var percent = (totalPerBulan > 0 && perBulan > 0) ? round2((perBulan / totalPerBulan) * 100) : 0;
       return '<tr>' +
         '<td>' + escapeHtml(c.label || '') + '</td>' +
         '<td>' + money0(perTahun) + '</td>' +
