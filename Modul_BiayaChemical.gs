@@ -129,6 +129,7 @@ function listBiayaChemical_impl_(cabangId) {
           id: cabang.id,
           namaLaundry: cabang.profil.namaLaundry,
           mesinCuci: cabang.mesinCuci,
+          mesinSetrika: cabang.mesinSetrika,
         },
         items: items,
         totalBiayaPerKg: round2_(totalBiayaPerKg),
@@ -390,6 +391,21 @@ function validateBiayaChemical_(data, cabang) {
 // biaya chemical. Frontend punya salinan identik untuk pratinjau real-time
 // (lihat Index.html), tapi modul lain WAJIB panggil ini, jangan duplikasi rumus.
 //
+function chemicalWeightedSetrikaKgPerJam_(mesinSetrika) {
+  const rows = Array.isArray(mesinSetrika) ? mesinSetrika : [];
+  let totalWeighted = 0;
+  let totalWeight = 0;
+  rows.forEach(function (m) {
+    const amount = toNumber_(m.kapasitasKgPerJam, 0);
+    const unit = Math.max(1, toNumber_(m.jumlahUnit, 1));
+    if (amount > 0) {
+      totalWeighted += amount * unit;
+      totalWeight += unit;
+    }
+  });
+  return totalWeight > 0 ? round2_(totalWeighted / totalWeight) : 0;
+}
+
 function computeBiayaChemicalSummary_(record, cabang) {
   const faktorKonversi = CHEMICAL_KONVERSI_DASAR_[record.satuanKemasan] || 0;
   const isiKemasanDasar = record.isiKemasan * faktorKonversi;
@@ -398,22 +414,32 @@ function computeBiayaChemicalSummary_(record, cabang) {
     : 0;
 
   const cuci = findMachineById_(cabang.mesinCuci, record.cuciRefId);
-  const kapasitasKgCuci = cuci ? toNumber_(cuci.kapasitasKg, 0) : 0;
+  const punyaMesinCuci_ = Array.isArray(cabang.mesinCuci) && cabang.mesinCuci.length > 0;
+
+  // [Outlet tanpa mesin cuci, mis. Jasa Setrika] "Biaya Chemical Per Load"
+  // tidak bisa pakai kapasitas mesin cuci (memang tidak ada) - pakai
+  // kapasitas kg/jam mesin setrika sebagai acuan pengganti ("per jam"
+  // dianggap = "per load" utk kategori ini, keputusan user 2026-07-13).
+  let kapasitasAcuan = cuci ? toNumber_(cuci.kapasitasKg, 0) : 0;
+  let acuanNama = cuci ? chemicalCuciDisplayName_(cuci) : "";
+  if (!punyaMesinCuci_) {
+    kapasitasAcuan = chemicalWeightedSetrikaKgPerJam_(cabang.mesinSetrika);
+    acuanNama = kapasitasAcuan > 0 ? "Kapasitas setrika (per jam dianggap per load)" : "";
+  }
 
   // biayaPerKg dihitung LANGSUNG (takaranPerKg * hargaPerUnit) - TIDAK
-  // bergantung ke mesin cuci acuan sama sekali (secara aljabar memang sudah
-  // begini, lihat catatan di header file). biayaPerLoad tetap butuh acuan
-  // mesin cuci (kalau tidak ada mesin/acuan, jadi Rp0 - wajar, "per Load"
-  // memang tidak berarti apa-apa tanpa mesin cuci).
+  // bergantung ke acuan apa pun (secara aljabar memang sudah begini, lihat
+  // catatan di header file). biayaPerLoad tetap butuh acuan kapasitas
+  // (mesin cuci ATAU mesin setrika, tergantung kategori outlet).
   const biayaPerKg = round2_(record.takaranPerKg * hargaPerUnit);
-  const pemakaianPerLoadDasar = round2_(record.takaranPerKg * kapasitasKgCuci);
+  const pemakaianPerLoadDasar = round2_(record.takaranPerKg * kapasitasAcuan);
   const biayaPerLoad = round2_(pemakaianPerLoadDasar * hargaPerUnit);
 
   return {
     hargaPerUnit: hargaPerUnit,
     satuanDasar: CHEMICAL_SATUAN_DASAR_LABEL_[record.satuanKemasan] || "",
-    cuciRefNama: cuci ? chemicalCuciDisplayName_(cuci) : "",
-    kapasitasKgCuci: kapasitasKgCuci,
+    cuciRefNama: acuanNama,
+    kapasitasKgCuci: kapasitasAcuan,
     biayaPerLoad: biayaPerLoad,
     biayaPerKg: biayaPerKg,
     statusValid: isiKemasanDasar > 0 && record.takaranPerKg > 0,

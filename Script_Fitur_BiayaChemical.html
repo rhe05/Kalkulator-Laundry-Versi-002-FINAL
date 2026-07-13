@@ -318,6 +318,17 @@ menjalankan bootApp().
     if (badge) badge.textContent = unitLabel;
   }
 
+  function chemicalWeightedSetrikaKgPerJamClient_(mesinSetrika) {
+    var rows = Array.isArray(mesinSetrika) ? mesinSetrika : [];
+    var totalWeighted = 0, totalWeight = 0;
+    rows.forEach(function (m) {
+      var amount = Number(m.kapasitasKgPerJam) || 0;
+      var unit = Math.max(1, Number(m.jumlahUnit) || 1);
+      if (amount > 0) { totalWeighted += amount * unit; totalWeight += unit; }
+    });
+    return totalWeight > 0 ? round2(totalWeighted / totalWeight) : 0;
+  }
+
   function computeBiayaChemicalSummaryClient(record) {
     var mesinCuci = (chemicalCabangCache && chemicalCabangCache.mesinCuci) || [];
     var faktorKonversi = CHEMICAL_KONVERSI_DASAR[record.satuanKemasan] || 0;
@@ -325,13 +336,19 @@ menjalankan bootApp().
     var hargaPerUnit = isiKemasanDasar > 0 ? round2(record.hargaBeli / isiKemasanDasar) : 0;
 
     var cuci = mesinCuci.find(function (m) { return m.id === record.cuciRefId; }) || null;
-    var kapasitasKgCuci = cuci ? (Number(cuci.kapasitasKg) || 0) : 0;
+    // [Outlet tanpa mesin cuci, mis. Jasa Setrika] pakai kapasitas kg/jam
+    // mesin setrika sebagai acuan pengganti ("per jam" dianggap "per load"),
+    // sama seperti backend computeBiayaChemicalSummary_ (Modul_BiayaChemical.gs).
+    var kapasitasAcuan = cuci ? (Number(cuci.kapasitasKg) || 0) : 0;
+    if (!mesinCuci.length) {
+      kapasitasAcuan = chemicalWeightedSetrikaKgPerJamClient_(chemicalCabangCache && chemicalCabangCache.mesinSetrika);
+    }
 
     // biayaPerKg dihitung LANGSUNG (takaranPerKg * hargaPerUnit) - tidak
     // butuh mesin cuci acuan (sama seperti backend computeBiayaChemicalSummary_
-    // di Modul_BiayaChemical.gs). biayaPerLoad tetap butuh acuan mesin cuci.
+    // di Modul_BiayaChemical.gs). biayaPerLoad tetap butuh acuan kapasitas.
     var biayaPerKg = round2(record.takaranPerKg * hargaPerUnit);
-    var pemakaianPerLoadDasar = round2(record.takaranPerKg * kapasitasKgCuci);
+    var pemakaianPerLoadDasar = round2(record.takaranPerKg * kapasitasAcuan);
     var biayaPerLoad = round2(pemakaianPerLoadDasar * hargaPerUnit);
 
     return {
