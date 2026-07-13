@@ -192,7 +192,13 @@ function authNormalizeEmail_(email) {
   return String(email || "").trim().toLowerCase();
 }
 
-function authHashPassword_(password, salt) {
+/**
+ * [LAMA - v1] SHA-256 1 putaran. HANYA dipakai untuk memverifikasi akun lama
+ * yang password-nya belum sempat di-upgrade. JANGAN dipakai untuk hash baru
+ * lagi - lihat authHashPasswordV2_. Akun yang berhasil login pakai v1 akan
+ * otomatis di-upgrade ke v2 saat itu juga (lihat loginUser).
+ */
+function authHashPasswordV1_(password, salt) {
   var raw = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
     String(password) + ":" + String(salt),
@@ -202,6 +208,31 @@ function authHashPassword_(password, salt) {
     var v = (b < 0 ? b + 256 : b).toString(16);
     return v.length === 1 ? "0" + v : v;
   }).join("");
+}
+
+var AUTH_HASH_V2_ITERATIONS_ = 10000;
+
+function authBytesToHex_(bytes) {
+  return bytes.map(function (b) {
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? "0" + v : v;
+  }).join("");
+}
+
+/**
+ * [BARU - v2] HMAC-SHA256 diulang 10.000x (skema mirip PBKDF2 - GAS tidak
+ * punya bcrypt/scrypt/PBKDF2 bawaan). Jauh lebih lambat di-brute-force
+ * dibanding v1 (SHA-256 1 putaran) kalau spreadsheet Master bocor. Dipakai
+ * untuk SEMUA password baru (registerUser) & password lama yang di-upgrade
+ * otomatis saat login berhasil (lihat loginUser).
+ */
+function authHashPasswordV2_(password, salt) {
+  var value = String(password) + ":" + String(salt);
+  for (var i = 0; i < AUTH_HASH_V2_ITERATIONS_; i++) {
+    var bytes = Utilities.computeHmacSha256Signature(value, salt);
+    value = authBytesToHex_(bytes);
+  }
+  return value;
 }
 
 function authGenerateOtp_() {
@@ -246,7 +277,7 @@ function registerUser(email, password) {
     }
 
     var salt = Utilities.getUuid();
-    var passwordHash = authHashPassword_(cleanPassword, salt);
+    var passwordHash = authHashPasswordV2_(cleanPassword, salt);
     var otp = authGenerateOtp_();
 
     // Kirim dulu sebelum simpan - kalau MailApp gagal (misal alamat gmail
@@ -264,6 +295,7 @@ function registerUser(email, password) {
       expiresAt: Date.now() + AUTH_OTP_TTL_MS_,
       passwordHash: passwordHash,
       salt: salt,
+      hashVersion: 2,
       createdAt: new Date().toISOString()
     }));
 
@@ -303,6 +335,7 @@ function verifyOtp(email, code) {
       email: cleanEmail,
       passwordHash: pending.passwordHash,
       salt: pending.salt,
+      hashVersion: pending.hashVersion || 1,
       createdAt: pending.createdAt || new Date().toISOString(),
       verifiedAt: new Date().toISOString(),
       tenantSpreadsheetId: ""
@@ -371,8 +404,25 @@ function loginUser(email, password) {
     }
 
     var user = JSON.parse(raw);
-    var hash = authHashPassword_(cleanPassword, user.salt);
-    if (hash !== user.passwordHash) {
+    var hashVersion = user.hashVersion || 1;
+    var isMatch;
+
+    if (hashVersion >= 2) {
+      isMatch = authHashPasswordV2_(cleanPassword, user.salt) === user.passwordHash;
+    } else {
+      isMatch = authHashPasswordV1_(cleanPassword, user.salt) === user.passwordHash;
+      // [UPGRADE OTOMATIS] Password benar tapi masih pakai skema lama (SHA-256
+      // 1 putaran) - hash ulang ke v2 (HMAC-SHA256 x10.000) & simpan sekarang
+      // juga, supaya makin lama makin sedikit akun yang masih pakai skema
+      // lemah, tanpa perlu paksa user ganti password.
+      if (isMatch) {
+        user.passwordHash = authHashPasswordV2_(cleanPassword, user.salt);
+        user.hashVersion = 2;
+        writeKey_(sheet, authKeyUser_(cleanEmail), JSON.stringify(user));
+      }
+    }
+
+    if (!isMatch) {
       return { ok: false, error: "Email atau password salah.", stage: "loginUser:mismatch" };
     }
 
