@@ -25,6 +25,7 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
   var AUTH_STORAGE_KEY_ = "klAuthUserEmail";
   var AUTH_SESSION_STORAGE_KEY_ = "klAuthSessionToken";
   var authPendingEmail_ = "";
+  var authPendingResetEmail_ = "";
 
   // [ADMIN UI] Cuma dipakai utk tampil/sembunyikan kartu menu "Buat Akun
   // Afiliator" (authApplyAdminUI_ di bawah) - HANYA kosmetik client. Kalau
@@ -63,13 +64,13 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
   }
 
   window.authGoTo = function (name) {
-    ["authScreenLogin", "authScreenRegister", "authScreenOtp"].forEach(function (id) {
+    ["authScreenLogin", "authScreenRegister", "authScreenOtp", "authScreenForgotPassword", "authScreenResetPassword"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("active");
     });
     var target = document.getElementById("authScreen" + name.charAt(0).toUpperCase() + name.slice(1));
     if (target) target.classList.add("active");
-    ["authLoginError", "authRegisterError", "authOtpError"].forEach(function (id) {
+    ["authLoginError", "authRegisterError", "authOtpError", "authForgotError", "authResetError"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.style.display = "none";
     });
@@ -214,6 +215,96 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
         authShowError_("authOtpError", err && err.message ? err.message : String(err));
       })
       .resendOtp(authPendingEmail_);
+  };
+
+  window.submitAuthForgotPassword = function () {
+    var emailEl = document.getElementById("authForgotEmail");
+    var btn = document.getElementById("authForgotBtn");
+    var email = emailEl ? emailEl.value.trim() : "";
+
+    if (!authIsValidGmailClient_(email)) {
+      authShowError_("authForgotError", "Email harus alamat Gmail yang valid (contoh: nama@gmail.com).");
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Mengirim..."; }
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) { btn.disabled = false; btn.textContent = "Kirim Kode Reset"; }
+        if (!res || !res.ok) {
+          authShowError_("authForgotError", (res && res.error) || "Gagal mengirim kode reset.");
+          return;
+        }
+        authPendingResetEmail_ = res.data.email;
+        var label = document.getElementById("authResetEmailLabel");
+        if (label) label.textContent = res.data.email;
+        var codeInput = document.getElementById("authResetCode");
+        var passInput = document.getElementById("authResetNewPassword");
+        if (codeInput) codeInput.value = "";
+        if (passInput) passInput.value = "";
+        authGoTo("resetPassword");
+        if (typeof showToast === "function") showToast("Kalau email terdaftar, kode reset sudah dikirim.", "ok");
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Kirim Kode Reset"; }
+        authShowError_("authForgotError", err && err.message ? err.message : String(err));
+      })
+      .requestPasswordReset(email);
+  };
+
+  window.resendAuthForgotPassword = function () {
+    if (!authPendingResetEmail_) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) {
+          authShowError_("authResetError", (res && res.error) || "Gagal mengirim ulang kode.");
+          return;
+        }
+        if (typeof showToast === "function") showToast("Kode reset baru sudah dikirim (kalau email terdaftar).", "ok");
+      })
+      .withFailureHandler(function (err) {
+        authShowError_("authResetError", err && err.message ? err.message : String(err));
+      })
+      .requestPasswordReset(authPendingResetEmail_);
+  };
+
+  window.submitAuthResetPassword = function () {
+    var codeEl = document.getElementById("authResetCode");
+    var passEl = document.getElementById("authResetNewPassword");
+    var btn = document.getElementById("authResetBtn");
+    var code = codeEl ? codeEl.value.trim() : "";
+    var newPassword = passEl ? passEl.value : "";
+
+    if (!/^\d{4}$/.test(code)) {
+      authShowError_("authResetError", "Kode reset harus 4 angka.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      authShowError_("authResetError", "Password baru minimal 6 karakter.");
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Memproses..."; }
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) { btn.disabled = false; btn.textContent = "Reset Password"; }
+        if (!res || !res.ok) {
+          authShowError_("authResetError", (res && res.error) || "Gagal reset password.");
+          return;
+        }
+        var loginEmailEl = document.getElementById("authLoginEmail");
+        var loginPasswordEl = document.getElementById("authLoginPassword");
+        if (loginEmailEl) loginEmailEl.value = res.data.email;
+        if (loginPasswordEl) loginPasswordEl.value = "";
+        authPendingResetEmail_ = "";
+        authGoTo("login");
+        if (typeof showToast === "function") showToast("Password berhasil direset. Silakan masuk.", "ok");
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Reset Password"; }
+        authShowError_("authResetError", err && err.message ? err.message : String(err));
+      })
+      .confirmPasswordReset(authPendingResetEmail_, code, newPassword);
   };
 
   window.authLogout = function () {

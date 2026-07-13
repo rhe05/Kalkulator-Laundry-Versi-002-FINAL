@@ -20,6 +20,8 @@
  * - verifyOtp(email, code)
  * - resendOtp(email)
  * - loginUser(email, password)
+ * - requestPasswordReset(email)
+ * - confirmPasswordReset(email, code, newPassword)
  * - logoutUser(sessionToken)
  *
  * [2026-07-13] MULTI-TENANT: setiap akun (authUser_<email>) sekarang juga
@@ -573,6 +575,129 @@ function loginUser(email, password) {
     return { ok: true, data: { email: cleanEmail, sessionToken: sessionToken } };
   } catch (err) {
     return errorResponse_(err, "loginUser");
+  }
+}
+
+function authKeyPasswordReset_(email) {
+  return "authPasswordReset_" + email;
+}
+
+function authSendPasswordResetEmail_(email, otp) {
+  MailApp.sendEmail({
+    to: email,
+    subject: "Kode Reset Password - Kalkulator Laundry",
+    body:
+      "Halo,\n\n" +
+      "Kode untuk reset password akun Kalkulator Laundry Anda:\n\n" +
+      "    " + otp + "\n\n" +
+      "Kode ini berlaku selama 5 menit.\n\n" +
+      "Kalau Anda tidak meminta reset password, abaikan email ini - password Anda TIDAK akan berubah tanpa kode ini."
+  });
+}
+
+/**
+ * requestPasswordReset: kirim kode 4 angka ke email (kalau akun memang
+ * terdaftar) untuk reset password. SENGAJA SELALU balas {ok:true} ke client
+ * terlepas akun ada/tidak (sama seperti prinsip pesan error loginUser yang
+ * digeneralkan) - supaya form ini tidak bisa dipakai mengecek email mana
+ * yang terdaftar di sistem.
+ */
+function requestPasswordReset(email) {
+  try {
+    var cleanEmail = authNormalizeEmail_(email);
+    if (!authIsValidGmail_(cleanEmail)) {
+      return { ok: false, error: "Email harus alamat Gmail yang valid (contoh: nama@gmail.com).", stage: "requestPasswordReset:validate_email" };
+    }
+
+    // [RATE LIMIT] Maks 3 kali kirim kode reset / 10 menit / email.
+    var rlKey = "rl_pwreset_" + cleanEmail;
+    if (authRateLimitCount_(rlKey) >= 3) {
+      return { ok: false, error: "Terlalu banyak permintaan reset password. Coba lagi dalam beberapa menit.", stage: "requestPasswordReset:rate_limited" };
+    }
+
+    var sheet = ensureDataSheet_();
+    var userExists = !!readKey_(sheet, authKeyUser_(cleanEmail));
+
+    if (userExists) {
+      authRateLimitBump_(rlKey, 10 * 60);
+      var otp = authGenerateOtp_();
+      try {
+        authSendPasswordResetEmail_(cleanEmail, otp);
+        writeKey_(sheet, authKeyPasswordReset_(cleanEmail), JSON.stringify({
+          email: cleanEmail,
+          otp: otp,
+          expiresAt: Date.now() + AUTH_OTP_TTL_MS_,
+          createdAt: new Date().toISOString()
+        }));
+      } catch (mailErr) {
+        // Diam-diam gagal (tetap balas ok:true - jangan bocorkan status akun
+        // ke client). confirmPasswordReset otomatis akan gagal juga kalau
+        // user coba lanjut, karena tidak ada kode tersimpan.
+      }
+    }
+
+    return { ok: true, data: { email: cleanEmail } };
+  } catch (err) {
+    return errorResponse_(err, "requestPasswordReset");
+  }
+}
+
+/**
+ * confirmPasswordReset: cocokkan kode reset, kalau benar & belum
+ * kedaluwarsa, ganti password (salt baru + hash v2). Semua sesi login lama
+ * milik email ini DIHAPUS PAKSA (scan authSession_ lewat readKeysByPrefix_)
+ * supaya device manapun yang masih pakai password lama otomatis ter-logout.
+ */
+function confirmPasswordReset(email, code, newPassword) {
+  try {
+    var cleanEmail = authNormalizeEmail_(email);
+    var cleanCode = String(code || "").trim();
+    var cleanPassword = typeof newPassword === "string" ? newPassword : "";
+
+    if (cleanPassword.length < 6) {
+      return { ok: false, error: "Password baru minimal 6 karakter.", stage: "confirmPasswordReset:validate_password" };
+    }
+
+    var sheet = ensureDataSheet_();
+    var raw = readKey_(sheet, authKeyPasswordReset_(cleanEmail));
+    if (!raw) {
+      return { ok: false, error: "Tidak ada permintaan reset password untuk email ini. Ulangi dari awal.", stage: "confirmPasswordReset:not_found" };
+    }
+
+    var pending = JSON.parse(raw);
+    if (Date.now() > Number(pending.expiresAt || 0)) {
+      deleteKeyRow_(sheet, authKeyPasswordReset_(cleanEmail));
+      return { ok: false, error: "Kode reset sudah kedaluwarsa. Ulangi dari awal.", stage: "confirmPasswordReset:expired" };
+    }
+    if (cleanCode !== String(pending.otp || "")) {
+      return { ok: false, error: "Kode reset salah. Coba lagi.", stage: "confirmPasswordReset:mismatch" };
+    }
+
+    var userRaw = readKey_(sheet, authKeyUser_(cleanEmail));
+    if (!userRaw) {
+      deleteKeyRow_(sheet, authKeyPasswordReset_(cleanEmail));
+      return { ok: false, error: "Akun tidak ditemukan.", stage: "confirmPasswordReset:user_not_found" };
+    }
+
+    var user = JSON.parse(userRaw);
+    var salt = Utilities.getUuid();
+    user.passwordHash = authHashPasswordV2_(cleanPassword, salt);
+    user.salt = salt;
+    user.hashVersion = 2;
+    writeKey_(sheet, authKeyUser_(cleanEmail), JSON.stringify(user));
+    deleteKeyRow_(sheet, authKeyPasswordReset_(cleanEmail));
+
+    // [KEAMANAN] Paksa logout semua device yang masih pakai sesi lama.
+    readKeysByPrefix_(sheet, "authSession_").forEach(function (row) {
+      try {
+        var s = JSON.parse(row.value);
+        if (authNormalizeEmail_(s.email) === cleanEmail) deleteKeyRow_(sheet, row.key);
+      } catch (e) {}
+    });
+
+    return { ok: true, data: { email: cleanEmail } };
+  } catch (err) {
+    return errorResponse_(err, "confirmPasswordReset");
   }
 }
 
