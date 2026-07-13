@@ -92,6 +92,19 @@ tag <script> atau <style> di file ini -- itu tugas file Style_*/Script_*.
             <div class="dashboard-card-summary is-loading" id="dashboardPotensiOmsetSummary">Memuat data...</div>
           </div>
         </div>
+
+        <!-- Kartu ini SECARA UI cuma dimunculkan utk email admin (lihat
+             authApplyAdminUI_ di Script_Fitur_Auth.html) - keamanan
+             sesungguhnya ditegakkan backend (adminCreateAffiliateAccount
+             cek session.email), ini bukan satu-satunya lapis proteksi. -->
+        <div class="menu-card dashboard-card tone-flame" id="adminAfiliatorMenuCard" style="display:none;" onclick="openScreenAdminAfiliator()">
+          <div class="menu-icon">&#128101;</div>
+          <div class="menu-body">
+            <div class="menu-title">Buat Akun Afiliator</div>
+            <div class="dashboard-card-summary">Khusus admin</div>
+          </div>
+          <div class="menu-arrow">&#8594;</div>
+        </div>
       </div>
 
       <!-- =================================================================

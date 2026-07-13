@@ -26,6 +26,12 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
   var AUTH_SESSION_STORAGE_KEY_ = "klAuthSessionToken";
   var authPendingEmail_ = "";
 
+  // [ADMIN UI] Cuma dipakai utk tampil/sembunyikan kartu menu "Buat Akun
+  // Afiliator" (authApplyAdminUI_ di bawah) - HANYA kosmetik client. Kalau
+  // email ini beda dari yang dicek server (AUTH_ADMIN_EMAIL_, Modul_Auth.gs),
+  // backend tetap menolak - sinkronkan manual kalau email admin pernah ganti.
+  var AUTH_ADMIN_EMAIL_CLIENT_ = "rheza354@gmail.com";
+
   function isAuthLoggedIn() {
     try {
       return !!window.localStorage.getItem(AUTH_STORAGE_KEY_) && !!window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY_);
@@ -253,6 +259,18 @@ dari sini utk memutuskan tampilkan #authRoot atau #appRoot).
     if (appHeaderEl) appHeaderEl.style.display = "flex";
     if (logoutBtnEl) logoutBtnEl.style.display = "inline-flex";
     if (typeof sidebarShow_ === "function") sidebarShow_();
+    authApplyAdminUI_();
     showScreen("menu");
+  }
+
+  // [ADMIN UI] Tampilkan kartu "Buat Akun Afiliator" HANYA kalau email yang
+  // login sama dengan AUTH_ADMIN_EMAIL_CLIENT_ - murni kosmetik, lihat
+  // catatan di deklarasi AUTH_ADMIN_EMAIL_CLIENT_ di atas.
+  function authApplyAdminUI_() {
+    var cardEl = document.getElementById("adminAfiliatorMenuCard");
+    if (!cardEl) return;
+    var email = "";
+    try { email = window.localStorage.getItem(AUTH_STORAGE_KEY_) || ""; } catch (e) {}
+    cardEl.style.display = (email.trim().toLowerCase() === AUTH_ADMIN_EMAIL_CLIENT_) ? "flex" : "none";
   }
 </script>

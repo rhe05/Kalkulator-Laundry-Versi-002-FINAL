@@ -43,6 +43,13 @@
  */
 
 var AUTH_OTP_TTL_MS_ = 5 * 60 * 1000; // 5 menit
+
+// [ADMIN] Email pemilik app - satu-satunya yang boleh memanggil
+// adminCreateAffiliateAccount (lihat fungsi itu di bawah). Client (Script_
+// Fitur_Auth.html, AUTH_ADMIN_EMAIL_CLIENT_) punya salinan email yang sama
+// HANYA untuk kosmetik (tampil/sembunyi kartu menu) - kalau email admin
+// berganti, ubah DUA-DUANYA supaya tetap sinkron.
+var AUTH_ADMIN_EMAIL_ = "rheza354@gmail.com";
 var AUTH_SESSION_TTL_MS_ = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
 function authKeyOtp_(email) {
@@ -508,6 +515,95 @@ function loginUser(email, password) {
     return { ok: true, data: { email: cleanEmail, sessionToken: sessionToken } };
   } catch (err) {
     return errorResponse_(err, "loginUser");
+  }
+}
+
+function authGenerateReadablePassword_() {
+  // Tanpa karakter membingungkan (0/O, 1/l/I) supaya gampang dibaca/diketik
+  // manual afiliator kalau perlu, walau normalnya tinggal salin dari email.
+  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  var out = "";
+  for (var i = 0; i < 10; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
+function authSendAffiliateCredentialsEmail_(email, password, afiliatorLabel) {
+  var appUrl = ScriptApp.getService().getUrl();
+  MailApp.sendEmail({
+    to: email,
+    subject: "Akun Kalkulator Laundry Anda (Trial Afiliator 7 Hari)",
+    body:
+      "Halo " + (afiliatorLabel || "") + ",\n\n" +
+      "Akun trial afiliator Kalkulator Laundry Anda sudah aktif, berlaku 7 hari:\n\n" +
+      "Link aplikasi : " + appUrl + "\n" +
+      "Email         : " + email + "\n" +
+      "Password      : " + password + "\n\n" +
+      "Setelah 7 hari, akun ini perlu diaktifkan admin dulu untuk lanjut dipakai.\n\n" +
+      "Selamat mencoba!"
+  });
+}
+
+/**
+ * adminCreateAffiliateAccount: dipanggil dari layar "Buat Akun Afiliator"
+ * (screenAdminAfiliator) - HANYA email AUTH_ADMIN_EMAIL_ yang lolos cek di
+ * bawah, user lain akan ditolak walau sesi login-nya valid. Beda dari
+ * registerUser: TIDAK butuh kode akses & TIDAK lewat verifikasi OTP (admin
+ * yang membuat langsung dianggap tepercaya) - password acak dibuat di sini,
+ * langsung dikirim ke email afiliator.
+ *
+ * SENGAJA TIDAK dibungkus withTenant_ (Code.gs) - fungsi ini menulis ke
+ * spreadsheet Master (authUser_/dst), bukan ke tenant manapun, sama seperti
+ * registerUser/loginUser/dkk lain di file ini.
+ */
+function adminCreateAffiliateAccount(sessionToken, targetEmail, afiliatorLabel) {
+  try {
+    var session = resolveSession_(sessionToken);
+    if (!session || authNormalizeEmail_(session.email) !== AUTH_ADMIN_EMAIL_) {
+      return { ok: false, error: "Akses ditolak.", stage: "adminCreateAffiliateAccount:forbidden", code: "FORBIDDEN" };
+    }
+
+    var cleanEmail = authNormalizeEmail_(targetEmail);
+    if (!authIsValidGmail_(cleanEmail)) {
+      return { ok: false, error: "Email harus alamat Gmail yang valid (contoh: nama@gmail.com).", stage: "adminCreateAffiliateAccount:validate_email" };
+    }
+
+    var sheet = ensureDataSheet_();
+    if (readKey_(sheet, authKeyUser_(cleanEmail))) {
+      return { ok: false, error: "Email ini sudah terdaftar.", stage: "adminCreateAffiliateAccount:already_registered" };
+    }
+
+    var tempPassword = authGenerateReadablePassword_();
+    var salt = Utilities.getUuid();
+    var passwordHash = authHashPasswordV2_(tempPassword, salt);
+
+    writeKey_(sheet, authKeyUser_(cleanEmail), JSON.stringify({
+      email: cleanEmail,
+      passwordHash: passwordHash,
+      salt: salt,
+      hashVersion: 2,
+      accessType: "affiliate_trial",
+      accessExpiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      afiliatorLabel: String(afiliatorLabel || ""),
+      createdAt: new Date().toISOString(),
+      verifiedAt: new Date().toISOString(),
+      tenantSpreadsheetId: ""
+    }));
+
+    provisionTenantSpreadsheet_(cleanEmail);
+
+    try {
+      authSendAffiliateCredentialsEmail_(cleanEmail, tempPassword, afiliatorLabel);
+    } catch (mailErr) {
+      // Akun tetap valid & aktif walau email gagal terkirim - admin lihat
+      // tempPassword dari response ini & sampaikan manual ke afiliator.
+      return { ok: true, data: { email: cleanEmail, tempPassword: tempPassword, emailSent: false } };
+    }
+
+    return { ok: true, data: { email: cleanEmail, tempPassword: tempPassword, emailSent: true } };
+  } catch (err) {
+    return errorResponse_(err, "adminCreateAffiliateAccount");
   }
 }
 

@@ -1,0 +1,74 @@
+<!--
+===============================================================================
+FILE: Script_Fitur_AdminAfiliator.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Fitur Admin - Buat & Kirim Akun Afiliator (screenAdminAfiliator)
+
+FUNGSI:
+Validasi form, panggil adminCreateAffiliateAccount (Modul_Auth.gs) lewat
+callServer_ (sessionToken disisipkan otomatis). Backend yang menegakkan
+"hanya admin boleh" (cek session.email) - kartu menu & layar ini di client
+cuma disembunyikan utk user lain (authApplyAdminUI_, Script_Fitur_Auth.html),
+BUKAN satu-satunya lapisan keamanan.
+
+Include SEBELUM Script_Boot_Main.html.
+===============================================================================
+-->
+<script>
+"use strict";
+  window.openScreenAdminAfiliator = function () {
+    var emailEl = document.getElementById("adminAfiliatorEmail");
+    var namaEl = document.getElementById("adminAfiliatorNama");
+    var errEl = document.getElementById("adminAfiliatorError");
+    var resultEl = document.getElementById("adminAfiliatorResult");
+    if (emailEl) emailEl.value = "";
+    if (namaEl) namaEl.value = "";
+    if (errEl) errEl.style.display = "none";
+    if (resultEl) { resultEl.style.display = "none"; resultEl.innerHTML = ""; }
+    showScreen("adminAfiliator");
+  };
+
+  window.submitAdminAfiliator = function () {
+    var emailEl = document.getElementById("adminAfiliatorEmail");
+    var namaEl = document.getElementById("adminAfiliatorNama");
+    var btn = document.getElementById("adminAfiliatorBtn");
+    var errEl = document.getElementById("adminAfiliatorError");
+    var resultEl = document.getElementById("adminAfiliatorResult");
+    var email = emailEl ? emailEl.value.trim() : "";
+    var nama = namaEl ? namaEl.value.trim() : "";
+
+    if (errEl) errEl.style.display = "none";
+    if (resultEl) { resultEl.style.display = "none"; resultEl.innerHTML = ""; }
+
+    if (!authIsValidGmailClient_(email)) {
+      if (errEl) { errEl.textContent = "Email harus alamat Gmail yang valid (contoh: nama@gmail.com)."; errEl.style.display = "block"; }
+      return;
+    }
+    if (!nama) {
+      if (errEl) { errEl.textContent = "Nama afiliator wajib diisi."; errEl.style.display = "block"; }
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Memproses..."; }
+    callServer_("adminCreateAffiliateAccount", [email, nama], function (res) {
+      if (btn) { btn.disabled = false; btn.textContent = "Buat & Kirim Akun"; }
+      if (!res || !res.ok) {
+        if (errEl) { errEl.textContent = (res && res.error) || "Gagal membuat akun."; errEl.style.display = "block"; }
+        return;
+      }
+      if (resultEl) {
+        var msg = res.data.emailSent
+          ? "Akun berhasil dibuat. Email berisi login (email + password) sudah terkirim ke " + escapeHtml(res.data.email) + "."
+          : "Akun berhasil dibuat, TAPI email gagal terkirim. Sampaikan manual - Email: " + escapeHtml(res.data.email) + ", Password: " + escapeHtml(res.data.tempPassword);
+        resultEl.innerHTML = msg;
+        resultEl.style.display = "block";
+      }
+      if (emailEl) emailEl.value = "";
+      if (namaEl) namaEl.value = "";
+      if (typeof showToast === "function") showToast("Akun afiliator dibuat.", "ok");
+    }, function (err) {
+      if (btn) { btn.disabled = false; btn.textContent = "Buat & Kirim Akun"; }
+      if (errEl) { errEl.textContent = err && err.message ? err.message : String(err); errEl.style.display = "block"; }
+    });
+  };
+</script>
