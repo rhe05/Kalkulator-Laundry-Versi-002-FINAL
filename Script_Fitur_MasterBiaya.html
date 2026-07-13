@@ -155,7 +155,7 @@ menjalankan bootApp().
       }
       var data = res.data || {};
       var row = Array.isArray(data.rows) && data.rows.length ? data.rows[0] : null;
-      host.innerHTML = buildMasterBiayaDesktopHtml_(cId, row);
+      host.innerHTML = buildMasterBiayaDesktopHtml_(cId, row, current);
       // Konten baru bisa mengubah tinggi kartu - kunci ulang 1 layar (lihat
       // fitDesktopDashboardToViewport_ di Script_Fitur_Dashboard.html).
       if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
@@ -242,19 +242,38 @@ menjalankan bootApp().
     );
   }
 
-  function buildMasterBiayaDesktopHtml_(cabangId, row) {
+  function buildMasterBiayaDesktopHtml_(cabangId, row, cabang) {
     var komponen = row && Array.isArray(row.komponenBiaya) ? row.komponenBiaya : [];
     var byKey = {};
     komponen.forEach(function (k) { byKey[k.key] = k; });
+
+    // Outlet Jasa Setrika yang cuma pakai Setrika Uap tidak punya komponen
+    // listrik apa pun (sama persis kondisi yang sudah dicek di
+    // renderBiayaPickCabangList utk HP) - tombol kartu Listrik dinonaktifkan
+    // KHUSUS kombinasi ini di desktop juga.
+    var setrikaRowsDesktop_ = cabang && Array.isArray(cabang.mesinSetrika) ? cabang.mesinSetrika : [];
+    var adaSetrikaListrikDesktop_ = setrikaRowsDesktop_.some(function (m) { return m.jenis === "listrik"; });
+    var disableListrikBtn_ = !!cabang && isSetrikaOnlyKategori(cabang.kategoriLayanan) && !adaSetrikaListrikDesktop_;
 
     var cardsHtml = MASTERBIAYA_KATEGORI_META.map(function (meta) {
       var k = byKey[meta.key];
       var hasValue = !!k && Number(k.biayaPerLoad) > 0;
       var hasEntry = !!k;
       var unitLabel = (k && k.unitSuffix) ? k.unitSuffix.replace(/^\//, '') : 'load';
+      var isDisabledCard = meta.key === 'listrik' && disableListrikBtn_;
       var bodyHtml;
 
-      if (meta.key === 'gas' && hasEntry && k.gasCard) {
+      if (isDisabledCard) {
+        bodyHtml =
+          '<div class="gas-card-result">' +
+            '<div class="gas-result-grid" style="grid-template-columns:1fr;">' +
+              '<div class="gas-result-cell">' +
+                '<div class="label">Status</div>' +
+                '<div class="val mb-desktop-empty-val">Tidak berlaku (Jasa Setrika + Setrika Uap)</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      } else if (meta.key === 'gas' && hasEntry && k.gasCard) {
         bodyHtml = buildGasCardBodyHtml_(k.gasCard);
       } else if (hasEntry) {
         var detailRowsHtml = buildMasterBiayaDetailRowsHtml_(k.detail);
@@ -278,6 +297,10 @@ menjalankan bootApp().
           '</div>';
       }
 
+      var btnHtml = isDisabledCard
+        ? '<button class="icon-btn" type="button" disabled aria-label="Listrik tidak berlaku untuk Jasa Setrika + Setrika Uap" style="opacity:0.4; cursor:not-allowed;" onclick="showToast(\'Outlet ini kategori Jasa Setrika dengan Setrika Uap - tidak ada komponen listrik untuk dihitung.\', \'\'); return false;">&#128683;</button>'
+        : '<button class="icon-btn" type="button" aria-label="' + (hasEntry ? 'Kelola' : 'Isi data') + ' ' + escapeHtml(meta.label) + '" onclick="' + meta.open + '(\'' + escapeJsAttr(cabangId) + '\')">' + (hasEntry ? '&#9998;' : '&#43;') + '</button>';
+
       return (
         '<div class="gas-card mb-desktop-card tone-' + escapeHtml(meta.tone) + (hasValue ? '' : ' is-empty') + '">' +
           '<div class="gas-card-top">' +
@@ -285,9 +308,7 @@ menjalankan bootApp().
               '<span class="dot"></span>' +
               '<h3>' + escapeHtml(meta.label) + '</h3>' +
             '</div>' +
-            '<div class="actions">' +
-              '<button class="icon-btn" type="button" aria-label="' + (hasEntry ? 'Kelola' : 'Isi data') + ' ' + escapeHtml(meta.label) + '" onclick="' + meta.open + '(\'' + escapeJsAttr(cabangId) + '\')">' + (hasEntry ? '&#9998;' : '&#43;') + '</button>' +
-            '</div>' +
+            '<div class="actions">' + btnHtml + '</div>' +
           '</div>' +
           bodyHtml +
         '</div>'

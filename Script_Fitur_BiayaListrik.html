@@ -138,7 +138,33 @@ menjalankan bootApp().
 
   function renderListrikForm() {
     syncListrikFieldsFromState();
+    applyListrikFieldAvailability_();
     renderListrikPreview();
+  }
+
+  /**
+   * applyListrikFieldAvailability_: kategori Jasa Setrika tidak pernah punya
+   * mesin cuci/pengering (lihat catatan Modul_Cabang.gs) - kartu Mesin
+   * Cuci/Mesin Pengering/Pompa Air dikunci (input disabled + pudar) supaya
+   * tidak membingungkan user, HANYA TDL & Setrika Listrik yang aktif untuk
+   * kategori ini. Kategori lain tidak terpengaruh sama sekali. Dipanggil
+   * tiap render form (sama utk HP & desktop, satu form yang sama).
+   */
+  function applyListrikFieldAvailability_() {
+    var isJasaSetrika_ = !!listrikCabangCache && isSetrikaOnlyKategori(listrikCabangCache.kategoriLayanan);
+    [
+      ["listrikCardCuci", "listrikWattCuci"],
+      ["listrikCardKering", "listrikWattKering"],
+      ["listrikCardPompa", "listrikWattPompa"]
+    ].forEach(function (pair) {
+      var cardEl = document.getElementById(pair[0]);
+      var inputEl = document.getElementById(pair[1]);
+      if (cardEl) {
+        cardEl.style.opacity = isJasaSetrika_ ? "0.4" : "";
+        cardEl.style.pointerEvents = isJasaSetrika_ ? "none" : "";
+      }
+      if (inputEl) inputEl.disabled = isJasaSetrika_;
+    });
   }
 
   /**
