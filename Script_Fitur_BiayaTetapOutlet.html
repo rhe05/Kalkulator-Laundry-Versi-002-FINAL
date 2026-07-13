@@ -65,12 +65,19 @@ menjalankan bootApp().
    * BIAYA TETAP OUTLET - LAYAR DESKTOP (#screenBiayaTetapList, >=1100px)
    * -------------------------------------------------------------------------
    * Panel fixed cost utk outlet yang sedang dipilih (dashboardSelectedOutletId,
-   * dipakai bareng Dashboard/Profil Outlet/Master Biaya/Struktur HPP). REUSE
-   * renderDashboardFixedCostCard(res, targetId) apa adanya (komponen
-   * ".fc-card" collapsible yang sudah dipakai Dashboard) - bukan komponen
-   * baru. Layar ini TIDAK mengisi cabangListCache global (lihat
-   * biayaTetapListCache di atas - bentuknya beda), jadi di sini ditarik
-   * listCabang() sendiri kalau cabangListCache masih kosong.
+   * dipakai bareng Dashboard/Profil Outlet/Master Biaya/Struktur HPP).
+   * [2026-07-13] TIDAK lagi reuse renderDashboardFixedCostCard/".fc-card" -
+   * layar ini sekarang punya kartu sendiri (buildBiayaTetapDesktopCardHtml_,
+   * ".fc-outlet-*" di Style_Module_FixedCost.html): langsung terbuka (tanpa
+   * tombol panah), rincian tiap komponen ditampilkan per tahun/bulan/hari +
+   * persentase dalam bentuk tabel, ukuran kartu lebih ringkas drpd kartu
+   * Dashboard. Kartu Fixed Cost di Dashboard (renderDashboardFixedCostCard)
+   * TIDAK tersentuh sama sekali. Layar ini TIDAK mengisi cabangListCache
+   * global (lihat biayaTetapListCache di atas - bentuknya beda), jadi di
+   * sini ditarik listCabang() sendiri kalau cabangListCache masih kosong.
+   * Data getDashboardFixedCostSummary() lewat cachedServerRead_ (SWR, pola
+   * sama dgn Master Biaya) supaya pindah layar ke sini instan pada kunjungan
+   * berikutnya.
    * =========================================================================
    */
   function renderBiayaTetapDesktop_() {
@@ -106,21 +113,67 @@ menjalankan bootApp().
       host.innerHTML = '<div class="dashboard-card-summary is-loading">Memuat data...</div>';
       var cId = current.id;
 
-      google.script.run
-        .withSuccessHandler(function (res) {
-          if (view.screen !== "biayaTetapList") return;
-          var stillSelected = ((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) === cId;
-          if (!stillSelected) return;
-          renderDashboardFixedCostCard(res, "biayaTetapDesktopContent");
-          if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
-        })
-        .withFailureHandler(function (err) {
-          if (view.screen !== "biayaTetapList") return;
-          host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
-          if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
-        })
-        .getDashboardFixedCostSummary(cId);
+      cachedServerRead_("getDashboardFixedCostSummary", cId, function (res, fromCache) {
+        if (view.screen !== "biayaTetapList") return;
+        var stillSelected = ((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) === cId;
+        if (!stillSelected) return;
+        host.innerHTML = buildBiayaTetapDesktopCardHtml_(res);
+        if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
+      }, function (err, hadCache) {
+        if (hadCache) return;
+        host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+        if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
+      });
     });
+  }
+
+  // Kartu detail khusus panel desktop Biaya Tetap Outlet: total per bulan/
+  // hari/tahun di atas, lalu tabel per komponen (Sewa/Gaji/Internet/dst)
+  // dgn kolom /Tahun /Bulan /Hari dan persentase kontribusi - LANGSUNG
+  // tampil saat outlet dipilih, tanpa perlu klik apa pun.
+  function buildBiayaTetapDesktopCardHtml_(res) {
+    if (!res || !res.ok) {
+      return '<div class="dashboard-empty">' + escapeHtml(res && res.error ? res.error : "Data fixed cost belum bisa dibaca.") + '</div>';
+    }
+    var data = res.data || {};
+    var rows = Array.isArray(data.rows) ? data.rows : [];
+    if (!rows.length) {
+      return '<div class="dashboard-empty">Belum ada outlet untuk fixed cost.</div>';
+    }
+    var d = rows[0];
+    var components = Array.isArray(d.components) ? d.components : [];
+    var totalPerBulan = toNumber(d.totalPerBulan, 0);
+    var totalPerHari = toNumber(d.totalPerHari, 0);
+    var totalPerTahun = totalPerBulan * 12;
+
+    var tableRowsHtml = components.map(function (c) {
+      var perBulan = toNumber(c.amount, 0);
+      var perTahun = perBulan * 12;
+      var perHari = perBulan / 30;
+      var percent = toNumber(c.percent, 0);
+      return '<tr>' +
+        '<td>' + escapeHtml(c.label || '') + '</td>' +
+        '<td>' + money0(perTahun) + '</td>' +
+        '<td>' + money0(perBulan) + '</td>' +
+        '<td>' + money0(perHari) + '</td>' +
+        '<td class="pct">' + percent + '%</td>' +
+      '</tr>';
+    }).join('');
+
+    return '' +
+      '<div class="fc-outlet-card">' +
+        '<div class="fc-outlet-totals">' +
+          '<div class="fc-outlet-total-item"><div class="label">Per tahun</div><div class="value">' + money0(totalPerTahun) + '</div></div>' +
+          '<div class="fc-outlet-total-item highlight"><div class="label">Per bulan</div><div class="value">' + money0(totalPerBulan) + '</div></div>' +
+          '<div class="fc-outlet-total-item"><div class="label">Per hari</div><div class="value">' + money0(totalPerHari) + '</div></div>' +
+        '</div>' +
+        (tableRowsHtml ? (
+          '<table class="fc-outlet-table">' +
+            '<thead><tr><th>Komponen</th><th>/Tahun</th><th>/Bulan</th><th>/Hari</th><th>%</th></tr></thead>' +
+            '<tbody>' + tableRowsHtml + '</tbody>' +
+          '</table>'
+        ) : '') +
+      '</div>';
   }
 
   function renderBiayaTetapOutletList() {

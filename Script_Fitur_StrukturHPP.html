@@ -146,12 +146,16 @@ menjalankan bootApp().
    * -------------------------------------------------------------------------
    * Panel HPP utk outlet yang sedang dipilih (dashboardSelectedOutletId,
    * dipakai bareng Dashboard/Profil Outlet/Master Biaya). Kartu layanan
-   * REUSE komponen ".hpp-mini-card" (collapsible, "Progressive Disclosure")
-   * yang sudah dipakai Dashboard - bukan komponen baru. Data dari
-   * getStrukturBiayaHPP(cabangId) SENGAJA TIDAK di-cache (sama spt jalur HP
-   * di atas) supaya angkanya selalu segar. Read-only (tanpa tombol toggle
-   * Bed Cover) - toggle itu tetap cuma ada di kartu Dashboard supaya tidak
-   * ada 2 tempat yang bisa jadi tidak sinkron satu sama lain.
+   * dibangun via buildStrukturHPPDesktopHtml_ (TIDAK reuse markup Dashboard
+   * lagi) - SELALU terbuka, tanpa tombol panah (Progressive Disclosure
+   * dimatikan khusus di panel ini sesuai revisi tampilan, [2026-07-13]).
+   * Kartu HPP di Dashboard (.hpp-mini-card via Script_Fitur_Dashboard_Kartu)
+   * TIDAK tersentuh - tetap collapsible spt semula.
+   * [2026-07-13] Sebelumnya getStrukturBiayaHPP() SENGAJA tidak di-cache
+   * supaya angkanya selalu segar - atas konfirmasi user, sekarang ikut pakai
+   * cachedServerRead_ (SWR) spt Master Biaya/Harga Layanan/Biaya Tetap demi
+   * kecepatan pindah layar; data tetap direvalidasi di background tiap buka
+   * (lihat cachedServerRead_ di Script_Shared_Util.html).
    * =========================================================================
    */
   function renderStrukturHPPDesktop_() {
@@ -174,26 +178,23 @@ menjalankan bootApp().
     var cId = getOutletId_(normalizeOutletRow_(current));
     host.innerHTML = '<div class="dashboard-card-summary is-loading">Memuat data...</div>';
 
-    google.script.run
-      .withSuccessHandler(function (res) {
-        if (view.screen !== "strukturHPPList") return;
-        var stillSelected = ((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) === cId;
-        if (!stillSelected) return;
+    cachedServerRead_("getStrukturBiayaHPP", cId, function (res, fromCache) {
+      if (view.screen !== "strukturHPPList") return;
+      var stillSelected = ((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) === cId;
+      if (!stillSelected) return;
 
-        if (!res || !res.ok) {
-          host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(res && res.error ? res.error : "Gagal memuat Struktur Biaya HPP.") + '</div>';
-          if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
-          return;
-        }
-        host.innerHTML = buildStrukturHPPDesktopHtml_(res.data);
+      if (!res || !res.ok) {
+        if (!fromCache) host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(res && res.error ? res.error : "Gagal memuat Struktur Biaya HPP.") + '</div>';
         if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
-      })
-      .withFailureHandler(function (err) {
-        if (view.screen !== "strukturHPPList") return;
-        host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
-        if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
-      })
-      .getStrukturBiayaHPP(cId);
+        return;
+      }
+      host.innerHTML = buildStrukturHPPDesktopHtml_(res.data);
+      if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
+    }, function (err, hadCache) {
+      if (hadCache) return;
+      host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+      if (typeof window.fitDesktopDashboardToViewport_ === "function") requestAnimationFrame(window.fitDesktopDashboardToViewport_);
+    });
   }
 
   function buildStrukturHPPDesktopHtml_(data) {
@@ -214,11 +215,12 @@ menjalankan bootApp().
           '<span class="hpp-mini-row-amount">' + money0(c.amount) + '</span>' +
         '</div>';
       }).join('');
-      return '<div class="hpp-mini-card">' +
-        '<div class="hpp-mini-head" onclick="toggleHppDetail(this, event)">' +
+      // Kartu langsung terbuka: tanpa tombol panah/onclick, rincian komponen
+      // (.hpp-mini-detail) selalu tampil.
+      return '<div class="hpp-mini-card is-open">' +
+        '<div class="hpp-mini-head">' +
           '<span class="hpp-mini-title">' + escapeHtml(svc.title || '') + '</span>' +
           '<span class="hpp-mini-total">' + money0(svc.total) + '</span>' +
-          '<span class="hpp-mini-arrow">&#9662;</span>' +
         '</div>' +
         (rowsHtml ? '<div class="hpp-mini-detail">' + rowsHtml + '</div>' : '') +
       '</div>';
@@ -230,7 +232,10 @@ menjalankan bootApp().
         '</ul></div>'
       : '';
 
-    return '<div class="hpp-mini-list">' + miniHtml + '</div>' + warningHtml;
+    // Dibungkus .hpp-desktop-scroll supaya HANYA daftar kartu ini yang bisa
+    // discroll kalau lebih panjang dari tinggi panel - header & panel di
+    // luar tetap terkunci (lihat Style_Module_HPP.html).
+    return '<div class="hpp-desktop-scroll"><div class="hpp-mini-list">' + miniHtml + '</div>' + warningHtml + '</div>';
   }
 
   window.openStrukturHPPDetail = function (cabangId) {

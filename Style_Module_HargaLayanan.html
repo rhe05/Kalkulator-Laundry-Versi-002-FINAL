@@ -166,11 +166,20 @@ body:has(#screenHargaLayananDetail.active) .wrap { width: min(100%, 1080px); }
     gap: 10px;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
   }
   #hargaLayananDesktopContent .hl-item { margin-bottom: 0; }
   #hargaLayananDesktopContent .dashboard-empty,
   #hargaLayananDesktopContent .dashboard-card-summary { grid-column: 1 / -1; }
+
+  /* [2026-07-13] Progressive Disclosure dimatikan khusus panel desktop ini -
+     tombol panah disembunyikan & detail perhitungan langsung tampil, tanpa
+     ubah markup kartu (.hl-item dipakai bareng Dashboard, lihat komentar di
+     renderHargaLayananDesktop_ pada Script_Fitur_HargaLayanan.html). Kartu
+     Harga Layanan di Dashboard TIDAK terpengaruh - masih collapsible. */
+  #hargaLayananDesktopContent .hl-arrow { display: none; }
+  #hargaLayananDesktopContent .hl-stat-toggle { cursor: default; }
+  #hargaLayananDesktopContent .hl-detail { display: flex !important; }
 
   #screenHargaLayananList .hargalayanan-desktop-actions {
     display: flex; justify-content: flex-end; align-items: center;
