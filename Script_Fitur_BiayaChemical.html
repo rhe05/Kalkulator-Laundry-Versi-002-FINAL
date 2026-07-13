@@ -291,10 +291,17 @@ menjalankan bootApp().
     var select = document.getElementById("chemicalCuciRef");
     if (!select) return;
     var mesinCuci = (chemicalCabangCache && chemicalCabangCache.mesinCuci) || [];
+
+    // [Kategori tanpa mesin cuci, mis. Jasa Setrika] Sembunyikan field acuan
+    // total - biayaPerKg tidak butuh ini sama sekali (lihat computeBiayaChemicalSummaryClient).
+    var wrapEl = document.getElementById("chemicalCuciRefWrap");
+    if (wrapEl) wrapEl.style.display = mesinCuci.length ? "" : "none";
+    if (!mesinCuci.length) return;
+
     select.innerHTML = "";
     var placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "Pilih mesin cuci acuan";
+    placeholder.textContent = "Pilih mesin cuci acuan (opsional)";
     select.appendChild(placeholder);
     mesinCuci.forEach(function (m, idx) {
       var opt = document.createElement("option");
@@ -320,16 +327,19 @@ menjalankan bootApp().
     var cuci = mesinCuci.find(function (m) { return m.id === record.cuciRefId; }) || null;
     var kapasitasKgCuci = cuci ? (Number(cuci.kapasitasKg) || 0) : 0;
 
+    // biayaPerKg dihitung LANGSUNG (takaranPerKg * hargaPerUnit) - tidak
+    // butuh mesin cuci acuan (sama seperti backend computeBiayaChemicalSummary_
+    // di Modul_BiayaChemical.gs). biayaPerLoad tetap butuh acuan mesin cuci.
+    var biayaPerKg = round2(record.takaranPerKg * hargaPerUnit);
     var pemakaianPerLoadDasar = round2(record.takaranPerKg * kapasitasKgCuci);
     var biayaPerLoad = round2(pemakaianPerLoadDasar * hargaPerUnit);
-    var biayaPerKg = kapasitasKgCuci > 0 ? round2(biayaPerLoad / kapasitasKgCuci) : 0;
 
     return {
       hargaPerUnit: hargaPerUnit,
       satuanDasar: CHEMICAL_SATUAN_DASAR_LABEL[record.satuanKemasan] || "",
       biayaPerLoad: biayaPerLoad,
       biayaPerKg: biayaPerKg,
-      statusValid: isiKemasanDasar > 0 && record.takaranPerKg > 0 && kapasitasKgCuci > 0
+      statusValid: isiKemasanDasar > 0 && record.takaranPerKg > 0
     };
   }
 
@@ -347,7 +357,7 @@ menjalankan bootApp().
     var warnEl = document.getElementById("cfWarning");
     if (!summary.statusValid) {
       warnEl.style.display = "block";
-      warnEl.textContent = "Lengkapi isi kemasan, satuan, takaran per Kg, dan mesin cuci acuan supaya biaya bisa dihitung.";
+      warnEl.textContent = "Lengkapi isi kemasan, satuan, dan takaran per Kg supaya biaya bisa dihitung.";
     } else {
       warnEl.style.display = "none";
     }

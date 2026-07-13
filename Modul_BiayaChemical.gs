@@ -12,14 +12,13 @@
  *      (Liter/ml -> ml, Kg/gram -> gram), supaya harga kemasan yang ditulis
  *      per Liter tetap bisa dibandingkan dengan takaran yang ditulis dalam ml.
  *   2. hargaPerUnit = hargaBeli / isiKemasanDasar (Rp per ml atau per gram)
- *   3. Record WAJIB merujuk (cuciRefId) ke SATU baris mesinCuci milik cabang
- *      yang sama, untuk tahu kapasitas maksimal (kg) satu kali load.
- *   4. biayaPerLoad = (takaranPerKg * kapasitasKg mesin acuan) * hargaPerUnit
- *   5. biayaPerKg   = biayaPerLoad / kapasitasKg mesin acuan
- *      (Catatan: biayaPerKg secara aljabar = takaranPerKg * hargaPerUnit,
- *      sama seperti rumus lama sebelum ada mesin acuan — tapi sekarang
- *      cuciRefId wajib diisi supaya angka "Biaya Chemical Per Load" bisa
- *      ditampilkan ke user.)
+ *   3. biayaPerKg = takaranPerKg * hargaPerUnit — TIDAK butuh mesin cuci
+ *      acuan sama sekali (murni aljabar, tidak bergantung kapasitas mesin).
+ *   4. cuciRefId OPSIONAL — kalau diisi (& outlet punya mesinCuci), cuma
+ *      dipakai untuk tampilkan angka tambahan "Biaya Chemical Per Load"
+ *      (biayaPerLoad = takaranPerKg * kapasitasKg mesin acuan * hargaPerUnit).
+ *      [2026-07-13] Outlet TANPA mesinCuci sama sekali (mis. kategori Jasa
+ *      Setrika) tidak diwajibkan isi cuciRefId — lihat validateBiayaChemical_.
  *
  * DEPENDENSI FILE INI:
  *   - Code.gs              : KEY_BIAYA_CHEMICAL_ORDER
@@ -365,12 +364,20 @@ function validateBiayaChemical_(data, cabang) {
   if (data.takaranPerKg <= 0) {
     return { valid: false, message: "Takaran pemakaian per Kg harus lebih dari 0." };
   }
-  if (!data.cuciRefId) {
-    return { valid: false, message: "Pilih mesin cuci acuan untuk hitungan Biaya Chemical Per Load." };
-  }
-  const cuciExists = (cabang.mesinCuci || []).some(function (m) { return m.id === data.cuciRefId; });
-  if (!cuciExists) {
-    return { valid: false, message: "Mesin cuci acuan tidak ditemukan di profil cabang ini. Mungkin baris mesin itu sudah dihapus — pilih ulang acuannya." };
+  // [Kategori tanpa mesin cuci, mis. Jasa Setrika] biayaPerKg secara aljabar
+  // TIDAK butuh mesin cuci acuan sama sekali (= takaranPerKg * hargaPerUnit,
+  // lihat computeBiayaChemicalSummary_) - acuan cuma dipakai untuk tampilkan
+  // "Biaya Chemical Per Load" tambahan. Kalau outlet ini memang tidak punya
+  // mesin cuci, jangan blokir simpan cuma karena tidak ada mesin utk dipilih.
+  const punyaMesinCuci_ = Array.isArray(cabang.mesinCuci) && cabang.mesinCuci.length > 0;
+  if (punyaMesinCuci_) {
+    if (!data.cuciRefId) {
+      return { valid: false, message: "Pilih mesin cuci acuan untuk hitungan Biaya Chemical Per Load." };
+    }
+    const cuciExists = cabang.mesinCuci.some(function (m) { return m.id === data.cuciRefId; });
+    if (!cuciExists) {
+      return { valid: false, message: "Mesin cuci acuan tidak ditemukan di profil cabang ini. Mungkin baris mesin itu sudah dihapus — pilih ulang acuannya." };
+    }
   }
   return { valid: true, message: "" };
 }
@@ -393,18 +400,23 @@ function computeBiayaChemicalSummary_(record, cabang) {
   const cuci = findMachineById_(cabang.mesinCuci, record.cuciRefId);
   const kapasitasKgCuci = cuci ? toNumber_(cuci.kapasitasKg, 0) : 0;
 
+  // biayaPerKg dihitung LANGSUNG (takaranPerKg * hargaPerUnit) - TIDAK
+  // bergantung ke mesin cuci acuan sama sekali (secara aljabar memang sudah
+  // begini, lihat catatan di header file). biayaPerLoad tetap butuh acuan
+  // mesin cuci (kalau tidak ada mesin/acuan, jadi Rp0 - wajar, "per Load"
+  // memang tidak berarti apa-apa tanpa mesin cuci).
+  const biayaPerKg = round2_(record.takaranPerKg * hargaPerUnit);
   const pemakaianPerLoadDasar = round2_(record.takaranPerKg * kapasitasKgCuci);
   const biayaPerLoad = round2_(pemakaianPerLoadDasar * hargaPerUnit);
-  const biayaPerKg = kapasitasKgCuci > 0 ? round2_(biayaPerLoad / kapasitasKgCuci) : 0;
 
   return {
     hargaPerUnit: hargaPerUnit,
     satuanDasar: CHEMICAL_SATUAN_DASAR_LABEL_[record.satuanKemasan] || "",
-    cuciRefNama: cuci ? chemicalCuciDisplayName_(cuci) : "(mesin tidak ditemukan)",
+    cuciRefNama: cuci ? chemicalCuciDisplayName_(cuci) : "",
     kapasitasKgCuci: kapasitasKgCuci,
     biayaPerLoad: biayaPerLoad,
     biayaPerKg: biayaPerKg,
-    statusValid: isiKemasanDasar > 0 && record.takaranPerKg > 0 && kapasitasKgCuci > 0,
+    statusValid: isiKemasanDasar > 0 && record.takaranPerKg > 0,
   };
 }
 

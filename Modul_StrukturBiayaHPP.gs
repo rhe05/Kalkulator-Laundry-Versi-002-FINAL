@@ -941,19 +941,28 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
 
 /**
  * buildJasaSetrikaHPPStructure_: kategori Jasa Setrika hanya punya 1 layanan,
- * HPP Setrika Saja (biaya setrika + App Kasir & Nota, per Kg).
+ * HPP Setrika Saja (biaya setrika + Parfum + Packing + App Kasir & Nota, per Kg).
  *
- * [FIX] Setrika Listrik & Setrika Uap saling eksklusif sesuai jenis mesin di
+ * [FIX 1] Setrika Listrik & Setrika Uap saling eksklusif sesuai jenis mesin di
  * Profil Outlet (SAMA PERSIS pola yang sudah benar di buildKiloanHPPStructure_
  * - lihat airSetrikaComponents_/listrikSetrikaComponents_/gasSetrikaComponents_
  * di sana) - dulu di sini SELALU pakai getStrukturHPPSetrikaPerKg_ (murni
  * biaya listrik) walau mesinnya uap, jadi hasilnya selalu Rp0 & data
  * Gas/Air Setrika Uap yang sudah diisi user tidak pernah kepakai.
+ * [FIX 2] Parfum & Packing ditambahkan (dulu tidak pernah disertakan sama
+ * sekali di layanan ini) - basis sudah per Kg langsung dari Modul_BiayaChemical/
+ * Modul_BiayaPacking, TIDAK perlu konversi kapasitas kg mesin cuci (kategori
+ * ini memang tidak punya mesin cuci). Deterjen/Softener SENGAJA tidak
+ * disertakan (Jasa Setrika tidak mencuci, cuma nyetrika).
+ * [FIX 3] Nota per Kg dulu selalu Rp0 (dibagi kapasitasKgPerLoad dari mesin
+ * cuci yang memang tidak ada) - sekarang pakai getStrukturHPPNotaPerKg_ versi
+ * setrika (dibagi kapasitas kg/jam mesin setrika, acuan yang memang ada utk
+ * kategori ini).
  */
 function buildJasaSetrikaHPPStructure_(normalized) {
-  const notaPerKg = getStrukturHPPNotaPerKg_(normalized);
-  const setrikaNote = normalized.kiloan.adaMesinSetrika ? "" : "Belum ada mesin setrika di Profil Outlet.";
   const kgPerJam = normalized.kiloan.setrikaKapasitasKgPerJam;
+  const notaPerKg = getStrukturHPPNotaPerKgSetrika_(normalized);
+  const setrikaNote = normalized.kiloan.adaMesinSetrika ? "" : "Belum ada mesin setrika di Profil Outlet.";
   const toPerKgSetrika_ = function (rpPerJam) {
     return kgPerJam > 0 ? strukturHPPRound2_(rpPerJam / kgPerJam) : 0;
   };
@@ -967,11 +976,24 @@ function buildJasaSetrikaHPPStructure_(normalized) {
         { key: "setrika_gas", label: "Gas Setrika per Kg", amount: toPerKgSetrika_(normalized.kiloan.gasSetrikaRpPerJam), note: "" },
       ];
 
+  const parfumPerKg = strukturHPPNumber_(normalized.kiloan.parfumPerKg, 0);
+  const packingItemsJasaSetrika = Array.isArray(normalized.kiloan.packingItemsKiloan) ? normalized.kiloan.packingItemsKiloan : [];
+  const packingComponentsJasaSetrika = packingItemsJasaSetrika.map(function (item, idx) {
+    return {
+      key: "packing_" + strukturHPPSlug_(item.nama) + "_" + idx,
+      label: item.nama + " per Kg",
+      amount: item.biayaPerKg,
+      note: "",
+    };
+  });
+
   const setrikaSaja = calculateHPPService_(
     STRUKTUR_HPP_SERVICE_KEYS_.SETRIKA_SAJA,
     "HPP Setrika Saja",
     setrikaComponents.concat([
-      { key: "app_nota", label: "Biaya App Kasir & Nota per Kg", amount: notaPerKg, note: normalized.kiloan.kapasitasKgPerLoad <= 0 ? "Belum bisa dikonversi ke per Kg (kapasitas kg mesin cuci belum diisi)." : "" },
+      { key: "parfum", label: "Parfum per Kg", amount: parfumPerKg, note: "" },
+    ], packingComponentsJasaSetrika, [
+      { key: "app_nota", label: "Biaya App Kasir & Nota per Kg", amount: notaPerKg, note: kgPerJam <= 0 ? "Belum bisa dikonversi ke per Kg (kapasitas kg/jam mesin setrika belum diisi)." : "" },
     ]),
     STRUKTUR_HPP_UNIT_LABEL_KG_
   );
@@ -1032,9 +1054,18 @@ function getStrukturHPPSetrikaPerKg_(normalized) {
   return kgPerJam > 0 ? strukturHPPRound2_(rpPerJam / kgPerJam) : 0;
 }
 
-function getStrukturHPPNotaPerKg_(normalized) {
-  const kg = normalized.kiloan.kapasitasKgPerLoad;
-  return kg > 0 ? strukturHPPRound2_(normalized.notaKasir.biayaPerLoad / kg) : 0;
+/**
+ * getStrukturHPPNotaPerKgSetrika_: khusus buildJasaSetrikaHPPStructure_ -
+ * kategori ini tidak punya mesin cuci sama sekali, jadi tidak bisa pakai
+ * kapasitasKgPerLoad (basis Kiloan/Self Service) untuk konversi Nota "per
+ * load" ke "per Kg". Dikonversi lewat kapasitas kg/jam mesin setrika sebagai
+ * gantinya (acuan yang memang ada untuk kategori ini) - keputusan user
+ * 2026-07-13, bukan rumus fisik presisi, cuma basis konversi paling masuk
+ * akal yang tersedia.
+ */
+function getStrukturHPPNotaPerKgSetrika_(normalized) {
+  const kgPerJam = normalized.kiloan.setrikaKapasitasKgPerJam;
+  return kgPerJam > 0 ? strukturHPPRound2_(normalized.notaKasir.biayaPerLoad / kgPerJam) : 0;
 }
 
 /**
