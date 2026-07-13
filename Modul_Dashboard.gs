@@ -336,12 +336,18 @@ function getDashboardMasterBiayaSummary_impl_(cabangId) {
             const washerPerLoad = cuciArr.length > 0 ? dashboardNumber_(cuciArr[0].rpListrikPerLoad, 0) : 0;
             const dryerPerLoad = pengeringArr.length > 0 ? dashboardNumber_(pengeringArr[0].rpListrikPerLoad, 0) : 0;
             const rataListrik = pompaPerLoad + washerPerLoad + dryerPerLoad;
-            if (listrikComplete) {
-              // Watt Setrika Listrik cuma relevan kalau outlet ini benar-benar
-              // punya baris mesin setrika berjenis "listrik" - setrika uap
-              // tidak berbiaya listrik sama sekali (lihat Modul_BiayaListrik.gs).
-              const setrikaRowsListrik_ = dashboardArray_(item.mesinSetrika);
-              const adaSetrikaListrik_ = setrikaRowsListrik_.some(function (m) { return m.jenis === "listrik"; });
+            // Watt Setrika Listrik cuma relevan kalau outlet ini benar-benar
+            // punya baris mesin setrika berjenis "listrik" - setrika uap
+            // tidak berbiaya listrik sama sekali (lihat Modul_BiayaListrik.gs).
+            const setrikaRowsListrik_ = dashboardArray_(item.mesinSetrika);
+            const adaSetrikaListrik_ = setrikaRowsListrik_.some(function (m) { return m.jenis === "listrik"; });
+            // [Jasa Setrika + Setrika Uap] Kategori ini tidak punya mesin
+            // cuci/pengering sama sekali, dan uap tidak berbiaya listrik ->
+            // kartu "Listrik" di Master Biaya Produksi dinonaktifkan total
+            // (bukan cuma tampil Rp0) - berlaku HP & desktop sekaligus karena
+            // keduanya baca array komponenBiaya yang sama ini.
+            const isJasaSetrikaTanpaListrik_ = String(item.kategoriLayanan || "") === "jasa_setrika" && !adaSetrikaListrik_;
+            if (listrikComplete && !isJasaSetrikaTanpaListrik_) {
               const listrikDetail = [
                 { label: "TDL per kWh", amount: dashboardRound2_(dashboardNumber_(listrikRecord.tdlPerKwh, 0)) },
                 { label: "Watt Mesin Cuci", text: dashboardNumber_(listrikRecord.wattMesinCuci, 0) + " watt" },
