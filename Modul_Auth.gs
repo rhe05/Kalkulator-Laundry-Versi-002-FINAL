@@ -237,9 +237,19 @@ function provisionTenantSpreadsheet_(email) {
     // Sembunyikan "Sheet1" bawaan Google (tidak bisa dihapus di titik ini -
     // spreadsheet wajib punya >=1 sheet, dan sheet data lain belum terbentuk
     // sampai pertama diakses) supaya tidak terlihat sebagai tab kosong yang
-    // membingungkan tenant baru.
+    // membingungkan tenant baru. [BUG 2026-07-14] Sheet1 ini SATU-SATUNYA
+    // sheet yang ada di titik ini - Google Sheets menolak permintaan
+    // menyembunyikan sheet terakhir yang terlihat ("Anda tidak dapat
+    // menyembunyikan semua sheet dalam dokumen"), jadi hideSheet() di sini
+    // SELALU gagal & menggagalkan seluruh provisioning (akun jadi aktif tapi
+    // tenantSpreadsheetId tidak pernah tersimpan). Bungkus try/catch supaya
+    // kegagalan kosmetik ini tidak lagi menggagalkan hal yang penting
+    // (menyambungkan akun ke datanya) - Sheet1 kosong tertinggal terlihat,
+    // itu saja, tidak masalah.
     var defaultSheet = newSs.getSheets()[0];
-    if (defaultSheet) defaultSheet.hideSheet();
+    if (defaultSheet) {
+      try { defaultSheet.hideSheet(); } catch (hideErr) {}
+    }
 
     user.tenantSpreadsheetId = newId;
     _writeKeyCore_(sheet, authKeyUser_(email), JSON.stringify(user));
@@ -786,7 +796,8 @@ function adminListAccounts(sessionToken) {
         afiliatorLabel: u.afiliatorLabel || "",
         createdAt: u.createdAt || "",
         lastActiveAt: lastActiveAt,
-        online: online
+        online: online,
+        hasTenant: !!u.tenantSpreadsheetId
       };
     }).filter(function (x) { return !!x; });
 
@@ -951,6 +962,43 @@ function adminDeleteAccount(sessionToken, targetEmail) {
     return { ok: true, data: { email: cleanEmail } };
   } catch (err) {
     return errorResponse_(err, "adminDeleteAccount");
+  }
+}
+
+/**
+ * adminFixTenant: [2026-07-14] Tombol darurat di panel admin utk kasus akun
+ * yang lolos verifikasi OTP tapi provisionTenantSpreadsheet_ (dipanggil dari
+ * verifyOtp) gagal di tengah jalan (mis. timeout Drive) - akun jadi aktif
+ * tapi tenantSpreadsheetId kosong, loginUser menolak dengan pesan "belum
+ * tersambung ke data" (lihat loginUser:missing_tenant). Sebelumnya harus
+ * dibetulkan manual lewat editor Apps Script (provisionTenantSpreadsheet_);
+ * sekarang admin cukup klik dari panel. Idempoten & aman dipanggil berkali-
+ * kali - provisionTenantSpreadsheet_ sendiri tidak akan membuat spreadsheet
+ * baru kalau akun sudah punya salah satu.
+ */
+function adminFixTenant(sessionToken, targetEmail) {
+  try {
+    var session = resolveSession_(sessionToken);
+    if (!session || authNormalizeEmail_(session.email) !== AUTH_ADMIN_EMAIL_) {
+      return { ok: false, error: "Akses ditolak.", stage: "adminFixTenant:forbidden", code: "FORBIDDEN" };
+    }
+
+    var cleanEmail = authNormalizeEmail_(targetEmail);
+    var sheet = ensureDataSheet_();
+    var raw = readKey_(sheet, authKeyUser_(cleanEmail));
+    if (!raw) {
+      return { ok: false, error: "Akun tidak ditemukan.", stage: "adminFixTenant:not_found" };
+    }
+
+    var user = JSON.parse(raw);
+    if (user.tenantSpreadsheetId) {
+      return { ok: true, data: { email: cleanEmail, alreadyFixed: true } };
+    }
+
+    provisionTenantSpreadsheet_(cleanEmail);
+    return { ok: true, data: { email: cleanEmail, alreadyFixed: false } };
+  } catch (err) {
+    return errorResponse_(err, "adminFixTenant");
   }
 }
 
