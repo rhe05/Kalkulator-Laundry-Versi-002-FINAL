@@ -451,30 +451,43 @@ terjadi LANGSUNG di browser pengunjung asli; begitu request dilewatkan
 menganggap ini mencurigakan dan minta login akun Google - padahal app ini
 pakai auth sendiri (email+OTP), TIDAK butuh akun Google sama sekali.
 
-**Percobaan 2 - GitHub Pages redirect: BERHASIL, dipakai SEKARANG.**
-Halaman statis `docs/index.html` (redirect via `<meta http-equiv="refresh">`
-+ `window.location.replace()`) di-hosting gratis GitHub Pages (Settings >
-Pages > Source: Deploy from branch > `main` / `/docs`), diakses lewat
-`https://rhe05.github.io/Kalkulator-Laundry-Versi-002-FINAL/` - link pendek
-ini AMAN dipakai (dites 2026-07-14, langsung masuk halaman Login Kalkulator
-Laundry, tidak ada layar Login Google) karena redirect terjadi LANGSUNG di
-browser pengunjung (bukan lewat server perantara spt proxy Vercel), jadi
-negosiasi cookie dgn Google tetap normal.
+**Percobaan 2 - GitHub Pages redirect: BERHASIL.** Halaman statis
+`docs/index.html` (redirect via `<meta http-equiv="refresh">` +
+`window.location.replace()`) di-hosting gratis GitHub Pages dari repo
+SOURCE CODE utama (Settings > Pages > Source: Deploy from branch > `main` /
+`/docs`) - link `https://rhe05.github.io/Kalkulator-Laundry-Versi-002-FINAL/`
+TERBUKTI aman (langsung masuk Login Kalkulator Laundry, tidak ada layar
+Login Google) tapi kepanjangan (nama repo ikut kebawa di URL).
 
-**Batasan yang harus diketahui:** ini REDIRECT, bukan proxy - begitu
-redirect terjadi, address bar browser BERUBAH jadi URL exec Apps Script yang
-panjang (bukan tetap di `github.io`/domain custom). Jadi ini cuma
-memendekkan LINK YANG DIBAGIKAN (WA/brosur/dst), bukan menyembunyikan URL
-asli selamanya. Kalau update URL exec Apps Script Anda (mis. redeploy versi
-baru dgn deployment ID beda), WAJIB update juga link di `docs/index.html`
-(2 tempat: `meta http-equiv="refresh"` & `window.location.replace`), commit,
-push - GitHub Pages auto-update dari branch `main` folder `/docs`.
+**Percobaan 3 - Repo GitHub terpisah khusus redirect: FINAL, INI YANG
+DIPAKAI SEKARANG.** Dibuat repo BARU terpisah bernama `kalkulator-laundry`
+(Public, aman - isinya CUMA halaman redirect, tidak ada kode aplikasi sama
+sekali) di folder lokal `C:\Users\user\Documents\kalkulator-laundry\`
+(index.html sama persis, di root repo bukan folder `docs`), GitHub Pages
+source: branch `main` / `/ (root)`. **Link resmi yang dipakai/dibagikan ke
+pelanggan sekarang: `https://rhe05.github.io/kalkulator-laundry/`** - lebih
+pendek & rapi drpd link Percobaan 2. Link Percobaan 2 (`.../Kalkulator-
+Laundry-Versi-002-FINAL/`) MASIH aktif/jalan (tidak dihapus), tapi jangan
+dipakai lagi sebagai link utama - biarkan `docs/index.html` di repo utama
+sbg cadangan saja.
+
+**Batasan yang harus diketahui (berlaku utk KEDUA link):** ini REDIRECT,
+bukan proxy - begitu redirect terjadi, address bar browser BERUBAH jadi URL
+exec Apps Script yang panjang (bukan tetap di `github.io`/domain custom).
+Jadi ini cuma memendekkan LINK YANG DIBAGIKAN (WA/brosur/dst), bukan
+menyembunyikan URL asli selamanya. Kalau update URL exec Apps Script Anda
+(mis. redeploy versi baru dgn deployment ID beda), WAJIB update link di
+KEDUA tempat: `docs/index.html` (repo utama) DAN
+`C:\Users\user\Documents\kalkulator-laundry\index.html` (repo terpisah,
+link resmi) - masing-masing 2 titik (`meta http-equiv="refresh"` &
+`window.location.replace`), commit, push di masing-masing repo.
 
 **Custom domain sungguhan** (ganti `github.io` jadi `laundry-anda.com`) bisa
-ditambah kapan saja tanpa proxy - tinggal file `CNAME` di folder `docs/`
-isinya nama domain, plus atur DNS (CNAME record) di registrar domain ke
-`rhe05.github.io`. BELUM dikerjakan (user belum punya domain custom saat
-sesi ini) - lanjutkan ini kalau user sudah beli domain.
+ditambah kapan saja tanpa proxy - tinggal file `CNAME` di repo
+`kalkulator-laundry` (yang dipakai sbg link resmi) isinya nama domain, plus
+atur DNS (CNAME record) di registrar domain ke `rhe05.github.io`. BELUM
+dikerjakan (user belum punya domain custom saat sesi ini) - lanjutkan ini
+kalau user sudah beli domain.
 
 Rencana custom domain "asli" (tetap di domain sendiri, tidak redirect ke
 URL panjang) baru masuk akal lagi SETELAH migrasi ke Supabase + frontend
