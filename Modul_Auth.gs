@@ -978,6 +978,28 @@ function adminDeleteAccount(sessionToken, targetEmail) {
 }
 
 /**
+ * [SEMENTARA - HAPUS SETELAH DIPAKAI] Jalankan sekali via `clasp run
+ * resetTenantSementara_` utk membetulkan 1 akun yang tenantSpreadsheetId-nya
+ * kadung menunjuk ke spreadsheet salah (dibuat admin, bukan akun itu sendiri
+ * - lihat riwayat bug executeAs: USER_ACCESSING). TIDAK client-callable
+ * (sengaja tidak dibungkus withTenant_/tidak dipanggil dari .html manapun).
+ */
+function resetTenantSementara_() {
+  var email = "laundrymartindonesia259@gmail.com";
+  var sheet = ensureDataSheet_();
+  var raw = readKey_(sheet, authKeyUser_(email));
+  if (!raw) {
+    Logger.log("Akun tidak ditemukan: " + email);
+    return;
+  }
+  var user = JSON.parse(raw);
+  var spreadsheetLamaSalah = user.tenantSpreadsheetId;
+  user.tenantSpreadsheetId = "";
+  writeKey_(sheet, authKeyUser_(email), JSON.stringify(user));
+  Logger.log("Direset. Spreadsheet lama (salah, di Drive admin, boleh dihapus manual): " + spreadsheetLamaSalah);
+}
+
+/**
  * migrateOwnerToTenant_: jalankan MANUAL SEKALI dari editor Apps Script
  * (bukan dipanggil dari UI/client - sengaja tidak client-callable krn tidak
  * dibungkus withTenant_ & tidak dipanggil dari file .html manapun) untuk
