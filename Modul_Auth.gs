@@ -598,14 +598,15 @@ function loginUser(email, password) {
     }
 
     // [SELF-HEAL 2026-07-14] Spreadsheet tenant terisi tapi TIDAK bisa
-    // dibuka oleh user yang sedang login (kasus nyata: sempat di-provision
-    // oleh ADMIN dari panel, jadi filenya milik Drive admin & user ini
-    // ditolak Google dengan "Anda tidak memiliki izin untuk mengakses
-    // dokumen"). Deteksi di sini dengan mencoba membukanya sebagai user ini
-    // (executeAs: USER_ACCESSING) - kalau gagal, buang ID salah itu supaya
-    // jatuh ke blok provisioning ulang di bawah. File lama yang salah TIDAK
-    // dihapus dari sini (user ini memang tidak punya akses) - tertinggal di
-    // Drive admin, boleh dibersihkan manual.
+    // dibuka oleh eksekusi saat ini. Sejak pindah ke executeAs:
+    // USER_DEPLOYING (semua eksekusi sebagai akun pemilik app), kasus ini
+    // terjadi utk akun era USER_ACCESSING yang spreadsheet-nya kadung dibuat
+    // di Drive CUSTOMER sendiri (pemilik app tidak punya akses). Buang ID
+    // yang tak terjangkau itu supaya jatuh ke blok provisioning ulang di
+    // bawah - dibuatkan spreadsheet baru di Drive pemilik app. Konsekuensi:
+    // data di spreadsheet lama (kalau ada isinya) tidak terbawa - file lama
+    // tetap utuh di Drive customer, bisa diminta di-share manual kalau
+    // datanya perlu diselamatkan.
     if (user.tenantSpreadsheetId) {
       try {
         SpreadsheetApp.openById(user.tenantSpreadsheetId).getName();
@@ -617,14 +618,10 @@ function loginUser(email, password) {
 
     // [SELF-HEAL 2026-07-14] Akun terverifikasi tapi BELUM punya spreadsheet
     // tenant - biasanya karena provisionTenantSpreadsheet_ di verifyOtp
-    // sempat gagal di tengah jalan (lihat riwayat bug hideSheet()). Coba lagi
-    // di SINI, bukan lewat panel admin - appsscript.json executeAs:
-    // USER_ACCESSING berarti skrip jalan sebagai akun yang login SEKARANG,
-    // jadi spreadsheet baru otomatis kepemilikannya benar (Drive akun ini
-    // sendiri). Kalau admin yang memicu provisioning (mis. dari panel admin),
-    // file baru itu malah kepemilikan Drive ADMIN & customer tidak akan bisa
-    // membukanya ("Anda tidak memiliki izin...") - JANGAN provision dari sisi
-    // admin lagi untuk akun lain.
+    // sempat gagal di tengah jalan (lihat riwayat bug hideSheet()). Coba
+    // lagi di sini. Sejak executeAs: USER_DEPLOYING, spreadsheet dibuat di
+    // Drive pemilik app - selalu bisa diakses eksekusi berikutnya, tidak ada
+    // lagi masalah kepemilikan silang seperti era USER_ACCESSING.
     if (!user.tenantSpreadsheetId) {
       try {
         provisionTenantSpreadsheet_(cleanEmail);
