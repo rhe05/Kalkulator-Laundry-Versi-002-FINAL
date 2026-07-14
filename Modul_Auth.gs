@@ -597,6 +597,24 @@ function loginUser(email, password) {
       return { ok: false, error: "Masa trial akun ini sudah berakhir. Hubungi admin untuk melanjutkan.", stage: "loginUser:trial_expired" };
     }
 
+    // [SELF-HEAL 2026-07-14] Spreadsheet tenant terisi tapi TIDAK bisa
+    // dibuka oleh user yang sedang login (kasus nyata: sempat di-provision
+    // oleh ADMIN dari panel, jadi filenya milik Drive admin & user ini
+    // ditolak Google dengan "Anda tidak memiliki izin untuk mengakses
+    // dokumen"). Deteksi di sini dengan mencoba membukanya sebagai user ini
+    // (executeAs: USER_ACCESSING) - kalau gagal, buang ID salah itu supaya
+    // jatuh ke blok provisioning ulang di bawah. File lama yang salah TIDAK
+    // dihapus dari sini (user ini memang tidak punya akses) - tertinggal di
+    // Drive admin, boleh dibersihkan manual.
+    if (user.tenantSpreadsheetId) {
+      try {
+        SpreadsheetApp.openById(user.tenantSpreadsheetId).getName();
+      } catch (accessErr) {
+        user.tenantSpreadsheetId = "";
+        writeKey_(sheet, authKeyUser_(cleanEmail), JSON.stringify(user));
+      }
+    }
+
     // [SELF-HEAL 2026-07-14] Akun terverifikasi tapi BELUM punya spreadsheet
     // tenant - biasanya karena provisionTenantSpreadsheet_ di verifyOtp
     // sempat gagal di tengah jalan (lihat riwayat bug hideSheet()). Coba lagi
@@ -977,27 +995,6 @@ function adminDeleteAccount(sessionToken, targetEmail) {
   }
 }
 
-/**
- * [SEMENTARA - HAPUS SETELAH DIPAKAI] Jalankan sekali via `clasp run
- * resetTenantSementara_` utk membetulkan 1 akun yang tenantSpreadsheetId-nya
- * kadung menunjuk ke spreadsheet salah (dibuat admin, bukan akun itu sendiri
- * - lihat riwayat bug executeAs: USER_ACCESSING). TIDAK client-callable
- * (sengaja tidak dibungkus withTenant_/tidak dipanggil dari .html manapun).
- */
-function resetTenantSementara_() {
-  var email = "laundrymartindonesia259@gmail.com";
-  var sheet = ensureDataSheet_();
-  var raw = readKey_(sheet, authKeyUser_(email));
-  if (!raw) {
-    Logger.log("Akun tidak ditemukan: " + email);
-    return;
-  }
-  var user = JSON.parse(raw);
-  var spreadsheetLamaSalah = user.tenantSpreadsheetId;
-  user.tenantSpreadsheetId = "";
-  writeKey_(sheet, authKeyUser_(email), JSON.stringify(user));
-  Logger.log("Direset. Spreadsheet lama (salah, di Drive admin, boleh dihapus manual): " + spreadsheetLamaSalah);
-}
 
 /**
  * migrateOwnerToTenant_: jalankan MANUAL SEKALI dari editor Apps Script
