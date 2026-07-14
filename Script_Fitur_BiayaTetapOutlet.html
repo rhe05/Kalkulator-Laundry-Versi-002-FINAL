@@ -129,10 +129,27 @@ menjalankan bootApp().
     });
   }
 
-  // Kartu detail khusus panel desktop Biaya Tetap Outlet: total per bulan/
-  // hari/tahun di atas, lalu tabel per komponen (Sewa/Gaji/Internet/dst)
-  // dgn kolom /Tahun /Bulan /Hari dan persentase kontribusi - LANGSUNG
-  // tampil saat outlet dipilih, tanpa perlu klik apa pun.
+  // [2026-07-14, direvisi] Kartu detail khusus panel desktop Biaya Tetap
+  // Outlet: total ringkasan atas cuma Per Bulan/Per Hari (Per Tahun DIHAPUS
+  // dari sini - user khawatir angka setahun penuh bikin owner kaget/salah
+  // kesan biaya laundry-nya besar). Sewa Outlet DIPISAH dari tabel komponen
+  // jadi 1 baris "spotlight" sendiri - SATU-SATUNYA komponen yang masih
+  // tampil nominal /Tahun, plus badge status (Wajar/Perhatian/Tinggi,
+  // dari persentase kontribusi sewa thd total biaya tetap) di kanan -
+  // sewa yang kelewat dominan ikut mendorong naik Harga Layanan & Target
+  // BEP, jadi owner perlu tahu dari sini duluan. Komponen lain (Gaji/
+  // Internet/Penyusutan Mesin/Perawatan/Operasional Lainnya) tetap di
+  // tabel generik, TANPA kolom /Tahun (cuma /Bulan /Hari %).
+  function fcSewaStatus_(percent) {
+    if (percent > 45) {
+      return { label: 'Tinggi', cls: 'high', note: 'Sewa mendominasi biaya tetap - ikut mendorong naik Harga Layanan & Target BEP.' };
+    }
+    if (percent > 30) {
+      return { label: 'Perhatian', cls: 'watch', note: 'Porsi sewa cukup besar - berpengaruh ke Harga Layanan & Target BEP.' };
+    }
+    return { label: 'Wajar', cls: 'ok', note: '' };
+  }
+
   function buildBiayaTetapDesktopCardHtml_(res) {
     if (!res || !res.ok) {
       return '<div class="dashboard-empty">' + escapeHtml(res && res.error ? res.error : "Data fixed cost belum bisa dibaca.") + '</div>';
@@ -146,35 +163,62 @@ menjalankan bootApp().
     var components = Array.isArray(d.components) ? d.components : [];
     var totalPerBulan = toNumber(d.totalPerBulan, 0);
     var totalPerHari = toNumber(d.totalPerHari, 0);
-    var totalPerTahun = totalPerBulan * 12;
+
+    var sewaComponent = null;
+    var otherComponents = [];
+    components.forEach(function (c) {
+      if (!sewaComponent && String(c.key || '') === 'sewa') { sewaComponent = c; } else { otherComponents.push(c); }
+    });
 
     // getDashboardFixedCostSummary (Modul_Dashboard.gs) hanya mengirim
     // key/label/amount per komponen (tanpa percent) - dihitung di sini dari
     // totalPerBulan, formula SAMA dgn renderDashboardFixedCostCard.
-    var tableRowsHtml = components.map(function (c) {
+    var tableRowsHtml = otherComponents.map(function (c) {
       var perBulan = toNumber(c.amount, 0);
-      var perTahun = perBulan * 12;
       var perHari = perBulan / 30;
       var percent = (totalPerBulan > 0 && perBulan > 0) ? round2((perBulan / totalPerBulan) * 100) : 0;
       return '<tr>' +
         '<td>' + escapeHtml(c.label || '') + '</td>' +
-        '<td>' + money0(perTahun) + '</td>' +
         '<td>' + money0(perBulan) + '</td>' +
         '<td>' + money0(perHari) + '</td>' +
         '<td class="pct">' + percent + '%</td>' +
       '</tr>';
     }).join('');
 
+    var sewaHtml = '';
+    if (sewaComponent) {
+      var sewaPerBulan = toNumber(sewaComponent.amount, 0);
+      var sewaPerTahun = sewaPerBulan * 12;
+      var sewaPercent = (totalPerBulan > 0 && sewaPerBulan > 0) ? round2((sewaPerBulan / totalPerBulan) * 100) : 0;
+      var st = fcSewaStatus_(sewaPercent);
+
+      sewaHtml =
+        '<div class="fc-outlet-sewa">' +
+          '<div class="fc-outlet-sewa-main">' +
+            '<div class="fc-outlet-sewa-label">Sewa Outlet</div>' +
+            '<div class="fc-outlet-sewa-figures">' +
+              '<span class="fc-outlet-sewa-bulan">' + money0(sewaPerBulan) + '<span class="unit">/bulan</span></span>' +
+              '<span class="fc-outlet-sewa-tahun">' + money0(sewaPerTahun) + ' /tahun</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="fc-outlet-sewa-status status-' + st.cls + '">' +
+            '<span class="fc-outlet-sewa-status-badge">' + st.label + '</span>' +
+            '<span class="fc-outlet-sewa-status-pct">' + sewaPercent + '% dari biaya tetap</span>' +
+          '</div>' +
+        '</div>' +
+        (st.note ? '<div class="fc-outlet-sewa-note status-' + st.cls + '">' + escapeHtml(st.note) + '</div>' : '');
+    }
+
     return '' +
       '<div class="fc-outlet-card">' +
         '<div class="fc-outlet-totals">' +
-          '<div class="fc-outlet-total-item fc-outlet-total-tahun"><div class="label">Per tahun</div><div class="value">' + money0(totalPerTahun) + '</div></div>' +
           '<div class="fc-outlet-total-item highlight"><div class="label">Per bulan</div><div class="value">' + money0(totalPerBulan) + '</div></div>' +
           '<div class="fc-outlet-total-item"><div class="label">Per hari</div><div class="value">' + money0(totalPerHari) + '</div></div>' +
         '</div>' +
+        sewaHtml +
         (tableRowsHtml ? (
           '<table class="fc-outlet-table">' +
-            '<thead><tr><th>Komponen</th><th>/Tahun</th><th>/Bulan</th><th>/Hari</th><th>%</th></tr></thead>' +
+            '<thead><tr><th>Komponen</th><th>/Bulan</th><th>/Hari</th><th>%</th></tr></thead>' +
             '<tbody>' + tableRowsHtml + '</tbody>' +
           '</table>'
         ) : '') +

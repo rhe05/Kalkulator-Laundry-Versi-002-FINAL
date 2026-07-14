@@ -198,12 +198,12 @@ body:has(#screenBiayaTetapForm.active) .wrap { width: min(100%, 1080px); }
     justify-content: center;
   }
 
-  /* [2026-07-13, direvisi] Kartu khusus Biaya Tetap Outlet desktop: langsung
-     terbuka (total per tahun/bulan/hari + tabel per komponen dgn
-     persentase, tanpa tombol panah). Ukuran & tipografi DISAMAKAN dgn kartu
-     ".fc-card" di fitur lain (Dashboard/Struktur HPP/Harga Layanan) sesuai
-     revisi - sebelumnya sengaja dibuat lebih kecil, ternyata kurang
-     terbaca. */
+  /* [2026-07-14, direvisi] Kartu khusus Biaya Tetap Outlet desktop: total
+     ringkasan atas cuma Bulan/Hari (Per Tahun dihapus, lihat
+     buildBiayaTetapDesktopCardHtml_), lalu 1 baris spotlight Sewa Outlet
+     (".fc-outlet-sewa" - satu-satunya yg masih tampil /Tahun + badge status),
+     baru tabel komponen lain. Padding/gap dirapatkan drpd versi sebelumnya
+     supaya kesan lebih padat & premium (bukan longgar). */
   #biayaTetapDesktopContent .fc-outlet-card {
     max-width: 560px;
     width: 100%;
@@ -211,33 +211,61 @@ body:has(#screenBiayaTetapForm.active) .wrap { width: min(100%, 1080px); }
     background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 22px 26px;
+    padding: 20px 24px;
   }
   #biayaTetapDesktopContent .fc-outlet-totals {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    margin-bottom: 18px;
-    padding-bottom: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
     border-bottom: 1px solid var(--border);
   }
   #biayaTetapDesktopContent .fc-outlet-total-item { text-align: center; min-width: 0; }
-  #biayaTetapDesktopContent .fc-outlet-total-item .label { font-size: 11px; color: var(--text-faint); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
-  /* Nilai per tahun SELALU digit paling banyak (12 bulan sekaligus) - font
-     dibuat lebih kecil drpd bulan/hari supaya tidak membungkus 2 baris &
-     tetap sejajar dgn 2 kolom lainnya, [2026-07-13]. */
-  #biayaTetapDesktopContent .fc-outlet-total-item .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  #biayaTetapDesktopContent .fc-outlet-total-tahun .value { font-size: 17px; }
+  #biayaTetapDesktopContent .fc-outlet-total-item .label { font-size: 11px; color: var(--text-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+  #biayaTetapDesktopContent .fc-outlet-total-item .value { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
   #biayaTetapDesktopContent .fc-outlet-total-item.highlight .value { color: var(--brass); }
+
+  /* Spotlight Sewa Outlet - kartu mini di dalam kartu, background sedikit
+     beda supaya menonjol dari tabel komponen biasa (ini komponen paling
+     sering jadi pertanyaan owner: "sewa saya kemahalan gak?"). */
+  #biayaTetapDesktopContent .fc-outlet-sewa {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  #biayaTetapDesktopContent .fc-outlet-sewa-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-figures { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-bulan { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-bulan .unit { font-size: 11px; font-weight: 600; color: var(--text-faint); margin-left: 2px; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-tahun { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status { text-align: right; flex-shrink: 0; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status-badge {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status.status-ok .fc-outlet-sewa-status-badge { background: rgba(15,118,110,0.14); color: var(--sage); }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status.status-watch .fc-outlet-sewa-status-badge { background: rgba(217,194,75,0.2); color: var(--volt); }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status.status-high .fc-outlet-sewa-status-badge { background: rgba(220,38,38,0.14); color: var(--red); }
+  #biayaTetapDesktopContent .fc-outlet-sewa-status-pct { display: block; font-size: 10.5px; color: var(--text-faint); margin-top: 4px; white-space: nowrap; }
+  #biayaTetapDesktopContent .fc-outlet-sewa-note {
+    font-size: 11px; line-height: 1.4; color: var(--text-dim); margin: -6px 0 14px; padding: 0 2px;
+  }
 
   #biayaTetapDesktopContent .fc-outlet-table { width: 100%; border-collapse: collapse; }
   #biayaTetapDesktopContent .fc-outlet-table th {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint);
-    text-align: right; font-weight: 600; padding: 0 0 9px 0;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint);
+    text-align: right; font-weight: 600; padding: 0 0 7px 0;
   }
   #biayaTetapDesktopContent .fc-outlet-table th:first-child { text-align: left; }
   #biayaTetapDesktopContent .fc-outlet-table td {
-    font-size: 14px; padding: 10px 0; border-top: 1px dashed var(--border);
+    font-size: 13.5px; padding: 8px 0; border-top: 1px dashed var(--border);
     text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dim); white-space: nowrap;
   }
   #biayaTetapDesktopContent .fc-outlet-table td:first-child { text-align: left; color: var(--text); font-weight: 600; white-space: normal; }
