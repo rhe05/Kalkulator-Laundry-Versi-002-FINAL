@@ -8,7 +8,8 @@
 - **Nama:** Kalkulator Laundry Versi 002 - FINAL
 - **Platform:** Google Apps Script Web App
 - **GitHub:** https://github.com/BangRhe99/Kalkulator-Laundry-Versi-002-FINAL
-- **URL Produksi:** https://script.google.com/macros/s/AKfycbxW6oL3GjGDUo8WKYOvfR5lIvdgAoNFiEI_hi9BDpsZwbA1oy58iq50w4VvvPR5TKnaQw/exec
+- **URL Produksi:** https://script.google.com/macros/s/AKfycbxQPKNOM8aTSZtWaRwp6GENbE2dT5nERK1Yd1cakULzKN2Pxrqpcui_88R_6jSCyR73xg/exec
+  (dikonfirmasi ulang 2026-07-14 - URL lama `AKfycbxW6oL3...` sudah tidak akurat)
 - **Folder Lokal:** `C:\Users\user\Documents\Kalkulator-Laundry-Versi-002-FINAL`
 
 ---
@@ -430,6 +431,40 @@ masuk/balik ke layar). HP/tablet (<1100px) TIDAK diubah - tetap pill kategori
    supaya 6 kartu + breakdown tambahan tetap muat 1 layar di laptop umum
    (1366x768 ke atas) - kalau di window sangat kecil kontennya di-crop halus
    (`overflow:hidden`, BUKAN error) drpd memaksa scrollbar muncul.
+
+---
+
+### Custom Domain / Reverse Proxy (2026-07-14) - SUDAH DICOBA, TIDAK BISA DIPAKAI
+
+User rencana jual app ini & mau custom domain (bukan URL panjang
+`script.google.com/...`) + bungkus repo di GitHub Private (sudah, dikonfirmasi
+aman) supaya kode tidak gampang disalin. Sempat dicoba reverse proxy Vercel
+(folder `vercel-proxy/`, Edge Function `api/proxy.js` yang `fetch()` ke URL
+exec Apps Script lalu kirim ulang responsnya) supaya address bar browser
+tetap domain custom.
+
+**Hasil: GAGAL - jangan dicoba ulang dengan cara yang sama.** Saat diakses
+lewat proxy, yang muncul adalah halaman **Login Google** (bukan halaman
+Login Kalkulator Laundry). Penyebab: akses anonim "Anyone" di Apps Script
+mengandalkan negosiasi cookie yang normalnya terjadi LANGSUNG di browser
+pengunjung asli; begitu request dilewatkan `fetch()` server-side Vercel
+(request baru tanpa cookie/histori), Google menganggap ini mencurigakan dan
+minta login akun Google - padahal app ini pakai auth sendiri (email+OTP),
+TIDAK butuh akun Google sama sekali. URL exec LANGSUNG (tanpa proxy) tetap
+normal, jadi masalahnya murni di pendekatan proxy-nya, bukan aplikasi.
+
+**Keputusan sementara:** custom domain DITUNDA. Pakai URL exec Apps Script
+apa adanya untuk dibagikan ke pelanggan (tidak elegan tapi 100% jalan).
+Rencana ulang custom domain baru masuk akal lagi SETELAH migrasi ke
+Supabase + frontend sendiri (Next.js/dst di Vercel) - di titik itu tidak ada
+lagi ketergantungan ke mekanisme sandbox Apps Script, custom domain jadi
+langsung bisa dipasang normal tanpa proxy sama sekali.
+
+File `vercel-proxy/` DIBIARKAN di repo (tidak dihapus) sebagai referensi,
+tapi JANGAN dipakai apa adanya tanpa perbaikan cookie-forwarding yang lebih
+lengkap kalau nanti mau dicoba lagi dengan pendekatan berbeda. Project
+Vercel-nya (`kalkulator-laundry-versi-002-final` di akun Vercel user) juga
+dibiarkan idle, dipakai ulang nanti saat migrasi Supabase.
 
 ---
 
