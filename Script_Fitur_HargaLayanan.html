@@ -307,7 +307,7 @@ menjalankan bootApp().
     }
 
     listEl.innerHTML = layanan.map(renderHargaLayananServiceCard).join("");
-    document.querySelectorAll("[data-harga-layanan-card]").forEach(updateMinOrderReco);
+    document.querySelectorAll("[data-harga-layanan-card]").forEach(function (c) { updateMinOrderReco(c); updateHargaReco(c); });
   }
 
   function renderHargaLayananServiceCard(item) {
@@ -345,6 +345,8 @@ menjalankan bootApp().
             '<input type="text" inputmode="numeric" pattern="[0-9]*" data-harga-layanan-key="' + escapeHtml(key) + '" value="' + (Number(item.hargaJual || 0) > 0 ? Number(item.hargaJual || 0).toLocaleString("id-ID") : "") + '" oninput="onHargaLayananInput(event)">' +
           '</div>' +
         '</div>' +
+
+        '<div class="hl-harga-reco" data-hl-harga-reco="' + escapeHtml(key) + '"></div>' +
 
         (isKgBased ?
           '<div class="field" style="margin-bottom:12px;">' +
@@ -418,6 +420,7 @@ menjalankan bootApp().
   function refreshHargaLayananPreview() {
     document.querySelectorAll("[data-harga-layanan-card]").forEach(function (card) {
       updateMinOrderReco(card);
+      updateHargaReco(card);
       var input = card.querySelector("[data-harga-layanan-key]");
       if (!input) return;
 
@@ -452,6 +455,91 @@ menjalankan bootApp().
       }
     });
   }
+
+  // === Rekomendasi Harga Jual (edukasi pemula) ===
+  // Per-Kg (kiloan/hybrid/jasa setrika): harga/kg agar di minimum order N Kg
+  // margin transaksi >= 20% (cost-plus dari HPP siklus; gas sudah termasuk di
+  // HPP), lalu dijepit ke rentang wajar pasar per layanan. N = min order saat
+  // ini; kalau kosong pakai asumsi 3 Kg. Bed Cover: per item, cost-plus lalu
+  // snap ke nilai wajar terdekat ke atas. Self Service belum di sini (butuh
+  // fixed cost + load dari backend).
+  var HARGA_WAJAR_PERKG = {
+    cuci_saja: [4000, 11000],
+    cuci_kering_lipat: [5000, 12000],
+    cuci_kering_setrika: [6000, 15000],
+    setrika_saja: [4000, 10000]
+  };
+  var BED_COVER_WAJAR = [20000, 22000, 25000, 28000, 30000, 32000, 35000, 38000, 40000, 42000, 45000, 48000, 50000];
+  var MIN_ORDER_ASUMSI = 3;
+
+  function updateHargaReco(card) {
+    if (!card) return;
+    var box = card.querySelector("[data-hl-harga-reco]");
+    if (!box) return;
+    var key = box.getAttribute("data-hl-harga-reco");
+
+    // Bed Cover (per item, tanpa minimum order)
+    if (key === "bed_cover") {
+      var hppItem = Number(card.getAttribute("data-hpp") || 0);
+      if (!(hppItem > 0)) { box.className = "hl-harga-reco"; box.innerHTML = ""; return; }
+      var floorCost = hppItem / 0.8;
+      var pickBc = BED_COVER_WAJAR[BED_COVER_WAJAR.length - 1];
+      var overBc = true;
+      for (var b = 0; b < BED_COVER_WAJAR.length; b++) {
+        if (BED_COVER_WAJAR[b] >= floorCost) { pickBc = BED_COVER_WAJAR[b]; overBc = false; break; }
+      }
+      box.className = "hl-harga-reco " + (overBc ? "warn" : "suggest");
+      box.innerHTML =
+        '<span class="hl-reco-text">Kisaran wajar ' + formatRupiahTanpaDesimal(20000) + '&ndash;' + formatRupiahTanpaDesimal(50000) + '/item. Disarankan <b>' + formatRupiahTanpaDesimal(pickBc) + '/item</b>' +
+          (overBc ? ' &mdash; biaya tinggi, ini batas atas wajar.' : '.') +
+        '</span>' +
+        '<button type="button" class="hl-reco-chip" data-hl-reco-harga="' + pickBc + '" onclick="applyHargaReco(this)">Pakai ' + formatRupiahTanpaDesimal(pickBc) + '</button>';
+      return;
+    }
+
+    // Per-Kg -- hanya kartu yang punya field minimum order (isKgBased);
+    // Self Service pakai key sama (cuci_saja) tapi TIDAK isKgBased -> dilewati.
+    var isKgBased = !!card.querySelector("[data-harga-layanan-minorder-key]");
+    var range = HARGA_WAJAR_PERKG[key];
+    if (!isKgBased || !range) { box.className = "hl-harga-reco"; box.innerHTML = ""; return; }
+
+    var hppSiklus = Number(card.getAttribute("data-hpp-siklus") || 0);
+    if (!(hppSiklus > 0)) {
+      box.className = "hl-harga-reco";
+      box.innerHTML = '<span class="hl-reco-text muted">Lengkapi HPP dulu untuk melihat harga wajar.</span>';
+      return;
+    }
+
+    var minInput = card.querySelector("[data-harga-layanan-minorder-key]");
+    var minOrderKg = minInput ? toNumber(minInput.value, 0) : 0;
+    var pakaiAsumsi = !(minOrderKg > 0);
+    var N = pakaiAsumsi ? MIN_ORDER_ASUMSI : minOrderKg;
+
+    var hargaMin = Math.ceil((hppSiklus / (0.8 * N)) / 1000) * 1000;
+    var pick = Math.min(range[1], Math.max(range[0], hargaMin));
+    var overCeiling = hargaMin > range[1];
+
+    box.className = "hl-harga-reco " + (overCeiling ? "warn" : "suggest");
+    box.innerHTML =
+      '<span class="hl-reco-text">Kisaran wajar ' + formatRupiahTanpaDesimal(range[0]) + '&ndash;' + formatRupiahTanpaDesimal(range[1]) + '/Kg. Disarankan <b>' + formatRupiahTanpaDesimal(pick) + '/Kg</b>' +
+        (pakaiAsumsi ? ' (asumsi minimum order ' + N + ' Kg)' : '') +
+        (overCeiling ? ' &mdash; biaya terlalu tinggi untuk harga wajar; naikkan minimum order atau tinjau biaya/gas.' : '.') +
+      '</span>' +
+      '<button type="button" class="hl-reco-chip" data-hl-reco-harga="' + pick + '" onclick="applyHargaReco(this)">Pakai ' + formatRupiahTanpaDesimal(pick) + '</button>';
+  }
+
+  function applyHargaReco(btn) {
+    if (!btn) return;
+    var card = btn.closest("[data-harga-layanan-card]");
+    if (!card) return;
+    var hargaInput = card.querySelector("[data-harga-layanan-key]");
+    if (!hargaInput) return;
+    var val = Number(btn.getAttribute("data-hl-reco-harga") || 0);
+    if (!(val > 0)) return;
+    hargaInput.value = val.toLocaleString("id-ID");
+    onHargaLayananInput({ target: hargaInput });
+  }
+  window.applyHargaReco = applyHargaReco;
 
   // === Rekomendasi Minimum Order (edukasi pemula) ===
   // Kg terkecil dari 3/4/5 yang bikin margin transaksi >= 20% (Opsi B, konsisten

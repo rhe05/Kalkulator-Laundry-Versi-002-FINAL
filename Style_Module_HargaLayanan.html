@@ -204,4 +204,10 @@ body:has(#screenHargaLayananDetail.active) .wrap { width: min(100%, 1080px); }
     transition: background .15s ease, color .15s ease;
   }
   .hl-reco-chip:hover, .hl-reco-chip:active { background: var(--brass); color: #fff; }
+  .hl-harga-reco { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .hl-harga-reco:empty { display: none; }
+  .hl-harga-reco .hl-reco-text { font-size: 12px; line-height: 1.45; color: var(--text-dim); }
+  .hl-harga-reco.suggest .hl-reco-text { color: var(--brass); }
+  .hl-harga-reco.warn .hl-reco-text { color: var(--red); }
+  .hl-harga-reco .hl-reco-text.muted { color: var(--text-faint); }
 </style>
