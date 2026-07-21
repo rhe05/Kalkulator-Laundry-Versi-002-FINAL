@@ -208,7 +208,7 @@ function createBiayaChemical_impl_(payload) {
 
     writeKeyAndAppendOrder_(sheet, "biayaChemical_" + clean.id, JSON.stringify(clean), KEY_BIAYA_CHEMICAL_ORDER, clean.id);
 
-    recomputeCabangSummary_(clean.cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
+    refreshFirestoreForCabang_(clean.cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
 
     return { ok: true, data: { record: clean, summary: computeBiayaChemicalSummary_(clean, cabang) } };
   } catch (err) {
@@ -259,7 +259,7 @@ function updateBiayaChemical_impl_(id, payload) {
     }
 
     writeKey_(sheet, "biayaChemical_" + id, JSON.stringify(clean));
-    recomputeCabangSummary_(clean.cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
+    refreshFirestoreForCabang_(clean.cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
     return { ok: true, data: { record: clean, summary: computeBiayaChemicalSummary_(clean, cabang) } };
   } catch (err) {
     return errorResponse_(err, "updateBiayaChemical");
@@ -285,7 +285,10 @@ function deleteBiayaChemical_impl_(id) {
     try { const r = readKey_(sheet, "biayaChemical_" + id); if (r) cabangIdRec = JSON.parse(r).cabangId; } catch (e) {}
     deleteKeyRow_(sheet, "biayaChemical_" + id);
     removeFromOrder_(sheet, KEY_BIAYA_CHEMICAL_ORDER, id);
-    if (cabangIdRec) recomputeCabangSummary_(cabangIdRec); // best-effort (non-fatal)
+    if (cabangIdRec) {
+      firestoreDeleteSubDoc_(cabangIdRec, "chemical", id); // best-effort: hapus dokumen Firestore-nya juga
+      refreshFirestoreForCabang_(cabangIdRec); // best-effort (non-fatal)
+    }
     return { ok: true, data: { id: id } };
   } catch (err) {
     return errorResponse_(err, "deleteBiayaChemical");

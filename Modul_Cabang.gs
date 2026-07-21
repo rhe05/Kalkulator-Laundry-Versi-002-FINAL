@@ -195,7 +195,7 @@ function createCabang_impl_(payload) {
     const sheet = ensureDataSheet_();
     writeKeyAndAppendOrder_(sheet, "cabang_" + clean.id, JSON.stringify(clean), KEY_CABANG_ORDER, clean.id);
 
-    recomputeCabangSummary_(clean.id); // best-effort: perbarui cache HPP Firestore (non-fatal)
+    refreshFirestoreForCabang_(clean.id); // best-effort: perbarui cache HPP Firestore (non-fatal)
 
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
@@ -239,7 +239,7 @@ function updateCabang_impl_(id, payload) {
     }
 
     writeKey_(sheet, "cabang_" + id, JSON.stringify(clean));
-    recomputeCabangSummary_(id); // best-effort: perbarui cache HPP Firestore (non-fatal)
+    refreshFirestoreForCabang_(id); // best-effort: perbarui cache HPP Firestore (non-fatal)
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
     return errorResponse_(err, "updateCabang");

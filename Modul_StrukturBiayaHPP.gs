@@ -1102,6 +1102,8 @@ function setBedCoverAktif_impl_(cabangId, aktif) {
       updatedAt: new Date().toISOString(),
     }));
 
+    refreshFirestoreForCabang_(cleanId); // best-effort: sinkronkan Firestore (non-fatal)
+
     return { ok: true, data: { cabangId: cleanId, aktif: !!aktif } };
   } catch (err) {
     return strukturHPPErrorResponse_(err, "setBedCoverAktif");
@@ -1157,6 +1159,8 @@ function setHPPLayananAktif_impl_(cabangId, serviceKey, aktif) {
       aktif: !!aktif,
       updatedAt: new Date().toISOString(),
     }));
+
+    refreshFirestoreForCabang_(cleanId); // best-effort: sinkronkan Firestore (non-fatal)
 
     return { ok: true, data: { cabangId: cleanId, serviceKey: serviceKey, aktif: !!aktif } };
   } catch (err) {

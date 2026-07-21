@@ -207,7 +207,7 @@ function saveBiayaTetapOutlet_impl_(cabangId, payload) {
 
     // [2026-07-13] Sheet ini TIDAK lewat Util_Penyimpanan.gs, jadi
     // baca-cek-tulisnya dikunci manual (sama alasannya dgn saveBiayaNotaKasir).
-    return _withDataLock_(function () {
+    const tetapResult = _withDataLock_(function () {
       const sheet = getBiayaTetapSheet_();
       const rowIndex = findBiayaTetapRowFast_(sheet, cabangId);
 
@@ -257,6 +257,9 @@ function saveBiayaTetapOutlet_impl_(cabangId, payload) {
         }
       };
     });
+    // best-effort DI LUAR lock (supaya HTTP Firestore tidak menahan kunci global)
+    if (tetapResult && tetapResult.ok) refreshFirestoreForCabang_(cabangId);
+    return tetapResult;
   } catch (err) {
     return biayaTetapErrorResponse_(err, "saveBiayaTetapOutlet");
   }

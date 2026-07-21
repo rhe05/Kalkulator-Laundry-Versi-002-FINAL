@@ -90,14 +90,68 @@ function getStrukturBiayaHPPFast_(cabangId) {
 }
 
 /**
- * Hapus dokumen computed cabang di Firestore (dipanggil saat cabang dihapus,
- * supaya tidak ada bayangan "hantu"). BEST-EFFORT.
+ * [DUAL-WRITE, 2026-07-21] Sinkronkan SEMUA data mentah 1 cabang (profil +
+ * config air/listrik/notaKasir/tetapOutlet/hargaLayanan/hppToggles +
+ * subkoleksi gas/chemical/packing, lihat migrateCabangFullConfig_ di
+ * Modul_Firestore_HPP_Eksperimen.gs) DAN cache HPP-nya ke Firestore dalam
+ * SATU panggilan. Dipanggil di SETIAP fungsi simpan yang menyentuh data
+ * cabang -- supaya Firestore tidak lagi cuma snapshot sekali migrasi,
+ * tapi ikut hidup/terbarui tiap kali user menyimpan. BEST-EFFORT PENUH:
+ * kegagalan Firestore (jaringan/kuota) TIDAK PERNAH menggagalkan
+ * penyimpanan ke Sheets (yang tetap sumber kebenaran).
+ */
+function refreshFirestoreForCabang_(cabangId) {
+  try {
+    migrateCabangFullConfig_(cabangId);
+  } catch (err) {
+    console.warn("refreshFirestoreForCabang_ (sync config) gagal utk " + cabangId + ": " + err);
+  }
+  return recomputeCabangSummary_(cabangId); // sudah best-effort sendiri, sekaligus hitung HPP terbaru
+}
+
+/**
+ * Hapus 1 dokumen di subkoleksi (gas/chemical/packing) cabang tertentu --
+ * dipanggil SEBELUM refreshFirestoreForCabang_ saat user menghapus 1 item,
+ * karena migrateCabangFullConfig_ hanya menimpa/menambah item yang MASIH
+ * ADA di Sheets, tidak pernah menghapus item Firestore yang sudah tidak ada
+ * lagi sumbernya. BEST-EFFORT.
+ */
+function firestoreDeleteSubDoc_(cabangId, subcollection, itemId) {
+  try {
+    const tenantId = activeDataSpreadsheetId_();
+    if (!tenantId || !cabangId || !itemId) return;
+    firestoreDeleteDoc_(firestoreCabangDocPath_(tenantId, cabangId) + "/" + subcollection + "/" + itemId);
+  } catch (err) {
+    console.warn("firestoreDeleteSubDoc_ gagal (non-fatal): " + err);
+  }
+}
+
+/**
+ * Hapus dokumen Cabang di Firestore SECARA PENUH (dipanggil saat cabang
+ * dihapus di Sheets): dokumen utama + semua config/* + semua item di
+ * subkoleksi gas/chemical/packing. BEST-EFFORT -- Firestore memang tidak
+ * otomatis menghapus subkoleksi saat dokumen induk dihapus (beda dari
+ * folder biasa), jadi harus eksplisit satu-satu di sini.
  */
 function deleteCabangComputed_(cabangId) {
   try {
     const tenantId = activeDataSpreadsheetId_();
     if (!tenantId || !cabangId) return;
-    firestoreDeleteDoc_(firestoreCabangDocPath_(tenantId, cabangId));
+    const path = firestoreCabangDocPath_(tenantId, cabangId);
+
+    ["air", "listrik", "notaKasir", "tetapOutlet", "hargaLayanan", "hppToggles"].forEach(function (name) {
+      try { firestoreDeleteDoc_(path + "/config/" + name); } catch (e) {}
+    });
+    ["gas", "chemical", "packing"].forEach(function (sub) {
+      try {
+        firestoreListCollection_(path, sub).forEach(function (item) {
+          const id = item && item._path ? item._path.split("/").pop() : null;
+          if (id) firestoreDeleteDoc_(path + "/" + sub + "/" + id);
+        });
+      } catch (e) {}
+    });
+
+    firestoreDeleteDoc_(path);
   } catch (err) {
     console.warn("deleteCabangComputed_ gagal (non-fatal): " + err);
   }

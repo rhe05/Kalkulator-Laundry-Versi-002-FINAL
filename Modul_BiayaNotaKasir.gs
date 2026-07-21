@@ -278,7 +278,7 @@ function saveBiayaNotaKasir_impl_(cabangId, payload) {
     });
     // best-effort: perbarui cache HPP Firestore DI LUAR lock (supaya HTTP
     // Firestore ~450ms tidak menahan kunci global yang dipakai penyimpanan lain)
-    if (nkResult && nkResult.ok) recomputeCabangSummary_(cabangId);
+    if (nkResult && nkResult.ok) refreshFirestoreForCabang_(cabangId);
     return nkResult;
   } catch (err) {
     return notaKasirErrorResponse_(err, "saveBiayaNotaKasir");
