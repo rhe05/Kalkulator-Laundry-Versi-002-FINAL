@@ -147,6 +147,20 @@ function withTenant_(sessionToken, fn) {
 }
 
 // ----------------------------------------------------------------------------
+// [SEMENTARA] PEMICU OTORISASI FIRESTORE
+// ----------------------------------------------------------------------------
+// Fungsi ini SENGAJA ditaruh di Code.gs (file ringan yang tidak membuat
+// toolbar editor "mati" seperti saat file Firestore besar dibuka). Menjalankan
+// fungsi APAPUN sekali setelah scope baru ditambah ke appsscript.json akan
+// memicu Google meminta persetujuan SEMUA izin sekaligus, termasuk
+// script.external_request yang dibutuhkan UrlFetchApp. Jadi cukup jalankan
+// fungsi ini SEKALI dari editor (dengan Code.gs tetap terbuka), setujui layar
+// izinnya, dan koneksi Firestore langsung ikut teruji. Aman dihapus setelah itu.
+function otorisasiFirestore_() {
+  return testFirestoreConnection_();
+}
+
+// ----------------------------------------------------------------------------
 // ENTRY POINT WEB APP
 // ----------------------------------------------------------------------------
 
