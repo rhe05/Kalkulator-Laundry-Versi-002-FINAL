@@ -218,6 +218,23 @@ function handleFirestoreDiagnostic_(e) {
         packing: firestoreListCollection_(path, "packing").length,
       };
       payload = { ok: true, action: action, cabangId: cabangId, hasComputed: !!(doc && doc.computed), hasProfil: !!(doc && doc.profil), configDocsFound: Object.keys(configDocs).filter(function (k) { return !!configDocs[k]; }), subCounts: subCounts };
+    } else if (action === "verifyAnyTenant") {
+      // Sama seperti verifyCabangFull, TAPI tenantId eksplisit dari parameter
+      // -- utk spot-check tenant LAIN (bukan konteks Master yg sedang aktif).
+      const tenantId = params.tenantId;
+      const cabangId = params.cabangId;
+      if (!tenantId || !cabangId) throw new Error("Parameter tenantId & cabangId wajib diisi.");
+      const path = firestoreCabangDocPath_(tenantId, cabangId);
+      const doc = firestoreGet_(path);
+      const configDocs = {
+        air: firestoreGet_(path + "/config/air"),
+        listrik: firestoreGet_(path + "/config/listrik"),
+        notaKasir: firestoreGet_(path + "/config/notaKasir"),
+        tetapOutlet: firestoreGet_(path + "/config/tetapOutlet"),
+        hargaLayanan: firestoreGet_(path + "/config/hargaLayanan"),
+        hppToggles: firestoreGet_(path + "/config/hppToggles"),
+      };
+      payload = { ok: true, action: action, tenantId: tenantId, cabangId: cabangId, namaLaundry: doc && doc.profil && doc.profil.namaLaundry, hasComputed: !!(doc && doc.computed), hasProfil: !!(doc && doc.profil), configDocsFound: Object.keys(configDocs).filter(function (k) { return !!configDocs[k]; }) };
     } else {
       throw new Error("action tidak dikenal: " + action);
     }
