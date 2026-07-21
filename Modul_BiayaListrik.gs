@@ -175,6 +175,8 @@ function saveBiayaListrik_impl_(cabangId, payload) {
 
     writeKey_(sheet, "biayaListrik_" + cabangId, JSON.stringify(clean));
 
+    recomputeCabangSummary_(cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
+
     return { ok: true, data: { record: clean, summary: computeBiayaListrikSummary_(clean, cabang) } };
   } catch (err) {
     return errorResponse_(err, "saveBiayaListrik");

@@ -165,6 +165,8 @@ function saveBiayaAir_impl_(cabangId, payload) {
 
     writeKey_(sheet, "biayaAir_" + cabangId, JSON.stringify(clean));
 
+    recomputeCabangSummary_(cabangId); // best-effort: perbarui cache HPP Firestore (non-fatal)
+
     return { ok: true, data: { record: clean, summary: computeBiayaAirSummary_(clean, cabang) } };
   } catch (err) {
     return errorResponse_(err, "saveBiayaAir");

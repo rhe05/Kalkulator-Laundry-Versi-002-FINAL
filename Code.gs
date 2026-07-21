@@ -215,6 +215,18 @@ function handleFirestoreDiagnostic_(e) {
       payload = { ok: true, action: action, cabangId: cabangId, hppAsli: hppAsli, dariFirestore: dariFirestore };
     } else if (action === "recomputeAll") {
       payload = { ok: true, action: action, result: recomputeAllCabang_() };
+    } else if (action === "testSaveRecompute") {
+      // Bukti wiring: re-save Air dgn nilai SAAT INI (idempotent) -> harus
+      // memicu recomputeCabangSummary_ -> computedAt di Firestore berubah/naik.
+      const cabangId = params.cabangId;
+      if (!cabangId) throw new Error("Parameter cabangId wajib diisi (?cabangId=...).");
+      const before = getStrukturBiayaHPPFast_(cabangId);
+      Utilities.sleep(1100); // pastikan timestamp berbeda
+      const airNow = getBiayaAir_impl_(cabangId);
+      if (!airNow.ok) throw new Error("getBiayaAir gagal: " + airNow.error);
+      const saveRes = saveBiayaAir_impl_(cabangId, airNow.data.record);
+      const after = getStrukturBiayaHPPFast_(cabangId);
+      payload = { ok: true, action: action, cabangId: cabangId, saveOk: saveRes.ok, sourceAfter: after && after._source, computedAtBefore: before && before._computedAt, computedAtAfter: after && after._computedAt };
     } else if (action === "benchmark") {
       const cabangId = params.cabangId;
       if (!cabangId) throw new Error("Parameter cabangId wajib diisi (?cabangId=...).");

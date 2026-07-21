@@ -87,8 +87,13 @@ let _strukturBiayaHPPCache_ = {};
 // sessionToken. Badan cache-check dipindah ke getStrukturBiayaHPP_impl_
 // (dipakai internal oleh modul lain spt Modul_HargaLayanan.gs/Modul_Dashboard.gs
 // TANPA sessionToken, krn sudah berjalan di dalam withTenant_ yang sama).
+// [2026-07-21 FIRESTORE] Layar HPP sekarang baca dari cache Firestore
+// (getStrukturBiayaHPPFast_, ~450ms) dengan fallback otomatis ke hitung Sheets
+// kalau computed belum ada. Pemanggil INTERNAL (Modul_HargaLayanan.gs /
+// Modul_Dashboard.gs) tetap pakai getStrukturBiayaHPP_impl_ langsung (jalur
+// Sheets) - sengaja, supaya perubahan ini terisolasi ke layar HPP dulu.
 function getStrukturBiayaHPP(sessionToken, cabangId) {
-  return withTenant_(sessionToken, function () { return getStrukturBiayaHPP_impl_(cabangId); });
+  return withTenant_(sessionToken, function () { return getStrukturBiayaHPPFast_(cabangId); });
 }
 
 function getStrukturBiayaHPP_impl_(cabangId) {

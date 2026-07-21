@@ -195,6 +195,8 @@ function createCabang_impl_(payload) {
     const sheet = ensureDataSheet_();
     writeKeyAndAppendOrder_(sheet, "cabang_" + clean.id, JSON.stringify(clean), KEY_CABANG_ORDER, clean.id);
 
+    recomputeCabangSummary_(clean.id); // best-effort: perbarui cache HPP Firestore (non-fatal)
+
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
     return errorResponse_(err, "createCabang");
@@ -237,6 +239,7 @@ function updateCabang_impl_(id, payload) {
     }
 
     writeKey_(sheet, "cabang_" + id, JSON.stringify(clean));
+    recomputeCabangSummary_(id); // best-effort: perbarui cache HPP Firestore (non-fatal)
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
     return errorResponse_(err, "updateCabang");
@@ -285,6 +288,7 @@ function deleteCabang_impl_(id) {
       deleteBiayaChemicalByCabang_(sheet, id);
       deleteBiayaPackingByCabang_(sheet, id);
     });
+    deleteCabangComputed_(id); // best-effort: hapus bayangan HPP di Firestore (non-fatal)
     return { ok: true, data: { id: id } };
   } catch (err) {
     return errorResponse_(err, "deleteCabang");

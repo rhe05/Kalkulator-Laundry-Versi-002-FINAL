@@ -240,7 +240,7 @@ function saveBiayaNotaKasir_impl_(cabangId, payload) {
     // file), jadi baca-cek-tulisnya dikunci manual di sini - tanpa ini, 2
     // penyimpanan bersamaan utk cabang yang SAMA-SAMA BARU bisa lolos
     // "belum ada baris" berbarengan dan menghasilkan 2 baris utk 1 cabang.
-    return _withDataLock_(function () {
+    const nkResult = _withDataLock_(function () {
       const sheet = getBiayaNotaKasirSheet_();
       const rowIndex = findBiayaNotaKasirRowFast_(sheet, cabangId);
 
@@ -276,6 +276,10 @@ function saveBiayaNotaKasir_impl_(cabangId, payload) {
         },
       };
     });
+    // best-effort: perbarui cache HPP Firestore DI LUAR lock (supaya HTTP
+    // Firestore ~450ms tidak menahan kunci global yang dipakai penyimpanan lain)
+    if (nkResult && nkResult.ok) recomputeCabangSummary_(cabangId);
+    return nkResult;
   } catch (err) {
     return notaKasirErrorResponse_(err, "saveBiayaNotaKasir");
   }
