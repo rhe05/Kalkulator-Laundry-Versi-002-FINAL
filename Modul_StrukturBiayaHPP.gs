@@ -1073,7 +1073,14 @@ function getBedCoverToggleKey_(cabangId) {
   return "bedCoverAktif_" + cabangId;
 }
 
-function isBedCoverAktif_(cabangId) {
+/**
+ * Versi Sheets-MURNI (tanpa Firestore sama sekali) -- WAJIB dipakai oleh
+ * fungsi yang MENULIS ke Firestore (firestoreSyncHppToggles*,
+ * migrateCabangFullConfig_), supaya tidak membaca balik data LAMA dari
+ * Firestore tepat sebelum menulis data BARU yang baru saja disimpan ke
+ * Sheets -- itu akan jadi bug melingkar (nilai baru tidak pernah tersimpan).
+ */
+function isBedCoverAktifSheetsOnly_(cabangId) {
   try {
     const sheet = ensureDataSheet_();
     const raw = readKey_(sheet, getBedCoverToggleKey_(cabangId));
@@ -1083,6 +1090,17 @@ function isBedCoverAktif_(cabangId) {
   } catch (err) {
     return true;
   }
+}
+
+/**
+ * [FIRESTORE-FIRST, minim risiko] Dipakai jalur BACA (hitung HPP dkk).
+ * Di-cache per-eksekusi (getHppTogglesDocCached_, Modul_Firestore_Computed.gs)
+ * supaya tidak jadi banyak HTTP call (dipanggil s.d. 7x per hitung HPP).
+ */
+function isBedCoverAktif_(cabangId) {
+  const doc = getHppTogglesDocCached_(cabangId);
+  if (doc && typeof doc.bedCoverAktif === "boolean") return doc.bedCoverAktif;
+  return isBedCoverAktifSheetsOnly_(cabangId);
 }
 
 function setBedCoverAktif(sessionToken, cabangId, aktif) {
@@ -1122,9 +1140,30 @@ function getHPPLayananToggleKey_(cabangId, serviceKey) {
   return "hppLayananAktif_" + serviceKey + "_" + cabangId;
 }
 
+/** Versi Sheets-MURNI -- lihat catatan isBedCoverAktifSheetsOnly_ di atas. */
+function isHPPLayananAktifSheetsOnly_(cabangId, serviceKey) {
+  if (serviceKey === STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER) {
+    return isBedCoverAktifSheetsOnly_(cabangId);
+  }
+  try {
+    const sheet = ensureDataSheet_();
+    const raw = readKey_(sheet, getHPPLayananToggleKey_(cabangId, serviceKey));
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed.aktif === "boolean" ? parsed.aktif : true;
+  } catch (err) {
+    return true;
+  }
+}
+
+/** [FIRESTORE-FIRST, minim risiko] Dipakai jalur BACA -- lihat catatan isBedCoverAktif_. */
 function isHPPLayananAktif_(cabangId, serviceKey) {
   if (serviceKey === STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER) {
     return isBedCoverAktif_(cabangId);
+  }
+  const doc = getHppTogglesDocCached_(cabangId);
+  if (doc && doc.layananAktif && typeof doc.layananAktif === "object" && Object.prototype.hasOwnProperty.call(doc.layananAktif, serviceKey)) {
+    return !!doc.layananAktif[serviceKey];
   }
   try {
     const sheet = ensureDataSheet_();

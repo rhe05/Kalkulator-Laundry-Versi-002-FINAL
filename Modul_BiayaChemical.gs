@@ -102,25 +102,49 @@ function listBiayaChemical_impl_(cabangId) {
       return { ok: false, error: "ID cabang tidak valid.", stage: "listBiayaChemical:validate_cabang_id" };
     }
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
 
-    const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
-    if (!cabangRaw) {
-      return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "listBiayaChemical:lookup_cabang" };
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    const tenantId = activeDataSpreadsheetId_();
+    let cabang = null;
+    if (tenantId) {
+      const cabangDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId));
+      if (cabangDoc && cabangDoc.profil) cabang = sanitizeCabang_(cabangDoc);
     }
-    const cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    const sheet = ensureDataSheet_();
+    if (!cabang) {
+      const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
+      if (!cabangRaw) {
+        return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "listBiayaChemical:lookup_cabang" };
+      }
+      cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    }
 
-    const order = readOrder_(sheet, KEY_BIAYA_CHEMICAL_ORDER);
+    let rawRecords = null;
+    if (tenantId) {
+      const docs = firestoreTryListPath_(firestoreCabangDocPath_(tenantId, cabangId), "chemical");
+      if (docs && docs.length) rawRecords = docs;
+    }
+
     const items = [];
     let totalBiayaPerKg = 0;
-    for (let i = 0; i < order.length; i++) {
-      const raw = readKey_(sheet, "biayaChemical_" + order[i]);
-      if (!raw) continue;
-      const record = sanitizeBiayaChemical_(JSON.parse(raw));
-      if (record.cabangId !== cabangId) continue;
-      const summary = computeBiayaChemicalSummary_(record, cabang);
-      items.push({ record: record, summary: summary });
-      totalBiayaPerKg += summary.biayaPerKg;
+    if (rawRecords) {
+      for (let i = 0; i < rawRecords.length; i++) {
+        const record = sanitizeBiayaChemical_(rawRecords[i]);
+        const summary = computeBiayaChemicalSummary_(record, cabang);
+        items.push({ record: record, summary: summary });
+        totalBiayaPerKg += summary.biayaPerKg;
+      }
+    } else {
+      const order = readOrder_(sheet, KEY_BIAYA_CHEMICAL_ORDER);
+      for (let i = 0; i < order.length; i++) {
+        const raw = readKey_(sheet, "biayaChemical_" + order[i]);
+        if (!raw) continue;
+        const record = sanitizeBiayaChemical_(JSON.parse(raw));
+        if (record.cabangId !== cabangId) continue;
+        const summary = computeBiayaChemicalSummary_(record, cabang);
+        items.push({ record: record, summary: summary });
+        totalBiayaPerKg += summary.biayaPerKg;
+      }
     }
     return {
       ok: true,

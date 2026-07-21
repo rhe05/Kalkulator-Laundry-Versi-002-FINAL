@@ -198,16 +198,25 @@ function getBiayaNotaKasir_impl_(cabangId) {
     }
 
     const cabang = getCabangInfo_(cabangId);
-    const sheet = getBiayaNotaKasirSheet_();
-    const rowIndex = findBiayaNotaKasirRowFast_(sheet, cabangId);
 
-    let record;
-    if (rowIndex > 0) {
-      const values = sheet.getRange(rowIndex, 1, 1, BIAYA_NOTA_KASIR_HEADERS_.length).getValues()[0];
-      const rowObject = rowArrayToBiayaNotaKasirObject_(values);
-      record = normalizeBiayaNotaKasirRecord_(rowObject, cabangId);
-    } else {
-      record = defaultBiayaNotaKasirRecord_(cabangId);
+    // [FIRESTORE-FIRST, minim risiko] fallback ke sheet dedicated kalau
+    // tidak ada/gagal -- Sheets TETAP ditulis (dual-write), jadi aman.
+    let record = null;
+    const tenantId = activeDataSpreadsheetId_();
+    if (tenantId) {
+      const notaDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/notaKasir");
+      if (notaDoc) record = normalizeBiayaNotaKasirRecord_(notaDoc, cabangId);
+    }
+    if (!record) {
+      const sheet = getBiayaNotaKasirSheet_();
+      const rowIndex = findBiayaNotaKasirRowFast_(sheet, cabangId);
+      if (rowIndex > 0) {
+        const values = sheet.getRange(rowIndex, 1, 1, BIAYA_NOTA_KASIR_HEADERS_.length).getValues()[0];
+        const rowObject = rowArrayToBiayaNotaKasirObject_(values);
+        record = normalizeBiayaNotaKasirRecord_(rowObject, cabangId);
+      } else {
+        record = defaultBiayaNotaKasirRecord_(cabangId);
+      }
     }
 
     return {

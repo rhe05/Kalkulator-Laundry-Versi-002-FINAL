@@ -108,18 +108,34 @@ function getBiayaListrik_impl_(cabangId) {
       return { ok: false, error: "ID cabang tidak valid.", stage: "getBiayaListrik:validate_cabang_id" };
     }
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
 
-    const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
-    if (!cabangRaw) {
-      return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getBiayaListrik:lookup_cabang" };
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    const tenantId = activeDataSpreadsheetId_();
+    let cabang = null;
+    if (tenantId) {
+      const cabangDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId));
+      if (cabangDoc && cabangDoc.profil) cabang = sanitizeCabang_(cabangDoc);
     }
-    const cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    const sheet = ensureDataSheet_();
+    if (!cabang) {
+      const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
+      if (!cabangRaw) {
+        return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getBiayaListrik:lookup_cabang" };
+      }
+      cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    }
 
-    const raw = readKey_(sheet, "biayaListrik_" + cabangId);
-    const record = raw
-      ? sanitizeBiayaListrik_(JSON.parse(raw))
-      : Object.assign(defaultBiayaListrik_(), { cabangId: cabangId });
+    let record = null;
+    if (tenantId) {
+      const listrikDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/listrik");
+      if (listrikDoc) record = sanitizeBiayaListrik_(listrikDoc);
+    }
+    if (!record) {
+      const raw = readKey_(sheet, "biayaListrik_" + cabangId);
+      record = raw
+        ? sanitizeBiayaListrik_(JSON.parse(raw))
+        : Object.assign(defaultBiayaListrik_(), { cabangId: cabangId });
+    }
 
     return {
       ok: true,

@@ -27,6 +27,55 @@ function firestoreCabangDocPath_(tenantId, cabangId) {
   return "tenants/" + tenantId + "/cabang/" + cabangId;
 }
 
+// ============================================================================
+// [READ-FIRST FIRESTORE, 2026-07-21] Helper generik dipakai SEMUA modul untuk
+// membalik urutan baca: coba Firestore DULU (lebih cepat), kalau tidak ada/
+// gagal (data lama yang belum ke-migrasi, Firestore sedang bermasalah, dst)
+// otomatis kembalikan null -- pemanggil WAJIB fallback ke Sheets seperti
+// biasa. TIDAK PERNAH throw. Ini yang membuat flip ini rendah risiko: Sheets
+// TETAP ditulis (dual-write tidak dicabut) dan TETAP jadi jaring pengaman.
+// ============================================================================
+
+function firestoreTryGetPath_(relPath) {
+  try {
+    return firestoreGet_(relPath);
+  } catch (err) {
+    console.warn("firestoreTryGetPath_(" + relPath + ") gagal, fallback Sheets: " + err);
+    return null;
+  }
+}
+
+function firestoreTryListPath_(parentPath, collectionId) {
+  try {
+    return firestoreListCollection_(parentPath, collectionId);
+  } catch (err) {
+    console.warn("firestoreTryListPath_(" + parentPath + "/" + collectionId + ") gagal, fallback Sheets: " + err);
+    return null;
+  }
+}
+
+/**
+ * Cache per-eksekusi (reset tiap request baru, sama seperti _dataSheetCache_
+ * di Util_Penyimpanan.gs) -- WAJIB, karena isBedCoverAktif_/isHPPLayananAktif_
+ * dipanggil sampai 7x per satu hitung HPP (1x bed cover + 6x layanan lain).
+ * Tanpa cache ini, flip ke Firestore akan jadi 7 HTTP call per hitung HPP --
+ * regresi fan-out yang sama seperti yang sudah kita hindari di tempat lain.
+ */
+let _hppTogglesFirestoreCache_ = {};
+
+function getHppTogglesDocCached_(cabangId) {
+  if (Object.prototype.hasOwnProperty.call(_hppTogglesFirestoreCache_, cabangId)) {
+    return _hppTogglesFirestoreCache_[cabangId];
+  }
+  let doc = null;
+  const tenantId = activeDataSpreadsheetId_();
+  if (tenantId) {
+    doc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/hppToggles");
+  }
+  _hppTogglesFirestoreCache_[cabangId] = doc;
+  return doc;
+}
+
 /**
  * Hitung ulang HPP satu cabang (via jalur Sheets yang sudah ada & terbukti)
  * lalu simpan ke field `computed.hpp` dokumen Cabang di Firestore.
@@ -165,7 +214,7 @@ function firestoreSyncHppToggles_(cabangId) {
     const layananAktif = {};
     STRUKTUR_HPP_TOGGLABLE_KEYS_.forEach(function (key) {
       if (key === STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER) return;
-      layananAktif[key] = isHPPLayananAktif_(cabangId, key);
+      layananAktif[key] = isHPPLayananAktifSheetsOnly_(cabangId, key);
     });
     const bepMixRaw = readKey_(ensureDataSheet_(), "bepMix_" + cabangId);
     let bepMix = null;
@@ -173,7 +222,7 @@ function firestoreSyncHppToggles_(cabangId) {
       try { bepMix = JSON.parse(bepMixRaw).mix || null; } catch (e) { bepMix = null; }
     }
     firestoreSet_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/hppToggles", {
-      bedCoverAktif: isBedCoverAktif_(cabangId),
+      bedCoverAktif: isBedCoverAktifSheetsOnly_(cabangId),
       layananAktif: layananAktif,
       bepMix: bepMix || {},
     });
@@ -287,16 +336,27 @@ function firestoreSyncHppTogglesAndRecompute_(cabangId) {
     const layananAktif = {};
     STRUKTUR_HPP_TOGGLABLE_KEYS_.forEach(function (key) {
       if (key === STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER) return;
-      layananAktif[key] = isHPPLayananAktif_(cabangId, key);
+      layananAktif[key] = isHPPLayananAktifSheetsOnly_(cabangId, key);
     });
     const bepMixRaw = readKey_(ensureDataSheet_(), "bepMix_" + cabangId);
     let bepMix = null;
     if (bepMixRaw) {
       try { bepMix = JSON.parse(bepMixRaw).mix || null; } catch (e) { bepMix = null; }
     }
+    const freshToggles = { bedCoverAktif: isBedCoverAktifSheetsOnly_(cabangId), layananAktif: layananAktif, bepMix: bepMix || {} };
+
+    // [KRITIS] Isi cache per-eksekusi DENGAN NILAI SEGAR ini SEBELUM
+    // buildComputedWriteSpec_ (yang lewat getStrukturBiayaHPP_impl_ bisa
+    // memanggil isHPPLayananAktif_/isBedCoverAktif_ versi Firestore-first).
+    // Tanpa ini, HPP yang dihitung ulang bisa memakai toggle LAMA (Firestore
+    // belum ter-update saat baris ini jalan, commit-nya baru terjadi di
+    // bawah) -- computed.hpp jadi tidak sinkron dengan toggle yang baru
+    // saja disimpan pada commit yang SAMA.
+    _hppTogglesFirestoreCache_[cabangId] = freshToggles;
+
     const writeSpecs = [{
       relPath: firestoreCabangDocPath_(tenantId, cabangId) + "/config/hppToggles",
-      data: { bedCoverAktif: isBedCoverAktif_(cabangId), layananAktif: layananAktif, bepMix: bepMix || {} },
+      data: freshToggles,
     }];
     const computedSpec = buildComputedWriteSpec_(tenantId, cabangId);
     if (computedSpec) writeSpecs.push(computedSpec);

@@ -113,13 +113,33 @@ function listCabang(sessionToken) {
 function listCabang_impl_() {
   try {
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
-    const order = readOrder_(sheet, KEY_CABANG_ORDER);
+
+    // [FIRESTORE-FIRST, minim risiko] Coba baca daftar cabang dari Firestore
+    // dulu; kalau kosong/gagal, fallback ke Sheets (order array) seperti
+    // sebelumnya -- Sheets TETAP ditulis (dual-write), jadi ini selalu aman.
+    let cabangList = null;
+    const tenantId = activeDataSpreadsheetId_();
+    if (tenantId) {
+      const docs = firestoreTryListPath_("tenants/" + tenantId, "cabang");
+      if (docs && docs.length) {
+        cabangList = docs.map(function (d) { return sanitizeCabang_(d); });
+      }
+    }
+
+    if (!cabangList) {
+      const sheet = ensureDataSheet_();
+      const order = readOrder_(sheet, KEY_CABANG_ORDER);
+      cabangList = [];
+      for (let i = 0; i < order.length; i++) {
+        const raw = readKey_(sheet, "cabang_" + order[i]);
+        if (!raw) continue;
+        cabangList.push(sanitizeCabang_(JSON.parse(raw)));
+      }
+    }
+
     const items = [];
-    for (let i = 0; i < order.length; i++) {
-      const raw = readKey_(sheet, "cabang_" + order[i]);
-      if (!raw) continue;
-      const cabang = sanitizeCabang_(JSON.parse(raw));
+    for (let i = 0; i < cabangList.length; i++) {
+      const cabang = cabangList[i];
       items.push({
         id: cabang.id,
         namaLaundry: cabang.profil.namaLaundry,
@@ -155,12 +175,24 @@ function getCabang_impl_(id) {
       return { ok: false, error: "ID cabang tidak valid.", stage: "getCabang:validate_id" };
     }
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
-    const raw = readKey_(sheet, "cabang_" + id);
-    if (!raw) {
-      return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getCabang:lookup" };
+
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    let cabang = null;
+    const tenantId = activeDataSpreadsheetId_();
+    if (tenantId) {
+      const doc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, id));
+      if (doc && doc.profil) cabang = sanitizeCabang_(doc);
     }
-    const cabang = sanitizeCabang_(JSON.parse(raw));
+
+    if (!cabang) {
+      const sheet = ensureDataSheet_();
+      const raw = readKey_(sheet, "cabang_" + id);
+      if (!raw) {
+        return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getCabang:lookup" };
+      }
+      cabang = sanitizeCabang_(JSON.parse(raw));
+    }
+
     return { ok: true, data: { cabang: cabang, summary: computeSummary_(cabang) } };
   } catch (err) {
     return errorResponse_(err, "getCabang");

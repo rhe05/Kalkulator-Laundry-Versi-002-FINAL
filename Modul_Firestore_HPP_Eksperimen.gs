@@ -72,7 +72,7 @@ function migrateCabangFullConfig_(cabangId) {
   var layananAktif = {};
   STRUKTUR_HPP_TOGGLABLE_KEYS_.forEach(function (key) {
     if (key === STRUKTUR_HPP_SERVICE_KEYS_.BED_COVER) return; // disimpan terpisah di bawah (bedCoverAktif)
-    layananAktif[key] = isHPPLayananAktif_(cabangId, key);
+    layananAktif[key] = isHPPLayananAktifSheetsOnly_(cabangId, key);
   });
   var bepMixRaw = readKey_(ensureDataSheet_(), "bepMix_" + cabangId);
   var bepMix = null;
@@ -80,7 +80,7 @@ function migrateCabangFullConfig_(cabangId) {
     try { bepMix = JSON.parse(bepMixRaw).mix || null; } catch (e) { bepMix = null; }
   }
   firestoreSet_(path + "/config/hppToggles", {
-    bedCoverAktif: isBedCoverAktif_(cabangId),
+    bedCoverAktif: isBedCoverAktifSheetsOnly_(cabangId),
     layananAktif: layananAktif,
     bepMix: bepMix || {},
   });

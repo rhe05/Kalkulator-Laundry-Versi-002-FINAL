@@ -863,6 +863,22 @@ function getBepServiceMix_(cabangId, activeKeys) {
     defaultMix[key] = n > 0 ? dashboardRound2_(100 / n) : 0;
   });
 
+  // [FIRESTORE-FIRST, minim risiko] pakai cache dokumen hppToggles yang sama
+  // (getHppTogglesDocCached_, Modul_Firestore_Computed.gs) -- kalau ada &
+  // keys-nya cocok, pakai itu tanpa perlu tambahan HTTP call terpisah.
+  try {
+    if (typeof getHppTogglesDocCached_ === "function") {
+      var fsDoc = getHppTogglesDocCached_(cabangId);
+      if (fsDoc && fsDoc.bepMix && typeof fsDoc.bepMix === "object" && Object.keys(fsDoc.bepMix).length) {
+        var fsKeys = Object.keys(fsDoc.bepMix).sort().join(",");
+        var curKeysFs = activeKeys.slice().sort().join(",");
+        if (fsKeys === curKeysFs) return fsDoc.bepMix;
+      }
+    }
+  } catch (err) {
+    console.warn("getBepServiceMix_ Firestore gagal, fallback Sheets: " + err);
+  }
+
   try {
     var sheet = ensureDataSheet_();
     var raw = readKey_(sheet, getBepMixKey_(cabangId));
@@ -888,6 +904,7 @@ function getBepServiceMix_(cabangId, activeKeys) {
         mix: defaultMix,
         updatedAt: new Date().toISOString()
       }));
+      if (typeof firestoreSyncHppToggles_ === "function") firestoreSyncHppToggles_(cabangId); // best-effort sync default baru
       return defaultMix;
     }
 

@@ -215,6 +215,20 @@ function sanitizeHargaLayananCabangId_(cabangId) {
 
 function readHargaLayananRecord_(cabangId) {
   try {
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    const tenantId = typeof activeDataSpreadsheetId_ === "function" ? activeDataSpreadsheetId_() : null;
+    if (tenantId) {
+      const doc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/hargaLayanan");
+      if (doc) {
+        return {
+          cabangId: doc.cabangId ? String(doc.cabangId) : cabangId,
+          hargaJual: doc.hargaJual && typeof doc.hargaJual === "object" ? doc.hargaJual : {},
+          minimumOrderKg: doc.minimumOrderKg && typeof doc.minimumOrderKg === "object" ? doc.minimumOrderKg : {},
+          updatedAt: doc.updatedAt ? String(doc.updatedAt) : "",
+        };
+      }
+    }
+
     const sheet = ensureDataSheet_();
     const raw = readKey_(sheet, getHargaLayananKey_(cabangId));
     if (!raw) {

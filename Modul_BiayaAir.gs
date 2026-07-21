@@ -98,18 +98,34 @@ function getBiayaAir_impl_(cabangId) {
       return { ok: false, error: "ID cabang tidak valid.", stage: "getBiayaAir:validate_cabang_id" };
     }
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
 
-    const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
-    if (!cabangRaw) {
-      return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getBiayaAir:lookup_cabang" };
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    const tenantId = activeDataSpreadsheetId_();
+    let cabang = null;
+    if (tenantId) {
+      const cabangDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId));
+      if (cabangDoc && cabangDoc.profil) cabang = sanitizeCabang_(cabangDoc);
     }
-    const cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    const sheet = ensureDataSheet_();
+    if (!cabang) {
+      const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
+      if (!cabangRaw) {
+        return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "getBiayaAir:lookup_cabang" };
+      }
+      cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    }
 
-    const raw = readKey_(sheet, "biayaAir_" + cabangId);
-    const record = raw
-      ? sanitizeBiayaAir_(JSON.parse(raw))
-      : Object.assign(defaultBiayaAir_(), { cabangId: cabangId });
+    let record = null;
+    if (tenantId) {
+      const airDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/air");
+      if (airDoc) record = sanitizeBiayaAir_(airDoc);
+    }
+    if (!record) {
+      const raw = readKey_(sheet, "biayaAir_" + cabangId);
+      record = raw
+        ? sanitizeBiayaAir_(JSON.parse(raw))
+        : Object.assign(defaultBiayaAir_(), { cabangId: cabangId });
+    }
 
     return {
       ok: true,

@@ -141,15 +141,23 @@ function getBiayaTetapOutlet_impl_(cabangId) {
       };
     }
 
-    const sheet = getBiayaTetapSheet_();
-    const rowIndex = findBiayaTetapRowFast_(sheet, cabangId);
-
-    let record;
-    if (rowIndex > 0) {
-      const values = sheet.getRange(rowIndex, 1, 1, BIAYA_TETAP_HEADERS_.length).getValues()[0];
-      record = normalizeBiayaTetapRecord_(rowArrayToBiayaTetapObject_(values), cabangId, cabang);
-    } else {
-      record = defaultBiayaTetapRecord_(cabangId, cabang);
+    // [FIRESTORE-FIRST, minim risiko] fallback ke sheet dedicated kalau
+    // tidak ada/gagal -- Sheets TETAP ditulis (dual-write), jadi aman.
+    let record = null;
+    const tenantId = activeDataSpreadsheetId_();
+    if (tenantId) {
+      const tetapDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId) + "/config/tetapOutlet");
+      if (tetapDoc) record = normalizeBiayaTetapRecord_(tetapDoc, cabangId, cabang);
+    }
+    if (!record) {
+      const sheet = getBiayaTetapSheet_();
+      const rowIndex = findBiayaTetapRowFast_(sheet, cabangId);
+      if (rowIndex > 0) {
+        const values = sheet.getRange(rowIndex, 1, 1, BIAYA_TETAP_HEADERS_.length).getValues()[0];
+        record = normalizeBiayaTetapRecord_(rowArrayToBiayaTetapObject_(values), cabangId, cabang);
+      } else {
+        record = defaultBiayaTetapRecord_(cabangId, cabang);
+      }
     }
 
     record.depresiasiRows = syncDepresiasiRowsWithProfil_(record.depresiasiRows, cabang);

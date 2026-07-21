@@ -132,25 +132,47 @@ function listBiayaGas_impl_(cabangId) {
       return { ok: false, error: "ID cabang tidak valid.", stage: "listBiayaGas:validate_cabang_id" };
     }
     ensureMigrated_();
-    const sheet = ensureDataSheet_();
 
-    const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
-    if (!cabangRaw) {
-      return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "listBiayaGas:lookup_cabang" };
+    // [FIRESTORE-FIRST, minim risiko] fallback Sheets kalau tidak ada/gagal.
+    const tenantId = activeDataSpreadsheetId_();
+    let cabang = null;
+    if (tenantId) {
+      const cabangDoc = firestoreTryGetPath_(firestoreCabangDocPath_(tenantId, cabangId));
+      if (cabangDoc && cabangDoc.profil) cabang = sanitizeCabang_(cabangDoc);
     }
-    const cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    const sheet = ensureDataSheet_();
+    if (!cabang) {
+      const cabangRaw = readKey_(sheet, "cabang_" + cabangId);
+      if (!cabangRaw) {
+        return { ok: false, error: "Cabang tidak ditemukan. Mungkin sudah dihapus.", stage: "listBiayaGas:lookup_cabang" };
+      }
+      cabang = sanitizeCabang_(JSON.parse(cabangRaw));
+    }
 
-    const order = readOrder_(sheet, KEY_BIAYA_GAS_ORDER);
+    let rawRecords = null;
+    if (tenantId) {
+      const docs = firestoreTryListPath_(firestoreCabangDocPath_(tenantId, cabangId), "gas");
+      if (docs && docs.length) rawRecords = docs;
+    }
+
     const items = [];
-    for (let i = 0; i < order.length; i++) {
-      const raw = readKey_(sheet, "biayaGas_" + order[i]);
-      if (!raw) continue;
-      const record = sanitizeBiayaGas_(JSON.parse(raw));
-      if (record.cabangId !== cabangId) continue;
-      items.push({
-        record: record,
-        summary: computeBiayaGasSummary_(record, cabang),
-      });
+    if (rawRecords) {
+      for (let i = 0; i < rawRecords.length; i++) {
+        const record = sanitizeBiayaGas_(rawRecords[i]);
+        items.push({ record: record, summary: computeBiayaGasSummary_(record, cabang) });
+      }
+    } else {
+      const order = readOrder_(sheet, KEY_BIAYA_GAS_ORDER);
+      for (let i = 0; i < order.length; i++) {
+        const raw = readKey_(sheet, "biayaGas_" + order[i]);
+        if (!raw) continue;
+        const record = sanitizeBiayaGas_(JSON.parse(raw));
+        if (record.cabangId !== cabangId) continue;
+        items.push({
+          record: record,
+          summary: computeBiayaGasSummary_(record, cabang),
+        });
+      }
     }
     return {
       ok: true,
