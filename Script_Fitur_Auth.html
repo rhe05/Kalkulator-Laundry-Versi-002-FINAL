@@ -109,6 +109,8 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
         return "Link ini sudah kedaluwarsa. Ulangi dari awal.";
       case "auth/too-many-requests":
         return "Terlalu banyak permintaan. Coba lagi sebentar lagi.";
+      case "auth/quota-exceeded":
+        return "Terlalu banyak email dikirim dalam waktu singkat. Mohon tunggu beberapa saat sebelum mencoba lagi (hindari klik Daftar/Kirim Ulang berkali-kali cepat untuk email yang sama).";
       case "auth/invalid-email":
         return "Alamat email tidak valid.";
       case "auth/user-disabled":
