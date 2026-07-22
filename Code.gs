@@ -90,23 +90,19 @@ const KEY_BIAYA_PACKING_ORDER = "biayaPacking_order";
 const KEY_LEGACY_V1 = "operasional_v1";
 
 // ----------------------------------------------------------------------------
-// LYNK.ID WEBHOOK (auto-provisioning akun dari pembelian)
+// UNDANGAN AKUN (admin-generated - lihat adminCreateInvite, Modul_Auth.gs)
 // ----------------------------------------------------------------------------
-// [2026-07-22] Token URL rahasia kita sendiri - pola SAMA seperti
-// firestoreDiag di bawah. Lynk.id TIDAK expose header custom ke Apps Script
-// doPost(e) (keterbatasan platform - e cuma punya parameter/postData, tidak
-// ada headers), jadi verifikasi resmi Lynk (X-Lynk-Signature) TIDAK BISA
-// dipakai - token di query string INI yang jadi pagar keamanan utama.
-// Didaftarkan di Lynk.id > Settings > Integrations > Webhook sbg:
-// https://script.google.com/macros/s/<deploymentId>/exec?lynkToken=<token ini>
-const LYNK_WEBHOOK_TOKEN_ = "eb4304ceea2ddebe6ef6860fc89a16dfe8689e8b5c4fdcda";
-// UUID produk "Kalkulator Laundry Versi 02.01" di toko Lynk.id user
-// (rhezalaundrymart, jual banyak produk lain juga - filter ini WAJIB supaya
-// pembelian produk lain tidak ikut bikin akun).
-const LYNK_PRODUCT_UUID_KALKULATOR_LAUNDRY_ = "681c3809ff93cb9a5d95b849-4057-9705292506-1746679817738";
+// [2026-07-22] SEMPAT dicoba integrasi webhook Lynk.id (auto-provisioning
+// dari pembelian) - DIBONGKAR lagi krn Lynk.id ternyata memakai field "URL
+// Webhook" jadi DUA fungsi sekaligus (notifikasi server-ke-server DAN link
+// yang ditampilkan ke pembeli di email konfirmasi bawaan mereka) - token
+// rahasia kita sempat bocor tampil ke pembeli. User minta sistem MANDIRI,
+// tidak bergantung ke perilaku platform pihak ketiga mana pun. Sekarang:
+// admin sendiri yang memicu (1 klik di Panel Admin, isi email), sisanya
+// (kirim email, aktivasi akun terkunci ke 1 email itu) otomatis penuh.
 // URL deployment produksi - dipakai bikin link invite di email (lihat
-// processLynkPurchaseWebhook_, Modul_Auth.gs). Kalau deployment ID pernah
-// ganti, update ini juga.
+// adminCreateInvite, Modul_Auth.gs). Kalau deployment ID pernah ganti,
+// update ini juga.
 const APP_EXEC_URL_ = "https://script.google.com/macros/s/AKfycbxQPKNOM8aTSZtWaRwp6GENbE2dT5nERK1Yd1cakULzKN2Pxrqpcui_88R_6jSCyR73xg/exec";
 
 // ----------------------------------------------------------------------------
@@ -175,11 +171,11 @@ function doGet(e) {
   if (diag) return diag;
 
   const tmpl = HtmlService.createTemplateFromFile("Index");
-  // [2026-07-22] Kalau user klik link invite dari email "Aktifkan Akun"
-  // (dikirim processLynkPurchaseWebhook_ setelah pembelian Lynk.id) -
-  // token ini dibaca client (Script_Fitur_Auth.html) utk tampilkan layar
-  // set-password. Kosong = tidak ada apa-apa, jalur normal biasa.
-  tmpl.lynkInviteToken = (e && e.parameter && e.parameter.lynkInvite) || "";
+  // [2026-07-22] Kalau user klik link undangan dari email "Aktifkan Akun"
+  // (dikirim adminCreateInvite, Modul_Auth.gs, setelah admin klik "Kirim
+  // Undangan" di Panel Admin) - token ini dibaca client (Script_Fitur_
+  // Auth.html) utk tampilkan layar set-password. Kosong = jalur normal biasa.
+  tmpl.accountInviteToken = (e && e.parameter && e.parameter.invite) || "";
 
   return tmpl
     .evaluate()
@@ -189,38 +185,6 @@ function doGet(e) {
       "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
     )
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/**
- * doPost: [2026-07-22] Penerima webhook Lynk.id (event payment.received) -
- * auto-provisioning akun begitu customer bayar produk Kalkulator Laundry.
- * SELALU balas 200 (bahkan kalau internal gagal) - textbook webhook
- * receiver, hindari Lynk.id retry bertubi-tubi krn dikira endpoint kita
- * down. Error dicatat via Logger.log (cek di Eksekusi/Executions Apps
- * Script kalau perlu diagnosis).
- */
-function doPost(e) {
-  try {
-    const params = (e && e.parameter) || {};
-    if (params.lynkToken !== LYNK_WEBHOOK_TOKEN_) {
-      Logger.log("[doPost] lynkToken tidak cocok/kosong - ditolak diam-diam.");
-      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    const raw = (e && e.postData && e.postData.contents) || "";
-    let payload;
-    try {
-      payload = JSON.parse(raw);
-    } catch (parseErr) {
-      Logger.log("[doPost] body bukan JSON valid: " + raw);
-      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    processLynkPurchaseWebhook_(payload);
-  } catch (err) {
-    Logger.log("[doPost] error: " + (err && err.message ? err.message : String(err)));
-  }
-  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

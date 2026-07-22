@@ -7,7 +7,12 @@ ISI: Panel Admin - Kelola Akun (KHUSUS admin)
 FUNGSI:
 1. Ringkasan (Total Aktif / Online Sekarang) - klik utk expand/collapse
    Daftar Akun lengkap di bawahnya (Progressive Disclosure).
-2. Daftar Akun - backend adminListAccounts (Modul_Auth.gs), tiap kartu akun
+2. Undang Akun Baru - admin isi 1 email, backend adminCreateInvite
+   (Modul_Auth.gs) kirim email berisi link "Aktifkan Akun" terkunci ke
+   email itu (1x pakai, 7 hari) - SATU-SATUNYA langkah manual, sisanya
+   (customer set password, akun aktif) otomatis penuh. Sistem mandiri,
+   TIDAK terintegrasi ke platform pembayaran mana pun.
+3. Daftar Akun - backend adminListAccounts (Modul_Auth.gs), tiap kartu akun
    punya tombol Hapus (adminDeleteAccount, reuse #confirmOverlay bersama)
    yang menghapus akun + sesi + spreadsheet data tenant-nya permanen (email
    bisa daftar ulang dari nol setelah dihapus).
@@ -42,6 +47,23 @@ tambah tag <script> atau <style> di file ini -- itu tugas file Style_*/Script_*.
           </div>
         </div>
       </div>
+
+      <section class="panel" style="margin-top:16px;">
+        <div class="panel-body">
+          <div class="list-header" style="margin:0 0 6px;">
+            <h1 style="font-size:15px;">Undang Akun Baru</h1>
+          </div>
+          <p style="font-size:12px; color:var(--text-faint); line-height:1.5; margin:0 0 10px;">Masukkan email pembeli/customer yang sudah Anda konfirmasi (dari sumber mana pun). Sistem otomatis kirim email berisi link "Aktifkan Akun" - customer tinggal klik & pilih password sendiri, tidak perlu langkah manual lagi dari Anda.</p>
+
+          <div class="field" style="text-align:left; margin-bottom:10px;">
+            <input type="email" id="adminInviteEmail" placeholder="nama@gmail.com" autocomplete="off">
+          </div>
+
+          <div class="auth-error" id="adminInviteError" style="display:none;"></div>
+
+          <button class="btn-primary" id="adminInviteBtn" onclick="submitAdminCreateInvite()" style="width:100%;">Kirim Undangan</button>
+        </div>
+      </section>
 
       <div id="adminAccountsSection" style="display:none;">
         <div class="list-header" style="margin-top:22px;">

@@ -79,13 +79,13 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
   }
 
   window.authGoTo = function (name) {
-    ["authScreenLogin", "authScreenRegister", "authScreenCheckEmail", "authScreenConfirmEmail", "authScreenLynkSetPassword", "authScreenForgotPassword", "authScreenResetPassword"].forEach(function (id) {
+    ["authScreenLogin", "authScreenRegister", "authScreenCheckEmail", "authScreenConfirmEmail", "authScreenAccountInvite", "authScreenForgotPassword", "authScreenResetPassword"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("active");
     });
     var target = document.getElementById("authScreen" + name.charAt(0).toUpperCase() + name.slice(1));
     if (target) target.classList.add("active");
-    ["authLoginError", "authRegisterError", "authCheckEmailError", "authConfirmEmailError", "authLynkInviteError", "authForgotError", "authResetError"].forEach(function (id) {
+    ["authLoginError", "authRegisterError", "authCheckEmailError", "authConfirmEmailError", "authAccountInviteError", "authForgotError", "authResetError"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.style.display = "none";
     });
@@ -415,24 +415,25 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
   };
 
   /**
-   * submitAuthLynkSetPassword: aktivasi akun dari link "Aktifkan Akun"
-   * (pembelian Lynk.id) - email sudah terverifikasi lewat pembelian
-   * (authLynkInviteToken_ didapat authHandleBootAuth_), customer cuma pilih
-   * password. Hash dihitung client (REUSE authGenerateSalt_/authDeriveHash_),
-   * TIDAK auto-login setelah sukses - konsisten dgn semua alur verifikasi
-   * lain di app ini (harus login manual).
+   * submitAuthAccountInvite: aktivasi akun dari link "Aktifkan Akun" (admin
+   * sudah undang lewat Panel Admin - adminCreateInvite, Modul_Auth.gs) -
+   * email sudah terkunci ke undangan itu (authAccountInviteToken_ didapat
+   * authHandleBootAuth_), customer cuma pilih password. Hash dihitung
+   * client (REUSE authGenerateSalt_/authDeriveHash_), TIDAK auto-login
+   * setelah sukses - konsisten dgn semua alur verifikasi lain di app ini
+   * (harus login manual).
    */
-  window.submitAuthLynkSetPassword = function () {
-    var passEl = document.getElementById("authLynkInvitePassword");
-    var btn = document.getElementById("authLynkInviteBtn");
+  window.submitAuthAccountInvite = function () {
+    var passEl = document.getElementById("authAccountInvitePassword");
+    var btn = document.getElementById("authAccountInviteBtn");
     var password = passEl ? passEl.value : "";
 
     if (password.length < 6) {
-      authShowError_("authLynkInviteError", "Password minimal 6 karakter.");
+      authShowError_("authAccountInviteError", "Password minimal 6 karakter.");
       return;
     }
-    if (!authLynkInviteToken_) {
-      authShowError_("authLynkInviteError", "Link tidak valid. Ulangi dari email pembelian Anda.");
+    if (!authAccountInviteToken_) {
+      authShowError_("authAccountInviteError", "Link tidak valid. Ulangi dari email pembelian Anda.");
       return;
     }
 
@@ -448,12 +449,12 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
           if (btn) { btn.disabled = false; btn.textContent = "Aktifkan Akun"; }
           if (!res || !res.ok) {
             if (typeof premiumLoaderFail === "function") premiumLoaderFail();
-            authShowError_("authLynkInviteError", (res && res.error) || "Gagal mengaktifkan akun.");
+            authShowError_("authAccountInviteError", (res && res.error) || "Gagal mengaktifkan akun.");
             return;
           }
           var loginEmailEl = document.getElementById("authLoginEmail");
           if (loginEmailEl) loginEmailEl.value = res.data.email;
-          authLynkInviteToken_ = "";
+          authAccountInviteToken_ = "";
           if (typeof premiumLoaderComplete === "function") {
             premiumLoaderComplete(function () {
               authGoTo("login");
@@ -466,13 +467,13 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
         .withFailureHandler(function (err) {
           if (btn) { btn.disabled = false; btn.textContent = "Aktifkan Akun"; }
           if (typeof premiumLoaderFail === "function") premiumLoaderFail();
-          authShowError_("authLynkInviteError", err && err.message ? err.message : String(err));
+          authShowError_("authAccountInviteError", err && err.message ? err.message : String(err));
         })
-        .completeLynkInvite(authLynkInviteToken_, salt, hash);
+        .completeAccountInvite(authAccountInviteToken_, salt, hash);
     }).catch(function (err) {
       if (btn) { btn.disabled = false; btn.textContent = "Aktifkan Akun"; }
       if (typeof premiumLoaderFail === "function") premiumLoaderFail();
-      authShowError_("authLynkInviteError", err && err.message ? err.message : String(err));
+      authShowError_("authAccountInviteError", err && err.message ? err.message : String(err));
     });
   };
 
@@ -553,18 +554,17 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
    * layar yang sesuai, BARU TIDAK memanggil callback() (supaya bootReveal_
    * tidak menimpa layar yang baru diarahkan dengan layar login polos).
    */
-  var authLynkInviteToken_ = "";
+  var authAccountInviteToken_ = "";
 
   window.authHandleBootAuth_ = function (callback) {
-    // [2026-07-22] Link "Aktifkan Akun" dari email pembelian Lynk.id -
-    // dicek DULUAN (independen dari magic link Firebase, tidak saling
-    // tumpang tindih krn URL/param-nya beda) - lihat processLynkPurchaseWebhook_
-    // (Modul_Auth.gs) & doGet (Code.gs).
-    var lynkToken = (typeof window.__lynkInviteToken === "string") ? window.__lynkInviteToken : "";
-    if (lynkToken) {
-      authLynkInviteToken_ = lynkToken;
-      var authRootElLynk = document.getElementById("authRoot");
-      if (authRootElLynk) authRootElLynk.style.display = "flex";
+    // [2026-07-22] Link "Aktifkan Akun" dari undangan admin (adminCreateInvite,
+    // Modul_Auth.gs) - dicek DULUAN (independen dari magic link Firebase,
+    // tidak saling tumpang tindih krn URL/param-nya beda) - lihat doGet (Code.gs).
+    var inviteToken = (typeof window.__accountInviteToken === "string") ? window.__accountInviteToken : "";
+    if (inviteToken) {
+      authAccountInviteToken_ = inviteToken;
+      var authRootElInvite = document.getElementById("authRoot");
+      if (authRootElInvite) authRootElInvite.style.display = "flex";
       try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 
       google.script.run
@@ -574,15 +574,15 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
             authShowError_("authLoginError", (res && res.error) || "Link tidak valid.");
             return;
           }
-          var lbl = document.getElementById("authLynkInviteEmailLabel");
+          var lbl = document.getElementById("authAccountInviteEmailLabel");
           if (lbl) lbl.textContent = res.data.email;
-          authGoTo("lynkSetPassword");
+          authGoTo("accountInvite");
         })
         .withFailureHandler(function (err) {
           authGoTo("login");
           authShowError_("authLoginError", err && err.message ? err.message : String(err));
         })
-        .getLynkInvite(lynkToken);
+        .getAccountInvite(inviteToken);
       return;
     }
 

@@ -19,6 +19,13 @@ FUNGSI:
    Reuse alur publik requestPasswordReset + authFirebaseSendMagicLink_ yang
    sama persis dgn "Lupa Password" biasa (Script_Fitur_Auth.html) - admin
    cuma memicu, TIDAK PERNAH melihat/menyimpan password.
+4. submitAdminCreateInvite: [2026-07-22] "Undang Akun Baru" - admin isi 1
+   email, backend adminCreateInvite (Modul_Auth.gs) kirim email berisi link
+   "Aktifkan Akun" terkunci ke email itu. SATU-SATUNYA langkah manual dalam
+   seluruh alur - sisanya (customer klik link, pilih password, akun aktif)
+   otomatis penuh tanpa admin terlibat lagi. Sistem mandiri, TIDAK
+   terintegrasi ke platform pembayaran/pihak ketiga mana pun (lihat catatan
+   riwayat di Modul_Auth.gs kenapa webhook Lynk.id dibongkar).
 Backend yang menegakkan "hanya admin boleh" (cek session.email) - kartu menu
 & layar ini di client cuma disembunyikan utk user lain (authApplyAdminUI_,
 Script_Fitur_Auth.html), BUKAN satu-satunya lapisan keamanan.
@@ -35,6 +42,9 @@ Include SEBELUM Script_Boot_Main.html.
   var adminAccountsDetailOpen_ = false;
 
   window.openScreenAdminAfiliator = function () {
+    var inviteErrEl = document.getElementById("adminInviteError");
+    if (inviteErrEl) inviteErrEl.style.display = "none";
+
     adminAccountsDetailOpen_ = false;
     var section = document.getElementById("adminAccountsSection");
     var arrow = document.getElementById("adminSummaryArrow");
@@ -161,6 +171,39 @@ Include SEBELUM Script_Boot_Main.html.
         if (typeof showToast === "function") showToast(err && err.message ? err.message : String(err), "error");
       })
       .requestPasswordReset(email);
+  };
+
+  /**
+   * submitAdminCreateInvite: SATU-SATUNYA langkah manual admin dlm alur
+   * "Undang Akun Baru" - panggil adminCreateInvite (Modul_Auth.gs, sudah
+   * kirim email di server lewat MailApp), sisanya customer yang lanjutkan
+   * sendiri (klik link, pilih password).
+   */
+  window.submitAdminCreateInvite = function () {
+    var emailEl = document.getElementById("adminInviteEmail");
+    var btn = document.getElementById("adminInviteBtn");
+    var errEl = document.getElementById("adminInviteError");
+    var email = emailEl ? emailEl.value.trim() : "";
+    if (errEl) errEl.style.display = "none";
+
+    if (!email) {
+      if (errEl) { errEl.textContent = "Email wajib diisi."; errEl.style.display = "block"; }
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Mengirim..."; }
+    callServer_("adminCreateInvite", [email], function (res) {
+      if (btn) { btn.disabled = false; btn.textContent = "Kirim Undangan"; }
+      if (!res || !res.ok) {
+        if (errEl) { errEl.textContent = (res && res.error) || "Gagal mengirim undangan."; errEl.style.display = "block"; }
+        return;
+      }
+      if (emailEl) emailEl.value = "";
+      if (typeof showToast === "function") showToast("Undangan terkirim ke " + res.data.email + ".", "ok");
+    }, function (err) {
+      if (btn) { btn.disabled = false; btn.textContent = "Kirim Undangan"; }
+      if (errEl) { errEl.textContent = err && err.message ? err.message : String(err); errEl.style.display = "block"; }
+    });
   };
 
   window.openConfirmDeleteAccount = function (email) {

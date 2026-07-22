@@ -7,17 +7,18 @@ Password / Password Baru (gerbang sebelum masuk ke app)
 
 FUNGSI:
 7 layar (#authScreenLogin, #authScreenRegister, #authScreenCheckEmail,
-#authScreenConfirmEmail, #authScreenLynkSetPassword,
+#authScreenConfirmEmail, #authScreenAccountInvite,
 #authScreenForgotPassword, #authScreenResetPassword) di dalam #authRoot -
 DILUAR #appRoot, ditampilkan/disembunyikan lewat class "active" (lihat
 authGoTo di Script_Fitur_Auth.html), BUKAN lewat showScreen/SCREEN_ELEMENT_ID
 yang dipakai layar di dalam app (supaya tidak mengubah invarian jumlah layar
 di dalam #appRoot yang sudah ada).
 
-[2026-07-22] authScreenLynkSetPassword: dipakai customer yang baru saja
-BELI produk Kalkulator Laundry di Lynk.id (webhook payment.received - lihat
-doPost Code.gs & processLynkPurchaseWebhook_ Modul_Auth.gs) - email sudah
-terverifikasi lewat pembelian, cukup pilih password buat aktifkan akun.
+[2026-07-22] authScreenAccountInvite: dipakai customer yang admin sudah
+"undang" lewat Panel Admin (adminCreateInvite, Modul_Auth.gs - SATU-SATUNYA
+langkah manual, sistem mandiri TIDAK terintegrasi ke platform pembayaran
+apa pun) - email sudah terkunci ke undangan itu, customer cukup pilih
+password buat aktifkan akun.
 
 [2026-07-22] LOGIN TETAP email+password (authScreenLogin tidak berubah).
 Yang berubah: verifikasi pendaftaran & reset password sekarang lewat KLIK
@@ -148,7 +149,7 @@ Script_Fitur_Auth.html.
       </div>
     </section>
 
-    <section class="auth-screen" id="authScreenLynkSetPassword">
+    <section class="auth-screen" id="authScreenAccountInvite">
       <div class="auth-card">
         <div class="auth-logo">
           <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
@@ -160,19 +161,19 @@ Script_Fitur_Auth.html.
           </svg>
         </div>
         <h1 class="auth-title">Aktifkan Akun</h1>
-        <p class="auth-subtitle">Terima kasih sudah membeli! Buat password untuk <b id="authLynkInviteEmailLabel">-</b></p>
+        <p class="auth-subtitle">Admin sudah menyiapkan akun untuk Anda. Buat password untuk <b id="authAccountInviteEmailLabel">-</b></p>
 
         <div class="field">
-          <label for="authLynkInvitePassword">Password Baru</label>
+          <label for="authAccountInvitePassword">Password Baru</label>
           <div class="auth-password-wrap">
-            <input type="password" id="authLynkInvitePassword" placeholder="Minimal 6 karakter" autocomplete="new-password">
-            <button type="button" class="auth-eye-btn" onclick="toggleAuthPassword('authLynkInvitePassword', this)" aria-label="Tampilkan password">&#128065;</button>
+            <input type="password" id="authAccountInvitePassword" placeholder="Minimal 6 karakter" autocomplete="new-password">
+            <button type="button" class="auth-eye-btn" onclick="toggleAuthPassword('authAccountInvitePassword', this)" aria-label="Tampilkan password">&#128065;</button>
           </div>
         </div>
 
-        <div class="auth-error" id="authLynkInviteError" style="display:none;"></div>
+        <div class="auth-error" id="authAccountInviteError" style="display:none;"></div>
 
-        <button class="btn-primary auth-submit-btn" id="authLynkInviteBtn" onclick="submitAuthLynkSetPassword()" type="button">Aktifkan Akun</button>
+        <button class="btn-primary auth-submit-btn" id="authAccountInviteBtn" onclick="submitAuthAccountInvite()" type="button">Aktifkan Akun</button>
       </div>
     </section>
 
