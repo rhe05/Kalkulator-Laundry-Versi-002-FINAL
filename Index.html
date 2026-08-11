@@ -222,7 +222,32 @@ RIWAYAT PEMECAHAN FILE INI:
     </div>
     <div class="header-right">
       <div class="save-status" id="saveStatus"></div>
+      <!-- [2026-08-11] Tombol "Keluar" telanjang ini sekarang KHUSUS DESKTOP
+           (disembunyikan <1100px lewat Style_Base.html). Di HP aksinya pindah
+           ke dalam menu akun di bawah - aksi yang jarang dipakai tidak lagi
+           mendapat bobot visual sebesar brand. Desktop sengaja TIDAK diubah
+           sama sekali. -->
       <button type="button" class="auth-logout-btn" id="authLogoutBtn" onclick="authLogout()" style="display:none;">Keluar</button>
+
+      <!-- Menu akun (KHUSUS HP, <1100px). Dimunculkan authEnterApp_ setelah
+           login (Script_Fitur_Auth.html) - sekaligus yang mengisi inisial &
+           email di dalamnya. Avatar = AKUN, bukan outlet: outlet punya
+           kontrolnya sendiri di baris bawah header layar. -->
+      <div class="account-menu" id="accountMenu">
+        <button type="button" class="account-avatar" id="accountAvatarBtn"
+                onclick="toggleAccountMenu_()" aria-haspopup="menu"
+                aria-expanded="false" aria-label="Menu akun">
+          <span id="accountAvatarInitial" aria-hidden="true"></span>
+        </button>
+        <div class="account-popover" id="accountPopover" role="menu">
+          <div class="account-popover-head">
+            <div class="account-popover-label">Masuk sebagai</div>
+            <div class="account-popover-email" id="accountPopoverEmail"></div>
+          </div>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); authLogout();">Keluar</button>
+        </div>
+      </div>
     </div>
   </header>
 

@@ -15,10 +15,19 @@ auth (authGoTo), simpan status login di localStorage.
 [2026-07-22] Verifikasi pendaftaran & reset password sekarang lewat magic
 link Firebase (klik link di email) - lihat authHandleBootAuth_ di bawah,
 dipanggil dari Script_Boot_Main.html SEBELUM bootReveal_ memutuskan tampilan
-(karena deteksi magic link itu ASYNC). idToken hasil klik link HANYA dipakai
+(karena deteksi magic link itu ASYNC). idToken hasil klik link dipakai
 membuktikan kepemilikan email (dikirim ke verifyEmailMagicLink/
-confirmPasswordResetMagicLink) - TIDAK PERNAH dipakai untuk auto-login, user
-tetap harus ketik password di layar Masuk seperti biasa.
+confirmPasswordResetMagicLink).
+
+[2026-07-27 AUTO-LOGIN] Verifikasi PENDAFTARAN (purpose "register") sekarang
+auto-login: verifyEmailMagicLink (Modul_Auth.gs) langsung buat sessionToken
+(loginFinish_) begitu akun aktif & tenant siap - client panggil
+authSetLoggedIn_ + authEnterApp_ langsung, TIDAK lagi diarahkan ke layar
+Masuk manual. Kalau sessionToken tidak ada (auto-login gagal di server) atau
+authEnterApp_ error di client, fallback ke layar Masuk (lihat
+authHandleBootAuth_ di bawah). Verifikasi RESET PASSWORD (purpose
+"resetPassword") TIDAK berubah - tetap arahkan ke layar set password baru,
+lalu login manual seperti biasa.
 
 [2026-07-13] MULTI-TENANT: loginUser yang sukses mengembalikan sessionToken
 (Modul_Auth.gs) - token INI yang jadi identitas sungguhan di server
@@ -500,6 +509,9 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
     if (authRootEl) authRootEl.style.display = "flex";
     if (appHeaderEl) appHeaderEl.style.display = "none";
     if (logoutBtnEl) logoutBtnEl.style.display = "none";
+    var accountMenuEl = document.getElementById("accountMenu");
+    if (accountMenuEl) accountMenuEl.style.display = "none";
+    if (typeof window.closeAccountMenu_ === "function") window.closeAccountMenu_();
     var footerEl = document.getElementById("footerBar");
     if (footerEl) footerEl.style.display = "none";
     if (typeof sidebarHide_ === "function") sidebarHide_();
@@ -521,6 +533,7 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
     if (logoutBtnEl) logoutBtnEl.style.display = "inline-flex";
     if (typeof sidebarShow_ === "function") sidebarShow_();
     authApplyAdminUI_();
+    authApplyAccountMenu_();
     showScreen("menu");
   }
 
@@ -540,6 +553,73 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
     var sidebarItemEl = document.getElementById("adminAfiliatorSidebarItem");
     if (sidebarItemEl) sidebarItemEl.style.display = isAdmin ? "flex" : "none";
   }
+
+  /**
+   * [2026-08-11] MENU AKUN (KHUSUS HP) - avatar bulat di kanan header berisi
+   * identitas akun + aksi Keluar, menggantikan tombol "Keluar" telanjang yang
+   * dulu duduk di sana. Di desktop elemen ini disembunyikan CSS (Style_Base.html)
+   * & tombol lama tetap dipakai apa adanya - desktop tidak berubah sedikit pun.
+   *
+   * Avatar sengaja menandai AKUN, bukan outlet: outlet punya kontrolnya
+   * sendiri di baris kedua header tiap layar (lihat Style_Module_Dashboard_Menu.html),
+   * dan lingkaran di kanan atas secara universal dibaca "akun saya" - dua hal
+   * berbeda tidak ditumpuk jadi satu kontrol.
+   */
+  function authAccountInitial_(email) {
+    // Satu huruf saja - app ini cuma menyimpan email, tidak pernah nama depan/
+    // belakang, jadi dua huruf berarti mengarang. Sama seperti Gmail saat
+    // tidak ada foto profil.
+    var m = String(email || "").match(/[A-Za-z0-9]/);
+    return m ? m[0].toUpperCase() : "?";
+  }
+
+  function authApplyAccountMenu_() {
+    var email = "";
+    try { email = window.localStorage.getItem(AUTH_STORAGE_KEY_) || ""; } catch (e) {}
+
+    var initialEl = document.getElementById("accountAvatarInitial");
+    if (initialEl) initialEl.textContent = authAccountInitial_(email);
+
+    var emailEl = document.getElementById("accountPopoverEmail");
+    if (emailEl) {
+      emailEl.textContent = email;
+      emailEl.title = email;
+    }
+
+    var menuEl = document.getElementById("accountMenu");
+    if (menuEl) menuEl.style.display = "block";
+    window.closeAccountMenu_();
+  }
+
+  window.closeAccountMenu_ = function () {
+    var menuEl = document.getElementById("accountMenu");
+    if (menuEl) menuEl.classList.remove("is-open");
+    var btnEl = document.getElementById("accountAvatarBtn");
+    if (btnEl) btnEl.setAttribute("aria-expanded", "false");
+  };
+
+  window.toggleAccountMenu_ = function () {
+    var menuEl = document.getElementById("accountMenu");
+    if (!menuEl) return;
+    var akanTerbuka = !menuEl.classList.contains("is-open");
+    menuEl.classList.toggle("is-open", akanTerbuka);
+    var btnEl = document.getElementById("accountAvatarBtn");
+    if (btnEl) btnEl.setAttribute("aria-expanded", akanTerbuka ? "true" : "false");
+  };
+
+  // Tutup saat disentuh di luar menu / ditekan Esc. Tanpa ini popover
+  // menggantung terbuka & menutupi konten setelah user berpindah layar.
+  // Sentuhan pada avatar sendiri tidak ikut tertutup di sini krn avatar ada
+  // DI DALAM .account-menu (contains() true) - yang menutupnya toggle di atas.
+  document.addEventListener("click", function (ev) {
+    var menuEl = document.getElementById("accountMenu");
+    if (!menuEl || !menuEl.classList.contains("is-open")) return;
+    if (!menuEl.contains(ev.target)) window.closeAccountMenu_();
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") window.closeAccountMenu_();
+  });
 
   // ---- Boot: selesaikan magic link (kalau ada) SEBELUM tampilan normal ----
 
@@ -583,6 +663,58 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
           authShowError_("authLoginError", err && err.message ? err.message : String(err));
         })
         .getAccountInvite(inviteToken);
+      return;
+    }
+
+    // [2026-07-27] Link "Masuk Langsung" (bypass total, adminGenerateDirectLoginLink,
+    // Modul_Auth.gs) - dicek SEBELUM magic link Firebase (independen, param URL
+    // beda, tidak saling tumpang tindih). Server sudah balikin sessionToken
+    // langsung (loginFinish_) - TIDAK ada layar antara, langsung masuk app.
+    // try/catch DI DALAM callback (bukan di luar) - pola SAMA seperti fix
+    // layar putih di verifyEmailMagicLink: kalau authEnterApp_ meleset,
+    // fallback ke layar Masuk, bukan layar putih.
+    var directLoginToken = (typeof window.__directLoginToken === "string") ? window.__directLoginToken : "";
+    if (directLoginToken) {
+      var authRootElDirect = document.getElementById("authRoot");
+      if (authRootElDirect) authRootElDirect.style.display = "flex";
+      try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
+      if (typeof premiumLoaderShow === "function") {
+        premiumLoaderShow({ status: "Menyiapkan akun Anda", mode: "await" });
+      }
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          function fail_(msg) {
+            if (typeof premiumLoaderFail === "function") premiumLoaderFail();
+            authGoTo("login");
+            authShowError_("authLoginError", msg);
+          }
+          if (!res || !res.ok || !res.data.sessionToken) {
+            fail_((res && res.error) || "Link tidak valid.");
+            return;
+          }
+          var finish_ = function () {
+            try {
+              authSetLoggedIn_(res.data.email, res.data.sessionToken);
+              authEnterApp_();
+              if (typeof showToast === "function") showToast("Berhasil masuk otomatis.", "ok");
+            } catch (directLoginErr) {
+              console.error("[Auth] Masuk langsung gagal, fallback ke layar Masuk:", directLoginErr);
+              authGoTo("login");
+              var loginEmailElDirect = document.getElementById("authLoginEmail");
+              if (loginEmailElDirect) loginEmailElDirect.value = res.data.email;
+              authShowError_("authLoginError", "Link diproses, tapi masuk otomatis gagal. Silakan masuk manual.");
+            }
+          };
+          if (typeof premiumLoaderComplete === "function") premiumLoaderComplete(finish_);
+          else finish_();
+        })
+        .withFailureHandler(function (err) {
+          if (typeof premiumLoaderFail === "function") premiumLoaderFail();
+          authGoTo("login");
+          authShowError_("authLoginError", err && err.message ? err.message : String(err));
+        })
+        .completeDirectLogin(directLoginToken);
       return;
     }
 
@@ -647,6 +779,30 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
               });
               return;
             }
+
+            // [AUTO-LOGIN 2026-07-27] Server sudah buat sesi (verifyEmailMagicLink
+            // -> loginFinish_) - langsung masuk app, tidak perlu ketik password
+            // lagi. try/catch DI DALAM callback loaderDone_ (bukan di luar) supaya
+            // kalau authEnterApp_ meleset di tengah jalan (mis. DOM app belum siap),
+            // errornya tertangkap SAAT itu juga & fallback ke layar Masuk - bukan
+            // malah membiarkan layar putih (insiden percobaan sebelumnya).
+            if (res.data.sessionToken) {
+              loaderDone_(function () {
+                try {
+                  authSetLoggedIn_(res.data.email, res.data.sessionToken);
+                  authEnterApp_();
+                  if (typeof showToast === "function") showToast("Email terverifikasi. Selamat datang!", "ok");
+                } catch (autoLoginErr) {
+                  console.error("[Auth] Auto-login setelah verifikasi gagal, fallback ke layar Masuk:", autoLoginErr);
+                  authGoTo("login");
+                  var loginEmailElFallback = document.getElementById("authLoginEmail");
+                  if (loginEmailElFallback) loginEmailElFallback.value = res.data.email;
+                  authShowError_("authLoginError", "Email terverifikasi, tapi masuk otomatis gagal. Silakan masuk manual.");
+                }
+              });
+              return;
+            }
+
             var loginEmailEl = document.getElementById("authLoginEmail");
             if (loginEmailEl) loginEmailEl.value = res.data.email;
             loaderDone_(function () {

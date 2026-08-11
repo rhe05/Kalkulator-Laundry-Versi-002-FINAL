@@ -192,20 +192,84 @@ dan kartu generik dashboard (dashboard-card-summary).
     color: var(--text-faint);
   }
 
-  /* [2026-08-11] HP/tablet portrait (<1100px): judul "Dashboard Bisnis" &
-     subjudul dibuang dari layar Dashboard - di HP layar ini sudah jelas
-     konteksnya (header app "Kalkulator Laundry" tepat di atasnya, dan
-     kartu-kartu di bawahnya bicara sendiri), jadi dua baris teks itu cuma
-     mendorong konten turun tanpa memberi informasi. Yang tersisa di baris
-     header cuma pemilih outlet (tetap di kanan spt semula krn
-     .dashboard-header-text tetap flex:1 walau isinya tersembunyi).
+  /* ==========================================================================
+     [2026-08-11] HEADER DUA TINGKAT - KHUSUS HP (<1100px)
+     --------------------------------------------------------------------------
+     Tingkat 1 (Index.html): brand + avatar akun, dipisah garis rambut.
+     Tingkat 2 (di sini)   : nama outlet aktif sebagai TEKS + chevron, rata
+                             kiri di barisnya sendiri - menggantikan pill
+                             berkotak.
+
+     Kenapa pill dibongkar jadi teks: outlet aktif itu KONTEKS seluruh angka
+     di Dashboard, jadi dia harus terbaca penuh - bukan disembunyikan di balik
+     menu atau dipersempit jadi kotak/inisial. Menghapus satu kotak berborder
+     dari layar yang sudah penuh kartu memindahkan bobot dari garis ke
+     hierarki tipografi; itu yang membedakan tampilan mahal dari tampilan
+     ramai. Markup-nya TIDAK disentuh sama sekali, murni tampilan.
+
+     CATATAN CAKUPAN: struktur .dashboard-header-top ini dipakai 7 layar, TAPI
+     di HP cuma header Dashboard (#screenMenu) yang benar-benar terlihat - 6
+     layar lain membungkusnya dalam wadah desktop-only (.masterbiaya-desktop,
+     .profil-outlet-desktop, dst: display:none sampai >=1100px). Aturan di
+     bawah karena itu ditulis umum tapi efeknya praktis cuma di Dashboard;
+     kalau suatu saat header layar lain dimunculkan di HP, mereka otomatis
+     ikut bahasa visual yang sama tanpa perlu aturan baru.
+
      DESKTOP TIDAK IKUT: >=1100px .dashboard-title justru dipakai sebagai
-     topbar tipis & .dashboard-subtitle memang sudah display:none di sana
-     (lihat Style_Module_Dashboard.html) - makanya dibatasi max-width. */
+     topbar tipis, pill tetap pill, dan .dashboard-subtitle memang sudah
+     display:none di sana (Style_Module_Dashboard.html) - makanya seluruh
+     blok ini dikurung max-width.
+     ========================================================================== */
   @media (max-width: 1099.98px) {
-    #screenMenu .dashboard-title,
-    #screenMenu .dashboard-subtitle {
+    /* Dashboard: judul "Dashboard Bisnis" + subjudul dibuang seluruhnya -
+       konteksnya sudah jelas dari brand di atasnya & kartu di bawahnya, dua
+       baris itu cuma mendorong konten turun. Layar LAIN tetap punya judulnya
+       (mis. "Master Biaya Produksi") krn di sana judul itu penanda halaman. */
+    #screenMenu .dashboard-header-text {
       display: none;
+    }
+
+    /* Judul & kontrol outlet ditumpuk, bukan berdampingan. gap 0 supaya jarak
+       ditentukan margin-bottom judul yang sudah ada (6px), tidak dobel. */
+    .dashboard-header-top {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .dashboard-filter-right {
+      align-items: flex-start;
+      max-width: 100%;
+    }
+
+    /* "9 outlet aktif" - metadata yang tidak menolong keputusan apa pun. */
+    .outlet-count-label {
+      display: none;
+    }
+
+    .outlet-filter-pill {
+      max-width: 100%;
+      margin-top: 0;
+      padding: 2px 0;
+      gap: 5px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Pill lama punya :hover border - tanpa ini tepinya "berkedip" saat
+       disentuh padahal bordernya sudah tidak ada. */
+    .outlet-filter-pill:hover,
+    .outlet-filter-pill.single-outlet:hover {
+      border-color: transparent;
+    }
+
+    .outlet-filter-arrow {
+      color: var(--text-faint);
     }
   }
 
