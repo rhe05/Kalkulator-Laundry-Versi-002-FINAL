@@ -139,6 +139,16 @@ Include SEBELUM Script_Boot_Main.html.
     plTick_();
   };
 
+  // Ganti teks status TANPA mengganggu progres yang sedang berjalan - dipakai
+  // proses bertahap yang tahapannya diketahui pasti (mis. penyiapan 4 outlet
+  // master, lihat maybeSeedMasterOutlets_ di Script_Fitur_Dashboard.html)
+  // supaya yang ditampilkan itu keadaan sebenarnya, bukan satu kalimat diam
+  // selama belasan detik.
+  window.premiumLoaderStatus = function (text) {
+    var els = plEls_();
+    if (els.status && text) els.status.textContent = text;
+  };
+
   window.premiumLoaderComplete = function (onDone) {
     if (typeof onDone === "function") plState_.onDone = onDone;
     plClearTimer_();

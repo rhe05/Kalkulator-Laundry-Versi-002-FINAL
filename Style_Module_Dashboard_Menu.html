@@ -192,4 +192,21 @@ dan kartu generik dashboard (dashboard-card-summary).
     color: var(--text-faint);
   }
 
+  /* [2026-08-11] HP/tablet portrait (<1100px): judul "Dashboard Bisnis" &
+     subjudul dibuang dari layar Dashboard - di HP layar ini sudah jelas
+     konteksnya (header app "Kalkulator Laundry" tepat di atasnya, dan
+     kartu-kartu di bawahnya bicara sendiri), jadi dua baris teks itu cuma
+     mendorong konten turun tanpa memberi informasi. Yang tersisa di baris
+     header cuma pemilih outlet (tetap di kanan spt semula krn
+     .dashboard-header-text tetap flex:1 walau isinya tersembunyi).
+     DESKTOP TIDAK IKUT: >=1100px .dashboard-title justru dipakai sebagai
+     topbar tipis & .dashboard-subtitle memang sudah display:none di sana
+     (lihat Style_Module_Dashboard.html) - makanya dibatasi max-width. */
+  @media (max-width: 1099.98px) {
+    #screenMenu .dashboard-title,
+    #screenMenu .dashboard-subtitle {
+      display: none;
+    }
+  }
+
 </style>

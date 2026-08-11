@@ -160,6 +160,7 @@ RIWAYAT PEMECAHAN FILE INI:
 <?!= include('Style_Module_Dashboard_KPIFooter') ?>
 <?!= include('Style_Module_Dashboard_HargaLayanan') ?>
 <?!= include('Style_Module_Dashboard_DesktopDensity') ?>
+<?!= include('Style_Module_BEP_Screen') ?>
 
 <?!= include('Style_Module_MasterBiaya') ?>
 <?!= include('Style_Module_HPP') ?>
@@ -264,9 +265,9 @@ RIWAYAT PEMECAHAN FILE INI:
 
     <?!= include('Screen_BiayaTetapOutlet') ?>
 
-    <?!= include('Screen_AdminAfiliator') ?>
+    <?!= include('Screen_BEP') ?>
 
-    <?!= include('Screen_OnboardingEstimasi') ?>
+    <?!= include('Screen_AdminAfiliator') ?>
 </div>
 
 <div class="footer-bar" id="footerBar" style="display:none;">
@@ -345,12 +346,13 @@ RIWAYAT PEMECAHAN FILE INI:
 <?!= include('Script_Fitur_StrukturHPP') ?>
 <?!= include('Script_Fitur_BiayaTetapOutlet') ?>
 <?!= include('Script_Fitur_HargaLayanan') ?>
+<?!= include('Script_Fitur_BEP') ?>
 <?!= include('Script_Fitur_FirebaseAuth') ?>
 <?!= include('Script_Fitur_AuthCrypto') ?>
 <script>window.__accountInviteToken = "<?= accountInviteToken ?>";</script>
+<script>window.__directLoginToken = "<?= directLoginToken ?>";</script>
 <?!= include('Script_Fitur_Auth') ?>
 <?!= include('Script_Fitur_AdminAfiliator') ?>
-<?!= include('Script_Fitur_OnboardingEstimasi') ?>
 <?!= include('Script_Fitur_Sidebar') ?>
 <?!= include('Script_Fitur_Loader') ?>
 <?!= include('Script_Boot_Main') ?>

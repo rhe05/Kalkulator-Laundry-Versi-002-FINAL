@@ -46,10 +46,11 @@ DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
       -> satu roundtrip getDashboardFullSummary() + cache per outlet
          (stale-while-revalidate) + sebar hasil ke 6 fungsi render kartu
          (ada di Script_Fitur_Dashboard_Kartu.html).
-  - setDesktopKpiMoney_/Note_/UnitValue_, renderDesktopKpiSummary_,
-    renderDesktopBepChart_
+  - setDesktopKpiMoney_/Note_/UnitValue_, renderDesktopKpiSummary_
       -> panel "Ringkasan Eksekutif" khusus desktop (id "desktopKpi*"),
          data SAMA PERSIS dari fetch di atas, TIDAK ada fetch tambahan.
+         BEP & Potensi Omset detail sekarang di layar sendiri (screenBEP,
+         Script_Fitur_BEP.html).
   - renderFooter
       -> tombol aksi bawah layar (Simpan/Batal/Hapus dll), 1 fungsi utk
          SEMUA layar form di app ini.
@@ -250,7 +251,6 @@ DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
     // di HP fungsi ini otomatis tidak melakukan apa-apa (guard di bawah).
     if (document.getElementById("desktopDashboardSummary")) {
       renderDesktopKpiSummary_(d);
-      renderDesktopBepChart_(d.bep);
       renderDashboardMasterBiayaCard(d.masterBiaya, "desktopMasterBiaya");
       renderDashboardHargaLayananCard(d.hargaLayanan, "desktopHargaLayanan");
       // Data baru bisa mengubah tinggi konten (mis. jumlah komponen Master
@@ -355,25 +355,69 @@ DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
     setDesktopKpiMoney_("desktopKpiFixedCost", true, fixedCostVal);
   }
 
-  function renderDesktopBepChart_(res) {
-    var target = document.getElementById("desktopBepChart");
-    if (!target) return;
-    if (!res || !res.ok || !res.data || !(res.data.bepLoadPerBulan > 0)) {
-      var msg = (res && res.data && Array.isArray(res.data.warnings) && res.data.warnings.length)
-        ? res.data.warnings.join(" · ")
-        : "Data BEP belum lengkap - isi Fixed Cost & Harga Layanan dulu.";
-      target.innerHTML = '<div class="dashboard-empty">' + escapeHtml(msg) + '</div>';
-      return;
+  /**
+   * [2026-08-11] MASTER OUTLET BAWAAN - pengganti layar "Template Estimasi
+   * Cepat" yang dihapus. Akun yang datanya masih kosong otomatis dibuatkan 4
+   * outlet master milik admin (lihat Modul_MasterOutletBawaan.gs) supaya
+   * customer baru tidak pernah bertemu dashboard kosong yang tidak bisa
+   * dipakai belajar apa-apa.
+   *
+   * Dipicu dari SATU tempat saja: saat listCabang() di refreshDashboard
+   * melaporkan 0 outlet. Jadi customer yang sudah punya data TIDAK PERNAH
+   * membayar biaya pemeriksaan apa pun - tidak ada tambahan round-trip di
+   * jalur login/dashboard normal yang sudah dioptimasi.
+   *
+   * Kloningnya diminta SATU OUTLET PER PANGGILAN (lihat catatan di
+   * Modul_MasterOutletBawaan.gs) - perulangan ada di sini supaya progresnya
+   * bisa ditulis apa adanya di splash yang sudah dipakai app ini saat login
+   * ("Master Hybrid - 3 dari 4"), bukan bar diam belasan detik.
+   */
+  var masterSeedChecked_ = false;
+
+  function maybeSeedMasterOutlets_(onProceed) {
+    masterSeedChecked_ = true;
+
+    callServer_("getMasterSeedPlan", [], function (res) {
+        var d = (res && res.ok) ? (res.data || {}) : {};
+        if (!d.pending) { onProceed(); return; }
+        runMasterSeed_(Number(d.total) || 4, onProceed);
+      }, function () { onProceed(); });
+  }
+
+  function runMasterSeed_(total, onProceed) {
+    if (typeof premiumLoaderShow === "function") {
+      premiumLoaderShow({ status: "Menyiapkan outlet master Anda", mode: "await" });
     }
-    var chartSvg = buildBepChartSvg(res.data);
-    target.innerHTML = chartSvg
-      ? '<div class="bep-chart-wrap">' + chartSvg +
-          '<div class="bep-chart-legend">' +
-            '<span class="bep-legend-item"><span class="bep-legend-dot sage"></span>Omset</span>' +
-            '<span class="bep-legend-item"><span class="bep-legend-dot brass"></span>Total Biaya</span>' +
-          '</div>' +
-        '</div>'
-      : '<div class="dashboard-empty">Grafik belum bisa dibuat.</div>';
+
+    // Pengaman perulangan: server SELALU menandai template yang gagal sbg
+    // sudah dikerjakan supaya pasti berhenti, ini lapis kedua kalau balasan
+    // server tak terduga - jangan sampai customer terkunci di layar tunggu.
+    var sisaPercobaan = total + 2;
+
+    function selesai() {
+      if (typeof premiumLoaderComplete === "function") {
+        premiumLoaderComplete(onProceed);
+      } else {
+        onProceed();
+      }
+    }
+
+    function langkah() {
+      sisaPercobaan -= 1;
+      if (sisaPercobaan < 0) { selesai(); return; }
+
+      callServer_("seedNextMasterOutlet", [], function (res) {
+          if (!res || !res.ok) { selesai(); return; }
+          var d = res.data || {};
+          if (d.lastName && typeof premiumLoaderStatus === "function") {
+            premiumLoaderStatus(d.lastName + " · " + d.doneCount + " dari " + d.total);
+          }
+          if (d.finished) { selesai(); return; }
+          langkah();
+        }, function () { selesai(); });
+    }
+
+    langkah();
   }
 
   function refreshDashboard(skipCabangCardLoading) {
@@ -406,6 +450,15 @@ DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
         var beforeId = dashboardSelectedOutletId;
         if (res && res.ok) {
           cabangListCache = res.data || [];
+          // Akun tanpa outlet sama sekali: coba semai 4 outlet master dulu
+          // (sekali seumur akun, lihat maybeSeedMasterOutlets_), baru muat
+          // ulang Dashboard dari nol. masterSeedChecked_ menjaga pemuatan
+          // ulang itu tidak jatuh ke sini lagi kalau ternyata tetap kosong -
+          // lanjut ke tampilan kosong biasa, tidak berputar-putar.
+          if (!cabangListCache.length && !masterSeedChecked_) {
+            maybeSeedMasterOutlets_(function () { refreshDashboard(); });
+            return;
+          }
           ensureDashboardOutletSelection_();
         } else {
           cabangListCache = [];
@@ -490,7 +543,8 @@ DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
       view.screen === "strukturHPPList" ||
       view.screen === "strukturHPPDetail" ||
       view.screen === "hargaLayananList" ||
-      view.screen === "biayaTetapList"
+      view.screen === "biayaTetapList" ||
+      view.screen === "bep"
     ) {
       bar.style.display = "none";
       return;

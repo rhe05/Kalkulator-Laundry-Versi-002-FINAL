@@ -1251,9 +1251,9 @@ function adminListAccounts(sessionToken) {
  * "not_found" lagi selama SALAH SATU dari authUser_/authOtp_ ada.
  *
  * [PROTEKSI] Akun AUTH_ADMIN_EMAIL_ (pemilik app) tidak boleh dihapus lewat
- * sini - kalau terhapus, panel admin ini sendiri & 4 outlet Template
- * Estimasi Cepat (Modul_OnboardingEstimasi.gs, disimpan di spreadsheet
- * tenant admin) ikut tidak bisa diakses lagi.
+ * sini - kalau terhapus, panel admin ini sendiri & 4 outlet master bawaan
+ * (Modul_MasterOutletBawaan.gs, disimpan di spreadsheet tenant admin & jadi
+ * sumber salinan tiap akun baru) ikut tidak bisa diakses lagi.
  */
 function adminDeleteAccount(sessionToken, targetEmail) {
   try {
