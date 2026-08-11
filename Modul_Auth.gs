@@ -412,10 +412,12 @@ function registerUser(email, salt, derivedHash) {
  * verifyEmailMagicLink: dipanggil client SETELAH user klik link Firebase &
  * berhasil signInWithEmailLink (lihat authHandleBootAuth_, Script_Fitur_
  * Auth.html). idToken dicek ke server Google (firebaseVerifyIdToken_) untuk
- * memastikan benar-benar pemilik email itu (bukan dipalsukan dari client),
- * BUKAN untuk login - akun yang berhasil diverifikasi TETAP harus login
- * manual pakai password (lihat submitAuthLogin) TIDAK ada sessionToken yang
- * dibuat di sini.
+ * memastikan benar-benar pemilik email itu (bukan dipalsukan dari client).
+ * [2026-07-27 AUTO-LOGIN] Setelah akun aktif & tenant siap, langsung buat
+ * sesi (loginFinish_, SAMA seperti dipakai loginUser/loginUserV3) supaya
+ * client bisa langsung masuk app tanpa user ketik ulang password. Kalau
+ * loginFinish_ gagal (mis. tenant belum siap), balas ok:true TANPA
+ * sessionToken - akun tetap aktif, client fallback ke layar Masuk manual.
  */
 function verifyEmailMagicLink(idToken, email) {
   try {
@@ -464,7 +466,19 @@ function verifyEmailMagicLink(idToken, email) {
       provisionTenantSpreadsheet_(claimedEmail);
     } catch (provisionErr) {}
 
-    return { ok: true, data: { email: claimedEmail } };
+    var freshRaw = readKey_(sheet, authKeyUser_(claimedEmail));
+    var freshUser = freshRaw ? JSON.parse(freshRaw) : null;
+    if (!freshUser) {
+      return { ok: true, data: { email: claimedEmail } };
+    }
+
+    var sessionResult = loginFinish_(sheet, freshUser, claimedEmail);
+    if (!sessionResult.ok) {
+      // Akun tetap aktif meski auto-login gagal - user masih bisa masuk manual.
+      return { ok: true, data: { email: claimedEmail } };
+    }
+
+    return { ok: true, data: { email: claimedEmail, sessionToken: sessionResult.data.sessionToken } };
   } catch (err) {
     return errorResponse_(err, "verifyEmailMagicLink");
   }
@@ -891,6 +905,33 @@ function adminCreateInvite(sessionToken, email) {
 }
 
 /**
+ * adminClearRateLimit: [2026-07-27] bantu user yang kena rate limit
+ * (daftar/masuk/reset password terlalu sering) supaya bisa langsung coba
+ * lagi tanpa nunggu cooldown alami (60dtk daftar / 15mnt masuk / 10mnt
+ * reset password). Cuma HAPUS counter CacheService punya email itu, TIDAK
+ * mengubah data akun/password apa pun - aman, sama seperti klik "coba lagi"
+ * setelah cooldown berakhir dengan sendirinya. Admin-gated sama seperti
+ * adminCreateInvite/adminDeleteAccount.
+ */
+function adminClearRateLimit(sessionToken, email) {
+  try {
+    var session = resolveSession_(sessionToken);
+    if (!session || authNormalizeEmail_(session.email) !== AUTH_ADMIN_EMAIL_) {
+      return { ok: false, error: "Akses ditolak.", stage: "adminClearRateLimit:forbidden", code: "FORBIDDEN" };
+    }
+
+    var cleanEmail = authNormalizeEmail_(email);
+    authRateLimitReset_("rl_register_" + cleanEmail);
+    authRateLimitReset_("rl_login_" + cleanEmail);
+    authRateLimitReset_("rl_pwreset_" + cleanEmail);
+
+    return { ok: true, data: { email: cleanEmail } };
+  } catch (err) {
+    return errorResponse_(err, "adminClearRateLimit");
+  }
+}
+
+/**
  * getAccountInvite: dipanggil client saat halaman dibuka dgn ?invite=<token>
  * (lihat authHandleBootAuth_/boot, Script_Fitur_Auth.html) - validasi
  * invite & balikin email-nya (utk ditampilkan read-only di layar "Aktifkan
@@ -979,6 +1020,139 @@ function completeAccountInvite(token, salt, derivedHash) {
     return { ok: true, data: { email: cleanEmail } };
   } catch (err) {
     return errorResponse_(err, "completeAccountInvite");
+  }
+}
+
+// [2026-07-27] LINK MASUK LANGSUNG (bypass total) - admin isi 1 email, klik
+// "Kirim Link Masuk Langsung" -> customer klik link di email -> LANGSUNG
+// masuk app, TIDAK ADA rate limit/OTP/password sama sekali di jalur ini.
+// BEDA dari "Undang Akun Baru" (completeAccountInvite) yang customer masih
+// pilih password sendiri dulu - di sini kalau akun belum ada, dibuatkan
+// dengan password ACAK (server tidak pernah kasih tahu customer/admin nilainya
+// - kalau nanti customer mau pakai password sendiri, tinggal lewat "Lupa
+// Password" seperti biasa). Risiko keamanan sengaja diterima krn ini SATU
+// LANGKAH MANUAL admin per kejadian (bukan tombol publik) - mitigasi: token
+// sekali pakai & masa berlaku PENDEK (30 menit, jauh lebih pendek dari invite
+// 7 hari) krn ini bypass PENUH, bukan cuma bukti kepemilikan email.
+var DIRECT_LOGIN_TTL_MS_ = 24 * 60 * 60 * 1000; // 24 jam
+
+function authKeyDirectLogin_(token) {
+  return "directLogin_" + token;
+}
+
+/**
+ * adminGenerateDirectLoginLink: admin-gated (sama pola adminCreateInvite).
+ * TIDAK ada rate limit sama sekali di sini SENGAJA - ini aksi admin yang
+ * sudah tervalidasi via sessionToken, bukan endpoint publik.
+ */
+function adminGenerateDirectLoginLink(sessionToken, email) {
+  try {
+    var session = resolveSession_(sessionToken);
+    if (!session || authNormalizeEmail_(session.email) !== AUTH_ADMIN_EMAIL_) {
+      return { ok: false, error: "Akses ditolak.", stage: "adminGenerateDirectLoginLink:forbidden", code: "FORBIDDEN" };
+    }
+
+    var cleanEmail = authNormalizeEmail_(email);
+    if (!authIsValidGmail_(cleanEmail)) {
+      return { ok: false, error: "Email harus alamat Gmail yang valid (contoh: nama@gmail.com).", stage: "adminGenerateDirectLoginLink:validate_email" };
+    }
+
+    var sheet = ensureDataSheet_();
+    var token = Utilities.getUuid() + Utilities.getUuid();
+    writeKey_(sheet, authKeyDirectLogin_(token), JSON.stringify({
+      email: cleanEmail,
+      expiresAt: Date.now() + DIRECT_LOGIN_TTL_MS_,
+      used: false,
+      createdAt: new Date().toISOString()
+    }));
+
+    MailApp.sendEmail({
+      to: cleanEmail,
+      subject: "Link Masuk Langsung - Kalkulator Laundry",
+      body:
+        "Halo,\n\n" +
+        "Berikut link untuk langsung masuk ke aplikasi Kalkulator Laundry Anda:\n\n" +
+        APP_EXEC_URL_ + "?directLogin=" + encodeURIComponent(token) + "\n\n" +
+        "Link ini berlaku 30 menit dan hanya bisa dipakai 1 kali.\n\n" +
+        "Kalau Anda tidak merasa meminta link ini, abaikan email ini."
+    });
+
+    return { ok: true, data: { email: cleanEmail } };
+  } catch (err) {
+    return errorResponse_(err, "adminGenerateDirectLoginLink");
+  }
+}
+
+/**
+ * completeDirectLogin: dipanggil client SETELAH halaman dimuat dgn
+ * ?directLogin=<token> (lihat authHandleBootAuth_, Script_Fitur_Auth.html).
+ * Public (tanpa session, sama seperti getAccountInvite) krn dipanggil
+ * SEBELUM ada sesi login. Kalau akun belum ada, dibuatkan dgn password ACAK
+ * (authHashPasswordV1_ - 1 putaran, CEPAT, krn nilainya cuma dibuang &
+ * TIDAK PERNAH dipakai jalur ini) supaya loginFinish_ (createSession_) bisa
+ * dipakai SAMA seperti loginUser/verifyEmailMagicLink - konsisten, TIDAK
+ * duplikasi logic self-heal tenant.
+ */
+function completeDirectLogin(token) {
+  try {
+    var cleanToken = String(token || "").trim();
+    if (!cleanToken) {
+      return { ok: false, error: "Link tidak valid.", stage: "completeDirectLogin:empty_token" };
+    }
+
+    var sheet = ensureDataSheet_();
+    var raw = readKey_(sheet, authKeyDirectLogin_(cleanToken));
+    if (!raw) {
+      return { ok: false, error: "Link tidak ditemukan atau sudah tidak berlaku.", stage: "completeDirectLogin:not_found" };
+    }
+
+    var linkData = JSON.parse(raw);
+    if (linkData.used) {
+      return { ok: false, error: "Link ini sudah pernah dipakai.", stage: "completeDirectLogin:already_used" };
+    }
+    if (Date.now() > Number(linkData.expiresAt || 0)) {
+      deleteKeyRow_(sheet, authKeyDirectLogin_(cleanToken));
+      return { ok: false, error: "Link ini sudah kedaluwarsa. Minta admin kirim link baru.", stage: "completeDirectLogin:expired" };
+    }
+
+    // Tandai terpakai SEGERA (sebelum langkah lain) supaya link ini tidak
+    // bisa dipakai ulang meski ada permintaan ganda/race condition.
+    linkData.used = true;
+    writeKey_(sheet, authKeyDirectLogin_(cleanToken), JSON.stringify(linkData));
+
+    var cleanEmail = authNormalizeEmail_(linkData.email);
+    var userRaw = readKey_(sheet, authKeyUser_(cleanEmail));
+    if (!userRaw) {
+      var randomSalt = Utilities.getUuid();
+      writeKey_(sheet, authKeyUser_(cleanEmail), JSON.stringify({
+        email: cleanEmail,
+        passwordHash: authHashPasswordV1_(Utilities.getUuid() + Utilities.getUuid(), randomSalt),
+        salt: randomSalt,
+        hashVersion: 1,
+        createdAt: new Date().toISOString(),
+        verifiedAt: new Date().toISOString(),
+        tenantSpreadsheetId: ""
+      }));
+    }
+
+    try {
+      provisionTenantSpreadsheet_(cleanEmail);
+    } catch (provisionErr) {}
+
+    var freshRaw = readKey_(sheet, authKeyUser_(cleanEmail));
+    var freshUser = freshRaw ? JSON.parse(freshRaw) : null;
+    if (!freshUser) {
+      return { ok: false, error: "Gagal menyiapkan akun. Hubungi admin.", stage: "completeDirectLogin:reload_failed" };
+    }
+
+    var sessionResult = loginFinish_(sheet, freshUser, cleanEmail);
+    if (!sessionResult.ok) {
+      return sessionResult;
+    }
+
+    return { ok: true, data: { email: cleanEmail, sessionToken: sessionResult.data.sessionToken } };
+  } catch (err) {
+    return errorResponse_(err, "completeDirectLogin");
   }
 }
 
