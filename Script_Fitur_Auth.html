@@ -552,6 +552,13 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
 
     var sidebarItemEl = document.getElementById("adminAfiliatorSidebarItem");
     if (sidebarItemEl) sidebarItemEl.style.display = isAdmin ? "flex" : "none";
+
+    // Item "Panel Admin" di menu utama HP (+ pemisah di atasnya, supaya tidak
+    // ada garis menggantung tanpa isi untuk akun biasa).
+    var menuAdminItemEl = document.getElementById("accountMenuAdminItem");
+    if (menuAdminItemEl) menuAdminItemEl.style.display = isAdmin ? "block" : "none";
+    var menuAdminSepEl = document.getElementById("accountMenuAdminSep");
+    if (menuAdminSepEl) menuAdminSepEl.style.display = isAdmin ? "block" : "none";
   }
 
   /**

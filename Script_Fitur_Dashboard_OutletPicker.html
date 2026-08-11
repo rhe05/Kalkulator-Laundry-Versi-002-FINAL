@@ -106,8 +106,11 @@ DIPAKAI OLEH FILE LAIN (contoh, bukan daftar lengkap):
       btnEl.setAttribute("aria-label", namaOutlet ? ("Menu utama - outlet aktif: " + namaOutlet) : "Menu utama");
     }
 
+    var adaPilihan = jumlahOutlet > 1;
     var outletItemEl = document.getElementById("accountMenuOutletItem");
-    if (outletItemEl) outletItemEl.style.display = jumlahOutlet > 1 ? "block" : "none";
+    if (outletItemEl) outletItemEl.style.display = adaPilihan ? "block" : "none";
+    var outletSepEl = document.getElementById("accountMenuOutletSep");
+    if (outletSepEl) outletSepEl.style.display = adaPilihan ? "block" : "none";
   }
 
   function updateOutletFilterPillText_() {

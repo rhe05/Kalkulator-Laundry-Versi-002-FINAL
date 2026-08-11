@@ -1,0 +1,167 @@
+<!--
+===============================================================================
+FILE: Script_Fitur_BEP.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Fitur layar "Target & Potensi" (screenBEP) - KHUSUS DESKTOP.
+
+FUNGSI:
+- openScreenBEP: dipanggil sidebarGoTo('bep') - tampilkan layar & render.
+- renderBEPScreenDesktop_: baca outlet terpilih (dashboardSelectedOutletId,
+  SAMA dgn Dashboard/Profil Outlet/dst), ambil data BEP & Potensi Omset lewat
+  endpoint yang SUDAH ADA (getDashboardBEPSummary/getDashboardPotensiOmsetSummary,
+  Modul_Dashboard.gs - TIDAK ada backend baru), render ke 2 panel.
+- buildBEPScreenNumbersHtml_: kartu BEP ANGKA SAJA (hero 2 angka + rincian
+  minggu/hari + warning) - TANPA grafik, reuse class .bep-hero-row-cards/
+  .bep-item yang sudah ada (Style_Module_Dashboard_BEP.html), TIDAK ada
+  bahasa visual baru.
+- Potensi Omset reuse LANGSUNG renderDashboardPotensiOmsetCard (Script_Fitur_
+  Dashboard_Kartu.html, sudah menerima parameter targetId opsional) - detail
+  LENGKAP sama persis dgn kartu HP.
+- dipanggil ulang dari outlet picker (Script_Fitur_Dashboard_OutletPicker.html)
+  tiap outlet diganti, pola SAMA dgn renderMasterBiayaDesktop_ dkk.
+
+PENTING -- catat sebelum edit:
+Semua file Script_*.html berbagi SATU scope global yang sama (Apps Script
+include() cuma menggabungkan teks mentah jadi satu <script> demi <script>
+di halaman yang sama -- bukan module system). Karena itu file ini SENGAJA
+TIDAK dibungkus (function(){...})() -- kalau kamu bungkus lagi, fungsi di
+file ini jadi tidak kelihatan dari file lain dan app akan rusak.
+Urutan include TIDAK masalah untuk deklarasi function/var (hoisting),
+TAPI Script_Boot_Main.html WAJIB tetap paling terakhir karena dia yang
+menjalankan bootApp().
+===============================================================================
+-->
+<script>
+"use strict";
+  /**
+   * [2026-08-11] Menu utama HP punya DUA pintu ke layar ini: "Target BEP"
+   * membuka apa adanya, "Potensi Omset" membuka layar yang sama tapi langsung
+   * tergulung ke panel kedua - dua nama menu, dua tujuan yang benar-benar
+   * berbeda, bukan dua tombol ke tempat yang persis sama.
+   *
+   * Penggulungannya SENGAJA ditunda sampai panel BEP di atasnya selesai
+   * dirender: isinya datang belakangan (cachedServerRead_), dan menggulung
+   * sebelum itu berarti menggulung ke posisi yang sebentar lagi bergeser.
+   */
+  var bepScreenFokus_ = "";
+
+  window.openScreenBEP = function (fokus) {
+    bepScreenFokus_ = (fokus === "potensi") ? "potensi" : "";
+    showScreen("bep");
+    renderBEPScreenDesktop_();
+  };
+
+  function bepTerapkanFokus_() {
+    if (bepScreenFokus_ !== "potensi") return;
+    bepScreenFokus_ = "";
+
+    var isiEl = document.getElementById("bepScreenPotensiContent");
+    if (!isiEl) return;
+    var panelEl = isiEl.closest ? (isiEl.closest(".bep-screen-panel") || isiEl) : isiEl;
+
+    window.requestAnimationFrame(function () {
+      panelEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function buildBEPScreenNumbersHtml_(d) {
+    var warnings = Array.isArray(d.warnings) ? d.warnings : [];
+
+    if (d.bepLoadPerBulan <= 0) {
+      return '<div class="bep-incomplete">' +
+        '<div class="bep-incomplete-title">Data belum lengkap</div>' +
+        '<div class="bep-incomplete-list">' +
+          warnings.map(function (w) { return '<span>' + escapeHtml(w) + '</span>'; }).join('') +
+        '</div>' +
+      '</div>';
+    }
+
+    return '<div class="bep-card">' +
+      '<div class="bep-hero-row-cards">' +
+        '<div class="bep-hero-item">' +
+          '<span class="bep-hero-item-label">Target BEP Load</span>' +
+          '<div class="bep-hero-item-value">' + escapeHtml(formatNum(d.bepLoadPerBulan, 0)) + '<span class="bep-hero-item-unit">load/bulan</span></div>' +
+        '</div>' +
+        '<div class="bep-hero-item">' +
+          '<span class="bep-hero-item-label">Target BEP Omset</span>' +
+          '<div class="bep-hero-item-value bep-hero-item-value-omset">' + money0(d.bepOmsetPerBulan) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bep-section">' +
+        '<div class="bep-row">' +
+          '<div class="bep-item bep-item-sub">' +
+            '<span class="bep-label">Load / Minggu</span>' +
+            '<span class="bep-value">' + escapeHtml(formatNum(d.bepLoadPerMinggu, 0)) + '</span>' +
+          '</div>' +
+          '<div class="bep-item bep-item-sub">' +
+            '<span class="bep-label">Omset / Minggu</span>' +
+            '<span class="bep-value bep-omset">' + money0(d.bepOmsetPerMinggu) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bep-row">' +
+          '<div class="bep-item bep-item-sub">' +
+            '<span class="bep-label">Load / Hari</span>' +
+            '<span class="bep-value">' + escapeHtml(formatNum(d.bepLoadPerHari, 0)) + '</span>' +
+          '</div>' +
+          '<div class="bep-item bep-item-sub">' +
+            '<span class="bep-label">Omset / Hari</span>' +
+            '<span class="bep-value bep-omset">' + money0(d.bepOmsetPerHari) + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      (warnings.length > 0 ? '<div class="bep-warning">' + warnings.map(function (w) { return escapeHtml(w); }).join(' &middot; ') + '</div>' : '') +
+    '</div>';
+  }
+
+  /**
+   * renderBEPScreenDesktop_: dipanggil saat layar dibuka (openScreenBEP) &
+   * tiap outlet diganti lewat picker (Script_Fitur_Dashboard_OutletPicker.html).
+   * Pola SAMA persis dgn renderStrukturHPPDesktop_ (Script_Fitur_StrukturHPP.html) -
+   * baca dashboardSelectedOutletId, cachedServerRead_ (SWR) per endpoint.
+   */
+  function renderBEPScreenDesktop_() {
+    var bepHost = document.getElementById("bepScreenBEPContent");
+    var potensiHost = document.getElementById("bepScreenPotensiContent");
+    if (!bepHost || !potensiHost) return;
+
+    if (typeof ensureDashboardOutletSelection_ === "function") ensureDashboardOutletSelection_();
+    if (typeof updateOutletFilterPillText_ === "function") updateOutletFilterPillText_();
+
+    var cId = (typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null;
+    if (!cId) {
+      bepHost.innerHTML = '<div class="dashboard-empty">Belum ada outlet. Tambahkan outlet dulu di menu Profil Outlet.</div>';
+      potensiHost.innerHTML = '';
+      bepScreenFokus_ = "";
+      return;
+    }
+
+    bepHost.innerHTML = '<div class="dashboard-card-summary is-loading">Memuat data...</div>';
+    potensiHost.innerHTML = '<div class="dashboard-card-summary is-loading">Memuat data...</div>';
+
+    cachedServerRead_("getDashboardBEPSummary", cId, function (res, fromCache) {
+      if (view.screen !== "bep") return;
+      if (((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) !== cId) return;
+      if (!res || !res.ok) {
+        if (!fromCache) bepHost.innerHTML = '<div class="dashboard-empty">' + escapeHtml((res && res.error) || "Data BEP belum bisa dihitung.") + '</div>';
+        bepTerapkanFokus_();
+        return;
+      }
+      bepHost.innerHTML = buildBEPScreenNumbersHtml_(res.data || {});
+      bepTerapkanFokus_();
+    }, function (err, hadCache) {
+      if (!hadCache) {
+        bepHost.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+      }
+      bepTerapkanFokus_();
+    });
+
+    cachedServerRead_("getDashboardPotensiOmsetSummary", cId, function (res, fromCache) {
+      if (view.screen !== "bep") return;
+      if (((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) !== cId) return;
+      renderDashboardPotensiOmsetCard(res, "bepScreenPotensiContent");
+    }, function (err, hadCache) {
+      if (hadCache) return;
+      potensiHost.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+    });
+  }
+</script>

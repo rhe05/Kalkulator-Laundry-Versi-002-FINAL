@@ -240,10 +240,44 @@ RIWAYAT PEMECAHAN FILE INI:
                 aria-expanded="false" aria-label="Menu utama">
           <span id="accountAvatarInitial" aria-hidden="true"></span>
         </button>
+        <!-- Dikelompokkan pakai .account-popover-sep, bukan diurut jadi satu
+             daftar panjang: konteks (outlet) - fitur - admin - keluar. Nama
+             item sengaja lebih pendek dari judul kartunya ("Master Biaya",
+             bukan "Master Biaya Produksi") supaya satu baris & mudah dipindai;
+             judul di kartu Dashboard TIDAK diubah. Profil Outlet tidak ada di
+             sini - dia kartu pertama di Dashboard, yang juga layar awal. -->
         <div class="account-popover" id="accountPopover" role="menu">
           <button type="button" class="account-popover-item" role="menuitem"
                   id="accountMenuOutletItem" style="display:none;"
                   onclick="closeAccountMenu_(); openOutletPicker();">Pilih Outlet</button>
+
+          <!-- Pemisah ini ikut sembunyi bersama "Pilih Outlet" saat outlet cuma
+               satu - kalau tidak, garis pemisah menggantung di paling atas
+               tanpa ada yang dipisahkan. -->
+          <div class="account-popover-sep" id="accountMenuOutletSep" role="separator" style="display:none;"></div>
+
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openScreenMasterBiaya();">Master Biaya</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openStrukturHPPOutletList();">Struktur Biaya</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openHargaLayananOutletList();">Harga Layanan</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openBiayaTetapOutletList();">Biaya Tetap</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openScreenBEP();">Target BEP</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openScreenBEP('potensi');">Potensi Omset</button>
+
+          <!-- Ditampilkan authApplyAdminUI_ (Script_Fitur_Auth.html) hanya utk
+               email admin - kosmetik; backend tetap menolak yang bukan admin. -->
+          <div class="account-popover-sep" id="accountMenuAdminSep" role="separator" style="display:none;"></div>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  id="accountMenuAdminItem" style="display:none;"
+                  onclick="closeAccountMenu_(); openScreenAdminAfiliator();">Panel Admin</button>
+
+          <div class="account-popover-sep" role="separator"></div>
+
           <button type="button" class="account-popover-item" role="menuitem"
                   onclick="closeAccountMenu_(); authLogout();">Keluar</button>
         </div>

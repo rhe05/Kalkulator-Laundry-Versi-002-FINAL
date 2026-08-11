@@ -1,0 +1,102 @@
+<!--
+===============================================================================
+FILE: Style_Module_BEP_Screen.html
+PROJECT: Kalkulator Laundry Versi 002
+FUNGSI: Style layar "Target & Potensi" (#screenBEP). Reuse class dasar
+.bep-*/.potensi-* (Style_Module_Dashboard_BEP.html/Style_Module_Dashboard_Potensi.html)
+& .panel/.dashboard-header/.outlet-filter-pill (dipakai bareng layar lain) -
+TIDAK ada bahasa visual baru.
+
+[2026-08-11] Dulu file ini isinya HANYA blok desktop (layar ini memang tidak
+bisa dijangkau dari HP). Sekarang ada blok HP di bawah krn layar ini dibuka
+dari menu utama - blok desktop di bawah TIDAK diubah sebaris pun.
+===============================================================================
+-->
+<style>
+  .bep-screen-body { display: none; }
+
+  @media (min-width: 1100px) {
+    #screenBEP .bep-screen-body { display: flex; flex-direction: column; gap: 14px; }
+
+    body:has(#screenBEP.active) .app-header { display: none !important; }
+    body:has(#screenBEP.active) { padding-top: 4px; }
+    body:has(#screenBEP.active) .wrap { width: min(100%, 1280px); }
+
+    #screenBEP .dashboard-header {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      margin-bottom: 0;
+      box-shadow: 0 1px 2px rgba(17,24,39,0.03);
+    }
+    #screenBEP .dashboard-header-top { align-items: center; }
+    #screenBEP .dashboard-title { font-size: 16px; margin-bottom: 0; letter-spacing: -0.01em; }
+
+    body:has(#screenBEP.active) .outlet-filter-pill { max-width: none; }
+    body:has(#screenBEP.active) .outlet-kategori-badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--brass);
+      background: rgba(var(--brass-rgb, 180, 130, 60), 0.10);
+      border: 1px solid rgba(var(--brass-rgb, 180, 130, 60), 0.22);
+      border-radius: 999px; padding: 2px 8px; margin: 0 2px; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* 2 panel berdampingan (BEP | Potensi Omset) - TIDAK dikunci tinggi
+       viewport (beda dgn Dashboard/Profil Outlet/dst) krn konten Potensi
+       Omset variatif (breakdown per layanan bisa panjang) - dibiarkan
+       scroll halaman biasa kalau lebih panjang dari layar. */
+    .bep-screen-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; align-items: start; }
+    .bep-screen-panel { margin-bottom: 0; }
+  }
+
+  @media (min-width: 1100px) and (max-width: 1399px) {
+    .bep-screen-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ==========================================================================
+     [2026-08-11] VERSI HP (<1100px) - dua panel ditumpuk vertikal.
+     --------------------------------------------------------------------------
+     Isi kedua panel dirender fungsi yang SAMA dgn kartu Dashboard versi HP
+     (buildBEPScreenNumbersHtml_ & renderDashboardPotensiOmsetCard), jadi yang
+     perlu diatur di sini cuma wadahnya - tidak ada satu pun aturan tampilan
+     baru untuk isinya.
+
+     Judul layar disamakan dgn layar HP lain yang pakai .list-header h1
+     (18px/600, lihat Style_Base.html) supaya tidak ada satu layar yang
+     judulnya berbeda sendiri.
+     ========================================================================== */
+  @media (max-width: 1099.98px) {
+    #screenBEP .bep-screen-body { display: flex; flex-direction: column; }
+
+    /* Pemilih outlet tidak ditampilkan di sini: di HP outlet diganti lewat
+       menu utama (avatar di header), satu pintu untuk semua layar. */
+    #screenBEP .dashboard-filter-right { display: none; }
+
+    #screenBEP .dashboard-header { margin-bottom: 16px; }
+
+    #screenBEP .dashboard-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+
+    /* gap 0 disengaja - jarak antar panel sudah dari margin-bottom .panel
+       (14px, Style_Components.html); pakai gap juga akan jadi dobel. */
+    #screenBEP .bep-screen-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* .desktop-panel-title cuma didefinisikan di dalam @media desktop
+       (Style_Module_Dashboard.html) - di HP kelasnya ada tapi tanpa gaya sama
+       sekali, jadi judul panelnya perlu diberi bentuk di sini. */
+    #screenBEP .desktop-panel-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+  }
+</style>

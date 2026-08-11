@@ -209,8 +209,15 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
     top: calc(100% + 8px);
     right: 0;
     z-index: 210;
-    min-width: 172px;
+    min-width: 196px;
     max-width: min(78vw, 280px);
+    /* Menu ini memuat seluruh navigasi fitur (9 baris + pemisah). Di layar
+       pendek/mendatar daftarnya bisa lebih tinggi dari ruang yang tersisa di
+       bawah header - dibatasi ke tinggi layar & digulung di dalam dirinya
+       sendiri, supaya "Keluar" di baris terakhir tidak pernah terpotong. */
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -247,6 +254,15 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
 
   .account-popover-item:hover {
     background: var(--panel-2);
+  }
+
+  /* Pemisah antar kelompok (konteks | fitur | admin | keluar). Dibuat lebih
+     ringan dari var(--border) - tugasnya memberi jeda baca, bukan memotong
+     menu jadi kotak-kotak terpisah. */
+  .account-popover-sep {
+    height: 1px;
+    margin: 4px 8px;
+    background: rgba(17, 24, 39, 0.08);
   }
 
   /* HP/tablet portrait: garis rambut pemisah di bawah brand + tombol Keluar
