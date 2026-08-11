@@ -738,6 +738,198 @@ menggabungkan siklus kunci):
 
 ---
 
+## SESI 2026-07-27 (ringkasan - detail lengkap ada di memory Claude, bukan di sini)
+
+**Catatan penting:** ada banyak sesi besar antara 2026-07-15 dan 2026-07-27
+yang TIDAK sempat dicatat di file ini (multi-tenant + auth password/magic
+link, migrasi sebagian ke Firestore, sistem Undangan Akun mandiri, dll) -
+semua itu SUDAH ada, cek memory Claude (`project_multi_tenant_auth`,
+`project_migrasi_firestore`, `project_layanan_hpp_custom`) kalau butuh
+detailnya, JANGAN asumsikan app masih di kondisi 2026-07-15.
+
+**Progress sesi 2026-07-27 (semua sudah deploy live, deployment ID SAMA
+`AKfycbxQPKNOM8aTSZtWaRwp6GENbE2dT5nERK1Yd1cakULzKN2Pxrqpcui_88R_6jSCyR73xg`,
+versi terakhir **@397**):**
+
+1. **Auto-login setelah verifikasi email pendaftaran** (`Modul_Auth.gs`
+   `verifyEmailMagicLink` + `Script_Fitur_Auth.html`) - klik link verifikasi
+   di email sekarang langsung masuk app, tidak perlu ketik password lagi
+   (server buat sessionToken via `loginFinish_`). Reset password TIDAK
+   berubah (tetap alur lama).
+2. **2 tool bypass admin di Panel Admin** (utk bantu user yg stuck
+   daftar/masuk): (a) ikon 🔒 "Bebaskan batas percobaan" per akun -
+   `adminClearRateLimit` (hapus rate-limit tanpa ubah password), (b) panel
+   "Link Masuk Langsung" - admin masukkan email, kirim link sekali-pakai
+   30 menit yg BENAR-BENAR skip password/OTP/limit (`adminGenerateDirectLoginLink`
+   + `completeDirectLogin`, Modul_Auth.gs).
+3. **Bug "GLOBAL ERROR" layar putih diperbaiki** - 5 form (Gas/Chemical/
+   Packing/Listrik/Profil Outlet) listener-nya dipasang saat boot padahal
+   variabel form-nya masih null sampai form dibuka; kalau ada event nyasar
+   (diduga autofill browser) sebelum itu, dulu CRASH & window.onerror
+   menghapus SELURUH tampilan app. Fix: guard `if (!xxxFormState) return;`
+   di semua listener yg dipasang saat boot.
+4. **Icon sidebar & kartu Dashboard diganti dari emoji ke SVG monokrom**
+   (stroke `currentColor`, viewBox 24, stroke-width 1.8 - gaya yg SAMA dgn
+   logo brand yg sudah ada, BUKAN gaya baru/library eksternal). Pola ini
+   jadi ACUAN kalau ganti icon lagi di layar lain nanti.
+5. **Sidebar diciutkan: logo jadi tombol lebarkan** (chevron disembunyikan,
+   klik logo utk lebarkan) **+ tooltip nama menu saat hover icon ciutkan**
+   (kartu gelap premium, posisi dihitung JS `position:fixed` - BUKAN CSS
+   absolute biasa, krn `.app-sidebar` py `overflow-y:auto` yg otomatis
+   memotong overflow-x juga).
+6. **Layar baru "Target & Potensi" (sidebar, KHUSUS DESKTOP)** - `Screen_BEP.html`
+   + `Script_Fitur_BEP.html` (file baru). BEP tampil ANGKA SAJA (grafik BEP
+   dihapus total setelah berkali-kali gagal presisi di panel desktop manapun -
+   reuse `.bep-hero-row-cards`/`.bep-item` yg sudah ada, TANPA
+   `buildBepChartSvg`). Potensi Omset versi LENGKAP (breakdown per layanan +
+   dasar perhitungan, sama persis kartu HP - `renderDashboardPotensiOmsetCard`
+   sekarang terima parameter `targetId` opsional). **BEP & Potensi Omset TIDAK
+   ADA lagi di Dashboard** (sempat dicoba taruh di sana dulu, user minta
+   pindah krn Dashboard py aturan keras "1 layar tanpa scroll" yg gampang
+   bentrok). Layar ini TIDAK dikunci 1-layar (beda dari Dashboard/Profil
+   Outlet/dst) - dibiarkan scroll biasa krn konten Potensi Omset variatif
+   panjangnya. TIDAK ADA versi HP (sidebar sendiri tidak tampil di HP).
+
+---
+
+## SESI 2026-08-11 s/d 12 (PALING BARU) — fokus MOBILE
+
+Deployment ID **SAMA** seperti biasa
+(`AKfycbxQPKNOM8aTSZtWaRwp6GENbE2dT5nERK1Yd1cakULzKN2Pxrqpcui_88R_6jSCyR73xg`),
+versi terakhir **@405**. Semua sudah `git push` + `clasp push` + deploy.
+
+**Seluruh sesi ini KHUSUS tampilan HP. Desktop sengaja tidak disentuh** —
+tiap aturan CSS baru dikurung `@media (max-width: 1099.98px)`, atau memang
+menyasar elemen yang hanya dirender di HP.
+
+### Yang selesai
+
+1. **@399 — TTL "Link Masuk Langsung" 30 menit → 24 jam**
+   (`Modul_Auth.gs`, konstanta `DIRECT_LOGIN_TTL_MS_`). Dipicu kasus nyata: customer
+   `rsg26.rsg@gmail.com` tidak bisa login (akun ADA, password salah — dia
+   sempat minta reset 2026-08-06 tapi tidak pernah menyelesaikan klik link).
+
+2. **@400 — Judul kartu Dashboard jadi hitam** (`.dashboard-card .menu-title`
+   dari `--text-faint` ke `--text`), keluhan tidak terbaca di HP.
+
+3. **@401 — 4 OUTLET MASTER OTOMATIS, "Template Estimasi Cepat" DIHAPUS TOTAL**
+   - `Modul_OnboardingEstimasi.gs` **diganti nama** →
+     `Modul_MasterOutletBawaan.gs`. Layar + script client + endpoint
+     (`cloneOnboardingTemplate`, `getOnboardingCategories`) + entri navigasi
+     **dihapus semua**; `Screen_OnboardingEstimasi.html` &
+     `Script_Fitur_OnboardingEstimasi.html` sudah tidak ada.
+   - Ganti: akun yang datanya masih kosong otomatis dibuatkan **keempat**
+     outlet master milik admin, lengkap dgn seluruh biayanya. Mesin
+     kloningnya SAMA seperti yang lama, cuma tanpa input user yang menimpa
+     sewa/gaji/gas.
+   - Endpoint baru: `getMasterSeedPlan` (murah, tidak mengkloning) &
+     `seedNextMasterOutlet` (SATU outlet per panggilan — 4 sekaligus berisiko
+     kena batas waktu Apps Script, dan dipecah begini progresnya bisa
+     ditampilkan jujur di splash).
+   - Dipicu HANYA saat `listCabang` di `refreshDashboard` melaporkan 0 outlet
+     → tidak ada round-trip tambahan untuk customer yang sudah punya data.
+   - Keputusan "akun ini berhak di-seed?" diambil SEKALI lalu dicatat
+     permanen di key `masterSeedState_` milik tenant. Akun yang saat pertama
+     diperiksa sudah punya outlet ditandai "done" & TIDAK PERNAH disentuh.
+   - **Nama template di akun admin WAJIB PERSIS**: `Master Self Service`,
+     `Master Jasa Setrika`, `Master Hybrid`, `Master Dropoff/Kiloan`
+     (perhatikan: "Dropoff", bukan "Drop Off"). Kalau namanya diubah, master
+     itu diam-diam gagal dibuat.
+
+4. **@402–@403 — HEADER HP DIROMBAK: menu utama di balik avatar**
+   - Header HP dapat garis rambut tipis (`rgba(17,24,39,0.08)`, sengaja lebih
+     ringan dari `--border` yang dipakai tepi kartu).
+   - Avatar bulat di kanan berisi **singkatan OUTLET AKTIF** — huruf awal tiap
+     kata ("Aca Laundry"→AL, "Master Jasa Setrika"→MJ). Pola huruf-awal
+     dipilih, BUKAN dua huruf pertama, karena keempat master diawali "Master"
+     → semuanya jadi "MA" dan avatar kehilangan gunanya. Nama utuh ada di
+     atribut `title`.
+   - Tombol "Keluar" telanjang **pindah ke dalam menu**; di desktop tombol
+     lama tetap dipakai apa adanya (`.auth-logout-btn` di-`display:none`
+     hanya di HP, `.account-menu` di-`display:none` hanya di desktop).
+   - Judul "Dashboard Bisnis" + subjudul + pemilih outlet + label "9 outlet
+     aktif" **dihapus dari layar Dashboard HP** (`#screenMenu
+     .dashboard-header-top { display:none }`).
+     **JANGAN sembunyikan `.dashboard-header`** — di `Screen_Menu.html` div
+     itu tidak pernah ditutup sebelum `.menu-grid`, jadi seluruh kartu ikut
+     hilang.
+
+5. **@404 — SELURUH NAVIGASI FITUR MASUK MENU UTAMA**
+   Isi menu: Pilih Outlet │ Master Biaya, Struktur Biaya, Harga Layanan,
+   Biaya Tetap, Target BEP, Potensi Omset │ Panel Admin (admin saja) │ Keluar.
+   Dikelompokkan pemisah tipis, `max-height` + scroll supaya "Keluar" tidak
+   pernah terpotong. Nama menu sengaja lebih pendek dari judul kartunya;
+   **judul kartu Dashboard TIDAK diubah**. Profil Outlet tidak masuk menu
+   (dia kartu pertama di Dashboard, yang juga layar awal).
+   - **Layar "Target & Potensi" (`screenBEP`) DIAKTIFKAN DI HP** — sebelumnya
+     dibungkus wadah desktop-only sehingga sama sekali tidak terjangkau dari
+     HP. Class `.bep-screen-desktop` → `.bep-screen-body` (namanya sudah tidak
+     benar). Di HP dua panelnya ditumpuk & pemilih outlet di headernya
+     disembunyikan. Blok CSS desktop tidak diubah sebaris pun.
+     "Target BEP" membukanya dari atas; "Potensi Omset" membukanya tergulung
+     ke panel kedua (digulung SETELAH panel BEP selesai dirender, kalau tidak
+     posisinya meleset).
+
+6. **@405 — KARTU PROFIL OUTLET HP DIDESAIN ULANG (kapasitas + leher botol)**
+   - **Temuan penting:** di `Modul_Cabang.gs` `computeGroupLoad_`,
+     `kapasitas produksi = kapasitas maksimal × okupansi%`. Jadi angka yang
+     selama ini tampil ("4,3 kg/jam") SUDAH dikali okupansi, tapi kapasitas
+     MAKSIMAL-nya tidak pernah ditampilkan di mana pun — pemilik outlet harus
+     membagi sendiri untuk tahu kemampuan asli mesinnya.
+   - Bentuk baru per layanan: `Cuci │ 1.020 dari 1.200 load/bln` + bar 4px +
+     `okupansi 85%`, ditumpuk ke bawah (bukan 3 kolom bergaris). Kotak abu
+     di dalam kartu dibuang.
+   - Layanan dgn okupansi tertinggi ditandai **"paling mepet"** (bar brass,
+     bukan merah — ini bukan kesalahan, cuma yang pertama kewalahan kalau
+     order naik). Ditandai HANYA kalau ada ≥2 layanan DAN puncaknya menang
+     ≥1 poin; kalau seri tidak ada yang ditandai.
+   - Builder baru `buildProfilOutletCardHpHtml_` (khusus kartu Dashboard =
+     khusus HP). `buildProfilOutletCardHtml_` lama **DIHAPUS** — setelah ini
+     tidak ada lagi yang memanggilnya.
+   - **Koreksi catatan lama:** layar Profil Outlet DESKTOP ternyata sudah
+     lama punya pembangun sendiri (`buildProfilOutletDetailHtml_` di
+     `Script_Fitur_Cabang.html`); komentar yang bilang HP & desktop berbagi
+     satu fungsi sudah basi dan sudah diperbaiki.
+
+### Yang masih menggantung (mulai dari sini sesi berikutnya)
+
+1. **BELUM ADA VERIFIKASI VISUAL SAMA SEKALI sepanjang sesi ini.** Claude
+   tidak bisa login ke app (butuh password), jadi SEMUA perubahan tampilan
+   di atas baru diverifikasi sintaks + logika, belum pernah dilihat di HP.
+   Yang paling perlu dicek user: layar Target & Potensi versi HP (paling
+   baru), popover menu 9 baris, dan angka "dari" (kapasitas maksimal) di
+   kartu Profil Outlet — itu hasil bagi balik `terpakai ÷ okupansi`, jadi
+   kalau okupansi diisi angka aneh hasilnya ikut aneh.
+
+2. **6 kartu Dashboard sisanya belum didesain ulang** dengan aturan yang sama
+   (Master Biaya, Struktur HPP, Harga Layanan, Biaya Tetap, Target BEP,
+   Potensi Omset). Aturannya: tanya user dulu **"kalau tiap pagi cuma boleh
+   lihat SATU angka dari kartu ini, angka apa?"** — jawabannya menentukan
+   hero tiap kartu. Jangan desain 6 kartu sendiri-sendiri tanpa aturan itu.
+
+3. **±200 baris CSS mati sengaja BELUM dihapus**
+   (`.profil-outlet-kpi`, `.profil-kpi-item/label/value/unit/divider`,
+   `.profil-outlet-mesin`, `.profil-mesin-*` di
+   `Style_Module_Dashboard_ProfilOutlet.html`) — sudah tidak diproduksi JS
+   mana pun setelah @405. Ditahan supaya kalau kartu baru ternyata meleset,
+   yang lama masih ada untuk dibandingkan. **Hapus setelah user konfirmasi
+   tampilan kartu Profil Outlet sudah benar.**
+   CATATAN: `.profil-kpi-okupansi` & `.profil-outlet-okupansi-info` MASIH
+   DIPAKAI (pembungkus tooltip "?"), jangan ikut dihapus.
+
+4. **Beberapa file masih uncommitted di git tapi SUDAH ter-deploy**
+   (`clasp push` mengirim working copy, tidak peduli git): `Code.gs`,
+   `Screen_AdminAfiliator.html`, `Screen_Sidebar.html`,
+   `Script_Fitur_AdminAfiliator.html`, `Script_Fitur_Sidebar.html`,
+   `Script_Fitur_Biaya{Chemical,Gas,Listrik,Packing}.html`,
+   `Style_Module_Dashboard{,_BEP,_DesktopDensity}.html`,
+   `Style_Module_Sidebar.html`. Artinya: kode yang HIDUP di produksi tidak
+   seluruhnya ada di GitHub. Tawarkan commit di awal sesi berikutnya.
+
+5. Prioritas lama yang masih pending TIDAK berubah dari sesi 2026-07-27
+   (gap edukasi pemula, Kontribusi Omset, UX validasi form Profil Outlet) —
+   lihat blok-blok di bawah.
+
 ## DATA BACKEND TERSEDIA
 
 ### `getDashboardCabangSummary(cabangId)`:
@@ -822,7 +1014,35 @@ oleh angka "Kapasitas maksimal/hari" di layar detail Profil Outlet).
 2. Tulis: **"Lanjutkan Kalkulator Laundry, lanjut dari yang kemarin."**
 3. Claude langsung paham tanpa penjelasan ulang — rule proyek dan rule desain sudah menyatu di file ini.
 
-### Titik berhenti sesi terakhir (2026-07-15, PALING BARU):
+### Titik berhenti sesi terakhir (2026-08-12, PALING BARU):
+Lihat blok "## SESI 2026-08-11 s/d 12" di atas (tepat sebelum "DATA BACKEND
+TERSEDIA"). Sesi KHUSUS MOBILE, desktop tidak disentuh. Deploy terakhir
+**@405**. Ringkas: 4 outlet master otomatis untuk akun kosong (Template
+Estimasi Cepat dihapus total), header HP dirombak jadi avatar + menu utama
+yang memuat seluruh navigasi fitur, layar Target & Potensi diaktifkan di HP,
+dan kartu Profil Outlet HP didesain ulang (kapasitas terpakai/maksimal +
+penanda "paling mepet").
+
+**4 hal yang harus diurus di awal sesi berikutnya** (detail di blok sesi):
+(a) belum ada verifikasi visual sama sekali — minta user cek HP dulu;
+(b) 6 kartu Dashboard sisanya menunggu didesain ulang, tanya dulu "satu
+angka apa yang paling penting" per kartu; (c) ±200 baris CSS mati menunggu
+dihapus setelah kartu Profil Outlet dikonfirmasi benar; (d) belasan file
+masih uncommitted di git padahal sudah hidup di produksi — tawarkan commit.
+
+### Titik berhenti sesi 2026-07-27:
+Lihat blok "## SESI 2026-07-27" di atas (sebelum "DATA BACKEND TERSEDIA")
+untuk ringkasan lengkap sesi paling baru - auto-login verifikasi email,
+2 tool bypass admin (rate-limit + link masuk langsung), fix bug layar putih
+5 form, icon SVG monokrom, sidebar collapse+tooltip, layar baru "Target &
+Potensi" (BEP angka + Potensi Omset lengkap, terpisah dari Dashboard).
+Deploy terakhir **@397**. Tidak ada keputusan pending yg menggantung dari
+sesi ini. Catatan blok di bawah (2026-07-15 ke bawah) masih akurat utk
+sejarahnya masing-masing, tapi ketahui ada gap besar sesi yg tidak tercatat
+di sini antara 2026-07-15 dan 2026-07-27 (lihat disclaimer di blok SESI
+2026-07-27).
+
+### Titik berhenti sesi sebelumnya (2026-07-15):
 Sesi 2026-07-15: SELESAI + deploy (@331/@332/@333) fitur rekomendasi "edukasi
 pemula" bagian HARGA di layar Harga Layanan - (a) harga jual ideal SEMUA
 kategori + (b) minimum order ideal. Detail lengkap di blok "[2026-07-15]" pada
