@@ -555,37 +555,19 @@ Script_Fitur_FirebaseAuth.html (perlu wrapper authFirebase*_ dari situ).
   }
 
   /**
-   * [2026-08-11] MENU AKUN (KHUSUS HP) - avatar bulat di kanan header berisi
-   * identitas akun + aksi Keluar, menggantikan tombol "Keluar" telanjang yang
-   * dulu duduk di sana. Di desktop elemen ini disembunyikan CSS (Style_Base.html)
-   * & tombol lama tetap dipakai apa adanya - desktop tidak berubah sedikit pun.
+   * [2026-08-11] MENU UTAMA (KHUSUS HP) - avatar bulat di kanan header yang
+   * memuat "Pilih Outlet" + "Keluar", menggantikan tombol "Keluar" telanjang
+   * yang dulu duduk di sana. Di desktop elemen ini disembunyikan CSS
+   * (Style_Base.html) & tombol lama tetap dipakai apa adanya - desktop tidak
+   * berubah sedikit pun.
    *
-   * Avatar sengaja menandai AKUN, bukan outlet: outlet punya kontrolnya
-   * sendiri di baris kedua header tiap layar (lihat Style_Module_Dashboard_Menu.html),
-   * dan lingkaran di kanan atas secara universal dibaca "akun saya" - dua hal
-   * berbeda tidak ditumpuk jadi satu kontrol.
+   * Fungsi ini HANYA memunculkan menunya. Isi avatar (singkatan outlet aktif)
+   * & tampil/sembunyinya "Pilih Outlet" diurus updateOutletFilterPillText_
+   * (Script_Fitur_Dashboard_OutletPicker.html) - di sanalah satu-satunya
+   * tempat yang tahu outlet mana yang aktif & ada berapa, jadi tidak ada dua
+   * sumber kebenaran yang bisa berbeda.
    */
-  function authAccountInitial_(email) {
-    // Satu huruf saja - app ini cuma menyimpan email, tidak pernah nama depan/
-    // belakang, jadi dua huruf berarti mengarang. Sama seperti Gmail saat
-    // tidak ada foto profil.
-    var m = String(email || "").match(/[A-Za-z0-9]/);
-    return m ? m[0].toUpperCase() : "?";
-  }
-
   function authApplyAccountMenu_() {
-    var email = "";
-    try { email = window.localStorage.getItem(AUTH_STORAGE_KEY_) || ""; } catch (e) {}
-
-    var initialEl = document.getElementById("accountAvatarInitial");
-    if (initialEl) initialEl.textContent = authAccountInitial_(email);
-
-    var emailEl = document.getElementById("accountPopoverEmail");
-    if (emailEl) {
-      emailEl.textContent = email;
-      emailEl.title = email;
-    }
-
     var menuEl = document.getElementById("accountMenu");
     if (menuEl) menuEl.style.display = "block";
     window.closeAccountMenu_();

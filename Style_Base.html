@@ -163,14 +163,14 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
   }
 
   /* ==========================================================================
-     MENU AKUN (avatar bulat + popover) - KHUSUS HP, lihat @media di bawah.
+     MENU UTAMA (avatar bulat + popover) - KHUSUS HP, lihat @media di bawah.
      --------------------------------------------------------------------------
-     Avatar berisi SATU huruf dari email akun, bukan dua. Dua huruf itu
-     mengarang: app ini tidak pernah menyimpan nama depan/belakang, cuma email
-     - dan inisial outlet (mis. "MS") bertabrakan begitu ada dua outlet
-     berawalan sama. Satu huruf = persis yang Gmail lakukan saat tidak ada foto
-     profil: cukup untuk menandai "ini akun saya", tanpa berpura-pura tahu
-     lebih banyak.
+     Avatar berisi singkatan OUTLET AKTIF (huruf awal tiap kata: "Aca Laundry"
+     -> "AL", "Master Jasa Setrika" -> "MJ"). Pola huruf-awal dipilih, bukan
+     "dua huruf pertama", karena keempat outlet master bawaan sama-sama
+     diawali kata "Master" - dua huruf pertama akan membuat semuanya tampil
+     "MA" dan avatar kehilangan satu-satunya tugasnya: menandai outlet mana
+     yang sedang dilihat. Nama lengkapnya tetap tersedia lewat atribut title.
      ========================================================================== */
   .account-menu {
     position: relative;
@@ -190,8 +190,9 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
     background: var(--panel);
     color: var(--text-dim);
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
+    letter-spacing: 0.01em;
     line-height: 1;
     cursor: pointer;
     transition: border-color 0.18s ease, color 0.18s ease;
@@ -208,7 +209,7 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
     top: calc(100% + 8px);
     right: 0;
     z-index: 210;
-    min-width: 208px;
+    min-width: 172px;
     max-width: min(78vw, 280px);
     background: var(--panel);
     border: 1px solid var(--border);
@@ -227,30 +228,6 @@ Semua sudah digabung jadi satu definisi final per elemen di bawah ini.
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
-  }
-
-  .account-popover-head {
-    padding: 10px 12px 9px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 4px;
-  }
-
-  .account-popover-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
-    margin-bottom: 3px;
-  }
-
-  .account-popover-email {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .account-popover-item {

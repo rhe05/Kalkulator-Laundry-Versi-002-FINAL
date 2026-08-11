@@ -193,83 +193,32 @@ dan kartu generik dashboard (dashboard-card-summary).
   }
 
   /* ==========================================================================
-     [2026-08-11] HEADER DUA TINGKAT - KHUSUS HP (<1100px)
+     [2026-08-11] HEADER DASHBOARD DI HP (<1100px): KOSONG SELURUHNYA
      --------------------------------------------------------------------------
-     Tingkat 1 (Index.html): brand + avatar akun, dipisah garis rambut.
-     Tingkat 2 (di sini)   : nama outlet aktif sebagai TEKS + chevron, rata
-                             kiri di barisnya sendiri - menggantikan pill
-                             berkotak.
+     Judul "Dashboard Bisnis", subjudulnya, pemilih outlet, dan label
+     "9 outlet aktif" semuanya dibuang dari layar Dashboard di HP - satu
+     baris .dashboard-header-top ini menampung keempatnya, jadi cukup
+     disembunyikan sekali di sini. Penggantinya ada di header aplikasi:
+     pemilihan outlet pindah ke menu utama di balik avatar (Index.html), dan
+     outlet yang sedang aktif ditandai singkatannya di avatar itu sendiri.
+     Kartu-kartu di bawah karena itu naik langsung ke bawah garis rambut.
 
-     Kenapa pill dibongkar jadi teks: outlet aktif itu KONTEKS seluruh angka
-     di Dashboard, jadi dia harus terbaca penuh - bukan disembunyikan di balik
-     menu atau dipersempit jadi kotak/inisial. Menghapus satu kotak berborder
-     dari layar yang sudah penuh kartu memindahkan bobot dari garis ke
-     hierarki tipografi; itu yang membedakan tampilan mahal dari tampilan
-     ramai. Markup-nya TIDAK disentuh sama sekali, murni tampilan.
+     JANGAN sembunyikan .dashboard-header (induknya) - di Screen_Menu.html
+     div itu tidak pernah ditutup sebelum .menu-grid, jadi seluruh kartu
+     Dashboard ikut berada DI DALAM-nya dan akan ikut hilang.
 
-     CATATAN CAKUPAN: struktur .dashboard-header-top ini dipakai 7 layar, TAPI
-     di HP cuma header Dashboard (#screenMenu) yang benar-benar terlihat - 6
-     layar lain membungkusnya dalam wadah desktop-only (.masterbiaya-desktop,
-     .profil-outlet-desktop, dst: display:none sampai >=1100px). Aturan di
-     bawah karena itu ditulis umum tapi efeknya praktis cuma di Dashboard;
-     kalau suatu saat header layar lain dimunculkan di HP, mereka otomatis
-     ikut bahasa visual yang sama tanpa perlu aturan baru.
+     CAKUPAN: 6 layar lain memakai struktur .dashboard-header-top yang sama,
+     tapi membungkusnya dalam wadah desktop-only (.masterbiaya-desktop,
+     .profil-outlet-desktop, dst: display:none sampai >=1100px) - di HP
+     mereka memang sudah tidak terlihat. Makanya aturan ini discope ke
+     #screenMenu saja, bukan digeneralkan.
 
      DESKTOP TIDAK IKUT: >=1100px .dashboard-title justru dipakai sebagai
-     topbar tipis, pill tetap pill, dan .dashboard-subtitle memang sudah
-     display:none di sana (Style_Module_Dashboard.html) - makanya seluruh
-     blok ini dikurung max-width.
+     topbar tipis (Style_Module_Dashboard.html) - makanya dikurung max-width.
      ========================================================================== */
   @media (max-width: 1099.98px) {
-    /* Dashboard: judul "Dashboard Bisnis" + subjudul dibuang seluruhnya -
-       konteksnya sudah jelas dari brand di atasnya & kartu di bawahnya, dua
-       baris itu cuma mendorong konten turun. Layar LAIN tetap punya judulnya
-       (mis. "Master Biaya Produksi") krn di sana judul itu penanda halaman. */
-    #screenMenu .dashboard-header-text {
+    #screenMenu .dashboard-header-top {
       display: none;
-    }
-
-    /* Judul & kontrol outlet ditumpuk, bukan berdampingan. gap 0 supaya jarak
-       ditentukan margin-bottom judul yang sudah ada (6px), tidak dobel. */
-    .dashboard-header-top {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0;
-    }
-
-    .dashboard-filter-right {
-      align-items: flex-start;
-      max-width: 100%;
-    }
-
-    /* "9 outlet aktif" - metadata yang tidak menolong keputusan apa pun. */
-    .outlet-count-label {
-      display: none;
-    }
-
-    .outlet-filter-pill {
-      max-width: 100%;
-      margin-top: 0;
-      padding: 2px 0;
-      gap: 5px;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
-      font-family: var(--font-display);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    /* Pill lama punya :hover border - tanpa ini tepinya "berkedip" saat
-       disentuh padahal bordernya sudah tidak ada. */
-    .outlet-filter-pill:hover,
-    .outlet-filter-pill.single-outlet:hover {
-      border-color: transparent;
-    }
-
-    .outlet-filter-arrow {
-      color: var(--text-faint);
     }
   }
 

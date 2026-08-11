@@ -229,21 +229,21 @@ RIWAYAT PEMECAHAN FILE INI:
            sama sekali. -->
       <button type="button" class="auth-logout-btn" id="authLogoutBtn" onclick="authLogout()" style="display:none;">Keluar</button>
 
-      <!-- Menu akun (KHUSUS HP, <1100px). Dimunculkan authEnterApp_ setelah
-           login (Script_Fitur_Auth.html) - sekaligus yang mengisi inisial &
-           email di dalamnya. Avatar = AKUN, bukan outlet: outlet punya
-           kontrolnya sendiri di baris bawah header layar. -->
+      <!-- Menu utama (KHUSUS HP, <1100px). Dimunculkan authEnterApp_ setelah
+           login (Script_Fitur_Auth.html); ISI avatar (singkatan outlet aktif)
+           & tampil/sembunyinya "Pilih Outlet" diatur updateOutletFilterPillText_
+           (Script_Fitur_Dashboard_OutletPicker.html) - satu-satunya tempat yang
+           tahu outlet mana yang sedang aktif. -->
       <div class="account-menu" id="accountMenu">
         <button type="button" class="account-avatar" id="accountAvatarBtn"
                 onclick="toggleAccountMenu_()" aria-haspopup="menu"
-                aria-expanded="false" aria-label="Menu akun">
+                aria-expanded="false" aria-label="Menu utama">
           <span id="accountAvatarInitial" aria-hidden="true"></span>
         </button>
         <div class="account-popover" id="accountPopover" role="menu">
-          <div class="account-popover-head">
-            <div class="account-popover-label">Masuk sebagai</div>
-            <div class="account-popover-email" id="accountPopoverEmail"></div>
-          </div>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  id="accountMenuOutletItem" style="display:none;"
+                  onclick="closeAccountMenu_(); openOutletPicker();">Pilih Outlet</button>
           <button type="button" class="account-popover-item" role="menuitem"
                   onclick="closeAccountMenu_(); authLogout();">Keluar</button>
         </div>
