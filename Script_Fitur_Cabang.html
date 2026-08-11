@@ -87,11 +87,17 @@ menjalankan bootApp().
    * renderProfilOutletDesktop_: mengisi kartu Profil Outlet versi DESKTOP
    * (#screenList, >=1100px) dari outlet yang sedang dipilih di picker global
    * (dashboardSelectedOutletId, ada di Script_Fitur_Dashboard_OutletPicker.html).
-   * Markup kartunya identik dgn Dashboard karena memakai
-   * buildProfilOutletCardHtml_ (Script_Fitur_Dashboard_Kartu.html) +
-   * mapCabangRowToProfilSummary_ (Script_Fitur_Dashboard.html). Semua render
-   * lokal dari cabangListCache -> instan, tanpa roundtrip. Aman di HP: elemen
-   * desktop tidak pernah tampil di <1100px, tapi guard host tetap ada.
+   * Markup kartunya dibangun buildProfilOutletDetailHtml_ DI FILE INI (versi
+   * lengkap: rincian per hari/minggu/bulan) - BUKAN pembangun kartu Dashboard.
+   * [2026-08-12] Komentar lama di sini bilang keduanya memakai fungsi yang
+   * sama (buildProfilOutletCardHtml_); itu sudah tidak benar sejak layar ini
+   * punya pembangun sendiri, dan sekarang kartu Dashboard versi HP juga punya
+   * miliknya sendiri (buildProfilOutletCardHpHtml_). Keduanya memang sengaja
+   * berbeda: desktop lengkap, HP ringkas.
+   *
+   * Semua render lokal dari cabangListCache -> instan, tanpa roundtrip. Aman
+   * di HP: elemen desktop tidak pernah tampil di <1100px, tapi guard host
+   * tetap ada.
    */
   function renderProfilOutletDesktop_() {
     var host = document.getElementById("profilOutletDesktopCard");
@@ -638,12 +644,18 @@ menjalankan bootApp().
   };
 
   function bindStaticFormInputs() {
+    // [2026-07-27] Guard formState null - lihat catatan sama di
+    // bindGasFormInputs (Script_Fitur_BiayaGas.html): listener terpasang
+    // sejak boot, elemen form Profil Outlet ada di DOM walau layarnya
+    // belum dibuka (formState masih null sampai openCabangForm dipanggil).
     document.getElementById("namaLaundry").addEventListener("input", function (e) {
+      if (!formState) return;
       formState.profil.namaLaundry = e.target.value;
     });
 
     function bindTime(idJam, idMenit, key) {
       function update() {
+        if (!formState) return;
         var jam = Number(document.getElementById(idJam).value) || 0;
         var menit = Number(document.getElementById(idMenit).value) || 0;
         formState.profil[key] = jam * 60 + menit;
@@ -656,16 +668,19 @@ menjalankan bootApp().
     bindTime("jamTutupJam", "jamTutupMenit", "jamTutupMenit");
 
     document.getElementById("cuciPersen").addEventListener("input", function (e) {
+      if (!formState) return;
       formState.okupansi.cuciPersen = Number(e.target.value);
       renderOkupansiUI();
       renderFormOutputs();
     });
     document.getElementById("keringPersen").addEventListener("input", function (e) {
+      if (!formState) return;
       formState.okupansi.keringPersen = Number(e.target.value);
       renderOkupansiUI();
       renderFormOutputs();
     });
     document.getElementById("setrikaPersen").addEventListener("input", function (e) {
+      if (!formState) return;
       formState.okupansi.setrikaPersen = Number(e.target.value);
       renderOkupansiUI();
       renderFormOutputs();
@@ -673,6 +688,7 @@ menjalankan bootApp().
 
     document.getElementById("kategoriPills").querySelectorAll(".pill").forEach(function (pill) {
       pill.addEventListener("click", function () {
+        if (!formState) return;
         if (pill.classList.contains("disabled")) {
           showToast("Mode ini segera hadir. Saat ini fokus di Self Service.", "");
           return;

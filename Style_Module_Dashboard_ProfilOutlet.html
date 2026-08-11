@@ -8,6 +8,111 @@ divider, mesin, okupansi + tooltip).
 ===============================================================================
 -->
 <style>
+  /* ==========================================================================
+     [2026-08-12] BLOK KAPASITAS KARTU PROFIL OUTLET (HP)
+     --------------------------------------------------------------------------
+     Dipakai buildProfilOutletCardHpHtml_ (Script_Fitur_Dashboard_Kartu.html),
+     yang hanya mengisi kartu Dashboard - dan kartu Dashboard hanya tampil di
+     HP (.dashboard-grid disembunyikan >=1100px, Style_Module_Dashboard.html).
+     Karena itu TIDAK perlu dikurung @media: di desktop markup ini memang tidak
+     pernah dirender. Layar Profil Outlet desktop tetap memakai blok
+     .profil-outlet-kpi lama di bawah, tidak tersentuh.
+
+     Menggantikan grid 3 kolom (.profil-outlet-kpi.kpi-3col) yang menaruh
+     kapasitas & okupansi sebagai dua angka sejajar padahal yang satu hasil
+     dari yang lain. Bentuk "X dari Y + bar" menunjukkan hubungannya, dan
+     memunculkan kapasitas MAKSIMAL yang selama ini tidak pernah tampil.
+
+     Tidak ada kotak/border baru: hierarkinya dari ukuran & warna huruf, plus
+     satu bar setipis 4px. Kotak abu (.profil-outlet-kpi background panel-2)
+     sengaja tidak dipakai lagi di HP - kotak di dalam kotak.
+     ========================================================================== */
+  .po-cap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .po-cap-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .po-cap-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .po-cap-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  /* Penanda layanan yang paling sedikit sisa ruangnya. Warna brass (bukan
+     merah) disengaja - ini bukan kesalahan yang harus diperbaiki, cuma hal
+     yang perlu diperhatikan duluan saat order naik. */
+  .po-cap-tag {
+    margin-left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--brass);
+    white-space: nowrap;
+  }
+
+  .po-cap-num {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 0;
+  }
+
+  .po-cap-num b {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .po-cap-kosong {
+    font-style: italic;
+  }
+
+  .po-cap-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    overflow: hidden;
+  }
+
+  .po-cap-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--sage);
+  }
+
+  .po-cap-row.is-mepet .po-cap-bar span {
+    background: var(--brass);
+  }
+
+  .po-cap-foot {
+    font-size: 9.5px;
+    color: var(--text-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .po-hp-mesin {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
   /* === PROFIL OUTLET CARD PREMIUM === */
   .profil-outlet-card {
     display: flex;

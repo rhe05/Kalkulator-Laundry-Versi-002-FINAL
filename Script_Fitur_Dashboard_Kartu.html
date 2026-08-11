@@ -29,9 +29,10 @@ TAPI Script_Boot_Main.html WAJIB tetap paling terakhir karena dia yang
 menjalankan bootApp().
 
 DAFTAR ISI (cari nama fungsi ini kalau butuh mengubah/memahami):
-  - renderDashboardCabangCard + buildProfilOutletCardHtml_
-      -> kartu "Profil Outlet" (dipakai bareng layar Profil Outlet desktop,
-         lihat Script_Fitur_Cabang.html).
+  - renderDashboardCabangCard + buildProfilOutletCardHpHtml_
+      -> kartu "Profil Outlet" di Dashboard (HP saja). Layar Profil Outlet
+         DESKTOP punya pembangunnya sendiri yang lebih lengkap:
+         buildProfilOutletDetailHtml_ di Script_Fitur_Cabang.html.
   - renderDashboardMasterBiayaCard
       -> kartu "Master Biaya" (ringkasan 6 komponen biaya + progress bar).
   - renderDashboardHPPCard
@@ -76,143 +77,132 @@ DIPAKAI OLEH FILE LAIN:
           return;
         }
 
-        var html = rows.slice(0, 1).map(buildProfilOutletCardHtml_).join('');
+        var html = rows.slice(0, 1).map(buildProfilOutletCardHpHtml_).join('');
         setDashboardCardHtml("dashboardCabangSummary", html);
   }
 
   /**
-   * buildProfilOutletCardHtml_: pembangun markup ".profil-outlet-card" (kartu
-   * premium: kategori + jam, KPI cuci/kering/setrika, blok mesin). Dipakai
-   * bareng oleh kartu Profil Outlet di Dashboard (renderDashboardCabangCard)
-   * DAN layar Profil Outlet desktop (renderProfilOutletDesktop_ di
-   * Script_Fitur_Cabang.html) supaya tampilannya identik & satu sumber.
-   * Argumen "row" = hasil map ke bentuk ringkasan (mapCabangRowToProfilSummary_,
-   * fungsinya ada di Script_Fitur_Dashboard.html).
+   * =========================================================================
+   * [2026-08-12] KARTU PROFIL OUTLET VERSI HP
+   * -------------------------------------------------------------------------
+   * Dipakai HANYA oleh kartu Dashboard (#dashboardCabangSummary) yang memang
+   * cuma tampil di HP - .dashboard-grid disembunyikan di >=1100px (lihat
+   * Style_Module_Dashboard.html). DESKTOP TIDAK TERPENGARUH SAMA SEKALI:
+   * layar Profil Outlet desktop punya pembangunnya sendiri yang lebih lengkap
+   * (buildProfilOutletDetailHtml_, Script_Fitur_Cabang.html) & tidak pernah
+   * memanggil fungsi di file ini.
+   *
+   * Fungsi ini MENGGANTIKAN buildProfilOutletCardHtml_ yang lama (dihapus -
+   * setelah kartu HP pindah ke sini, tidak ada lagi yang memanggilnya; komentar
+   * lama yang bilang layar desktop ikut memakainya sudah tidak benar sejak
+   * desktop punya builder sendiri).
+   *
+   * KENAPA BENTUKNYA BERUBAH: kartu lama menampilkan kapasitas & okupansi
+   * sebagai dua KPI sejajar, padahal keduanya satu hubungan - di
+   * Modul_Cabang.gs computeGroupLoad_ kapasitas produksi itu HASIL okupansi:
+   *     kapasitas produksi = kapasitas maksimal x okupansi%
+   * Akibatnya angka yang tampil ("4,3 kg/jam") sudah dikali okupansi, tapi
+   * kapasitas maksimalnya sendiri tidak pernah ditampilkan di mana pun -
+   * pemilik outlet harus membagi sendiri utk tahu kemampuan asli mesinnya.
+   * Bentuk "X dari Y + bar" menampilkan ketiganya sekaligus (terpakai,
+   * maksimal, dan okupansi yang menghubungkan) dalam satu gerakan baca.
+   *
+   * "PALING MEPET": layanan dgn okupansi TERTINGGI = paling sedikit sisa
+   * ruang sebelum mentok, jadi dia yang pertama kewalahan kalau order naik.
+   * Ditandai HANYA kalau ada >=2 layanan DAN puncaknya benar-benar sendirian
+   * (beda >=1 poin dari peringkat dua) - kalau seri, tidak ada yang ditandai
+   * daripada menunjuk salah satu secara sewenang-wenang.
+   * =========================================================================
    */
-  function buildProfilOutletCardHtml_(row) {
-          var jamBuka = row.jamBukaMenit != null ? row.jamBukaMenit : 0;
-          var jamTutup = row.jamTutupMenit != null ? row.jamTutupMenit : 0;
-          var totalMenit = jamTutup > jamBuka ? jamTutup - jamBuka : (jamTutup + 1440 - jamBuka);
-          var jamOps = Math.floor(totalMenit / 60);
-          var jamBukaH = Math.floor(jamBuka/60); var jamBukaM = jamBuka%60;
-          var jamTutupH = Math.floor(jamTutup/60); var jamTutupM = jamTutup%60;
-          var jamBukaStr = (jamBukaH < 10 ? '0' : '') + jamBukaH + '.' + (jamBukaM < 10 ? '0' : '') + jamBukaM;
-          var jamTutupStr = (jamTutupH < 10 ? '0' : '') + jamTutupH + '.' + (jamTutupM < 10 ? '0' : '') + jamTutupM;
-          var kategoriLabel = row.kategoriLayanan === 'self_service' ? 'Self Service' : (row.kategoriLayanan === 'jasa_setrika' ? 'Jasa Setrika' : (row.kategoriLayanan === 'drop_off' ? 'Drop Off' : (row.kategoriLayanan === 'hybrid' ? 'Hybrid' : (row.kategoriLayanan || '-'))));
-          var isSetrikaOnlyKategori = row.kategoriLayanan === 'jasa_setrika';
-          var isKiloanKategori = row.kategoriLayanan === 'drop_off' || row.kategoriLayanan === 'hybrid';
-          var hasSetrika = (isKiloanKategori || isSetrikaOnlyKategori) && Number(row.totalUnitSetrika || 0) > 0;
-          var jenisSetrikaLabel = row.jenisSetrika === 'listrik' ? 'Setrika Listrik' : (row.jenisSetrika === 'uap' ? 'Setrika Uap' : 'Belum dipilih');
+  function buildProfilOutletCardHpHtml_(row) {
+    var jamBuka = row.jamBukaMenit != null ? row.jamBukaMenit : 0;
+    var jamTutup = row.jamTutupMenit != null ? row.jamTutupMenit : 0;
+    var totalMenit = jamTutup > jamBuka ? jamTutup - jamBuka : (jamTutup + 1440 - jamBuka);
+    var jamOps = Math.floor(totalMenit / 60);
+    var jamStr = function (menit) {
+      var h = Math.floor(menit / 60), m = menit % 60;
+      return (h < 10 ? '0' : '') + h + '.' + (m < 10 ? '0' : '') + m;
+    };
 
-          var setrikaKpiItemHtml =
-                '<div class="profil-kpi-item setrika">' +
-                  '<span class="profil-kpi-label">Kap. Setrika</span>' +
-                  '<div class="profil-kpi-value-row">' +
-                    '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.kgSetrikaPerBulan || 0)) + '</span>' +
-                    '<span class="profil-kpi-unit">kg/bln</span>' +
-                  '</div>' +
-                  '<div class="profil-kpi-okupansi">Okupansi ' + escapeHtml(String(row.okupansiSetrika || 0)) + '%</div>' +
-                '</div>';
-          var setrikaKpiHtml = !hasSetrika ? '' : ('<div class="profil-kpi-divider"></div>' + setrikaKpiItemHtml);
+    var kategoriLabel = (typeof KATEGORI_LABEL !== "undefined" && KATEGORI_LABEL[row.kategoriLayanan])
+      ? KATEGORI_LABEL[row.kategoriLayanan]
+      : (row.kategoriLayanan || '-');
 
-          var setrikaMesinItemHtml =
-                '<div class="profil-mesin-item volt">' +
-                  '<span class="profil-mesin-count">' + escapeHtml(String(row.totalUnitSetrika || 0)) + '</span>' +
-                  '<span class="profil-mesin-type">setrika</span>' +
-                  '<span class="profil-mesin-kategori">' + escapeHtml(jenisSetrikaLabel) + '</span>' +
-                  (row.kapasitasSetrikaKgPerJam > 0 ? '<span class="profil-mesin-durasi">' + formatNum(row.kapasitasSetrikaKgPerJam) + ' kg/jam</span>' : '') +
-                '</div>';
-          var setrikaMesinHtml = !hasSetrika ? '' : setrikaMesinItemHtml;
+    var isSetrikaOnly = row.kategoriLayanan === 'jasa_setrika';
+    var isKiloan = row.kategoriLayanan === 'drop_off' || row.kategoriLayanan === 'hybrid';
+    var hasSetrika = (isKiloan || isSetrikaOnly) && Number(row.totalUnitSetrika || 0) > 0;
 
-          var setrikaFlatRowHtml =
-                '<div class="profil-outlet-kpi kpi-3col">' +
-                  '<div class="profil-kpi-item setrika">' +
-                    '<span class="profil-kpi-label">Unit Setrika</span>' +
-                    '<div class="profil-kpi-value-row">' +
-                      '<span class="profil-kpi-value">' + escapeHtml(String(row.totalUnitSetrika || 0)) + '</span>' +
-                      '<span class="profil-kpi-unit">unit</span>' +
-                    '</div>' +
-                    '<div class="profil-kpi-okupansi">' + escapeHtml(jenisSetrikaLabel) + '</div>' +
-                  '</div>' +
-                  '<div class="profil-kpi-divider"></div>' +
-                  '<div class="profil-kpi-item setrika">' +
-                    '<span class="profil-kpi-label">Kapasitas</span>' +
-                    '<div class="profil-kpi-value-row">' +
-                      '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.kapasitasSetrikaKgPerJam || 0)) + '</span>' +
-                      '<span class="profil-kpi-unit">kg/jam</span>' +
-                    '</div>' +
-                  '</div>' +
-                  '<div class="profil-kpi-divider"></div>' +
-                  '<div class="profil-kpi-item setrika">' +
-                    '<span class="profil-kpi-label">Okupansi</span>' +
-                    '<div class="profil-kpi-value-row">' +
-                      '<span class="profil-kpi-value">' + escapeHtml(String(row.okupansiSetrika || 0)) + '</span>' +
-                      '<span class="profil-kpi-unit">%</span>' +
-                    '</div>' +
-                  '</div>' +
-                '</div>';
+    // Tiap layanan: terpakai (SUDAH okupansi-adjusted, apa adanya dari
+    // summary) + okupansi -> maksimalnya dihitung balik. desimals dibedakan
+    // krn load itu bilangan bulat sedangkan kapasitas setrika pecahan.
+    var layanan = [];
+    if (!isSetrikaOnly) {
+      layanan.push({ nama: 'Cuci', terpakai: Number(row.loadCuciPerBulan) || 0, okupansi: Number(row.okupansiCuci) || 0, satuan: 'load/bln', desimal: 0 });
+      layanan.push({ nama: 'Kering', terpakai: Number(row.loadKeringPerBulan) || 0, okupansi: Number(row.okupansiKering) || 0, satuan: 'load/bln', desimal: 0 });
+    }
+    if (hasSetrika || isSetrikaOnly) {
+      layanan.push({ nama: 'Setrika', terpakai: Number(row.kapasitasSetrikaKgPerJam) || 0, okupansi: Number(row.okupansiSetrika) || 0, satuan: 'kg/jam', desimal: 1 });
+    }
 
-          var kpiBlockHtml = isSetrikaOnlyKategori
-            ? setrikaFlatRowHtml
-            : (
-              '<div class="profil-outlet-kpi' + (hasSetrika ? ' kpi-3col' : '') + '">' +
-                '<div class="profil-kpi-item cuci">' +
-                  '<span class="profil-kpi-label">Kap. Cuci</span>' +
-                  '<div class="profil-kpi-value-row">' +
-                    '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.loadCuciPerBulan || 0)) + '</span>' +
-                    '<span class="profil-kpi-unit">load</span>' +
-                  '</div>' +
-                  '<div class="profil-kpi-okupansi">Okupansi ' + escapeHtml(String(row.okupansiCuci || 0)) + '%</div>' +
-                '</div>' +
-                '<div class="profil-kpi-divider"></div>' +
-                '<div class="profil-kpi-item kering">' +
-                  '<span class="profil-kpi-label">Kap. Kering</span>' +
-                  '<div class="profil-kpi-value-row">' +
-                    '<span class="profil-kpi-value">' + escapeHtml(formatNum(row.loadKeringPerBulan || 0)) + '</span>' +
-                    '<span class="profil-kpi-unit">load</span>' +
-                  '</div>' +
-                  '<div class="profil-kpi-okupansi">Okupansi ' + escapeHtml(String(row.okupansiKering || 0)) + '%</div>' +
-                '</div>' +
-                setrikaKpiHtml +
-              '</div>'
-            );
+    // Penanda "paling mepet" - lihat aturannya di blok komentar di atas.
+    var idxMepet = -1;
+    if (layanan.length >= 2) {
+      var urut = layanan.map(function (l, i) { return { i: i, ok: l.okupansi }; })
+                        .filter(function (x) { return x.ok > 0; })
+                        .sort(function (a, b) { return b.ok - a.ok; });
+      if (urut.length >= 2 && (urut[0].ok - urut[1].ok) >= 1) idxMepet = urut[0].i;
+    }
 
-          var mesinBlockHtml = isSetrikaOnlyKategori
-            ? ''
-            : (
-              '<div class="profil-outlet-mesin">' +
-                '<div class="profil-mesin-item sage">' +
-                  '<span class="profil-mesin-count">' + escapeHtml(String(row.totalUnitCuci || 0)) + '</span>' +
-                  '<span class="profil-mesin-type">washer</span>' +
-                  '<span class="profil-mesin-kategori">' + escapeHtml(row.jenisCuci || 'home') + '</span>' +
-                  (row.durasiCuci > 0 ? '<span class="profil-mesin-durasi">' + row.durasiCuci + ' menit</span>' : '') +
-                '</div>' +
-                '<div class="profil-mesin-item brass">' +
-                  '<span class="profil-mesin-count">' + escapeHtml(String(row.totalUnitPengering || 0)) + '</span>' +
-                  '<span class="profil-mesin-type">dryer</span>' +
-                  '<span class="profil-mesin-kategori">' + escapeHtml(row.jenisKering || 'commercial') + '</span>' +
-                  (row.durasiKering > 0 ? '<span class="profil-mesin-durasi">' + row.durasiKering + ' menit</span>' : '') +
-                '</div>' +
-                setrikaMesinHtml +
-              '</div>'
-            );
+    var barisHtml = layanan.map(function (l, i) {
+      var adaOkupansi = l.okupansi > 0;
+      var maksimal = adaOkupansi ? (l.terpakai / (l.okupansi / 100)) : 0;
+      var isMepet = i === idxMepet;
 
-          return (
-            '<div class="profil-outlet-card">' +
-              '<div class="profil-outlet-meta">' +
-                '<span class="profil-outlet-kategori">' + escapeHtml(kategoriLabel) + '</span>' +
-                '<span class="profil-outlet-jam">' +
-                  jamBukaStr + ' – ' + jamTutupStr + ' · ' + jamOps + ' jam' +
-                  '<span class="profil-kpi-okupansi profil-outlet-okupansi-info">' +
-                    '<button type="button" class="okupansi-info-btn" onclick="toggleOkupansiTooltip(this, event)" aria-label="Apa itu okupansi?">?</button>' +
-                    '<div class="okupansi-tooltip">Okupansi adalah perkiraan seberapa sering mesin dipakai. Okupansi 50% artinya mesin diperkirakan cuma terisi separuh waktu yang tersedia, bukan penuh terus-menerus.</div>' +
-                  '</span>' +
-                '</span>' +
-              '</div>' +
-              kpiBlockHtml +
-              mesinBlockHtml +
-            '</div>'
-          );
+      var angkaHtml = adaOkupansi
+        ? ('<b>' + escapeHtml(formatNum(l.terpakai, l.desimal)) + '</b> dari ' +
+           escapeHtml(formatNum(maksimal, l.desimal)) + ' ' + escapeHtml(l.satuan))
+        : '<span class="po-cap-kosong">Okupansi belum diisi</span>';
+
+      return '<div class="po-cap-row' + (isMepet ? ' is-mepet' : '') + '">' +
+          '<div class="po-cap-head">' +
+            '<span class="po-cap-name">' + escapeHtml(l.nama) +
+              (isMepet ? '<span class="po-cap-tag">paling mepet</span>' : '') +
+            '</span>' +
+            '<span class="po-cap-num">' + angkaHtml + '</span>' +
+          '</div>' +
+          '<div class="po-cap-bar" role="presentation">' +
+            '<span style="width:' + Math.max(0, Math.min(100, l.okupansi)) + '%"></span>' +
+          '</div>' +
+          '<div class="po-cap-foot">okupansi ' + escapeHtml(String(l.okupansi || 0)) + '%</div>' +
+        '</div>';
+    }).join('');
+
+    // Daftar mesin jadi SATU kalimat kecil, bukan grid - jumlah unit itu
+    // angka yang jarang berubah, tidak layak memakan ruang sebesar dulu.
+    var mesin = [];
+    if (!isSetrikaOnly) {
+      mesin.push(String(row.totalUnitCuci || 0) + ' cuci');
+      mesin.push(String(row.totalUnitPengering || 0) + ' kering');
+    }
+    if (hasSetrika || isSetrikaOnly) mesin.push(String(row.totalUnitSetrika || 0) + ' setrika');
+
+    // Pembungkus & baris meta pakai ULANG class kartu lama (.profil-outlet-card
+    // / .profil-outlet-meta / .profil-outlet-kategori / .profil-outlet-jam) -
+    // yang benar-benar baru cuma blok kapasitas .po-cap-* di bawahnya.
+    return '<div class="profil-outlet-card">' +
+        '<div class="profil-outlet-meta">' +
+          '<span class="profil-outlet-kategori">' + escapeHtml(kategoriLabel) + '</span>' +
+          '<span class="profil-outlet-jam">' +
+            jamStr(jamBuka) + ' – ' + jamStr(jamTutup) + ' · ' + jamOps + ' jam' +
+            '<span class="profil-kpi-okupansi profil-outlet-okupansi-info">' +
+              '<button type="button" class="okupansi-info-btn" onclick="toggleOkupansiTooltip(this, event)" aria-label="Apa itu okupansi?">?</button>' +
+              '<div class="okupansi-tooltip">Okupansi adalah perkiraan seberapa sering mesin dipakai. Okupansi 50% artinya mesin diperkirakan cuma terisi separuh waktu yang tersedia, bukan penuh terus-menerus.</div>' +
+            '</span>' +
+          '</span>' +
+        '</div>' +
+        '<div class="po-cap-list">' + barisHtml + '</div>' +
+        (mesin.length ? '<div class="po-hp-mesin">' + escapeHtml(mesin.join(' · ')) + '</div>' : '') +
+      '</div>';
   }
 
   function renderDashboardMasterBiayaCard(res, targetId) {
@@ -586,9 +576,10 @@ DIPAKAI OLEH FILE LAIN:
         setDashboardCardHtml("dashboardBEPSummary", html);
   }
 
-  function renderDashboardPotensiOmsetCard(res) {
+  function renderDashboardPotensiOmsetCard(res, targetId) {
+        targetId = targetId || "dashboardPotensiOmsetSummary";
         if (!res || !res.ok) {
-          setDashboardCardError("dashboardPotensiOmsetSummary", res && res.error ? res.error : "Potensi omset belum bisa dihitung.");
+          setDashboardCardError(targetId, res && res.error ? res.error : "Potensi omset belum bisa dihitung.");
           return;
         }
         var d = res.data || {};
@@ -649,7 +640,7 @@ DIPAKAI OLEH FILE LAIN:
             '</div>' +
           '</div>';
         }
-        setDashboardCardHtml("dashboardPotensiOmsetSummary", html);
+        setDashboardCardHtml(targetId, html);
   }
 
   window.openBepMix = function () {
