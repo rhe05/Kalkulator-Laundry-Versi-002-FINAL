@@ -181,7 +181,15 @@ function saveBiayaAir_impl_(cabangId, payload) {
 
     writeKey_(sheet, "biayaAir_" + cabangId, JSON.stringify(clean));
 
-    firestoreSyncConfigDocAndRecompute_(cabangId, "air", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] DULU firestoreSyncConfigDocAndRecompute_
+    // (sync + recompute 5-ringkasan digabung 1 fungsi, sinkron, blocking respons
+    // client 30-57 detik - lihat audit). SEKARANG cuma sync config (cepat,
+    // ~400ms) - recompute dipicu client SETELAH respons ini balik, lewat
+    // triggerRecomputeCabang (fire-and-forget, tidak ditunggu UI). Trade-off:
+    // computed.hpp/masterBiaya/hargaLayanan/bep/potensiOmset di Firestore
+    // sempat stale beberapa puluh detik pasca-simpan (dashboard/HPP baru
+    // ter-update setelah recompute background selesai) - diterima user.
+    firestoreSyncConfigDoc_(cabangId, "air", clean); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { record: clean, summary: computeBiayaAirSummary_(clean, cabang) } };
   } catch (err) {

@@ -285,6 +285,13 @@ function renderAirPreview() {
       renderAirForm();
       showScreen("masterBiaya");
       refreshBiayaPickCabangList();
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute HPP/MasterBiaya/
+      // HargaLayanan/BEP/PotensiOmset dipicu DI SINI, TERPISAH dari save di
+      // atas (fire-and-forget, tidak ditunggu) - supaya tombol Simpan tidak
+      // diam 30-57 detik. Dashboard/HPP baru menampilkan angka baru setelah
+      // panggilan background ini selesai (beberapa puluh detik).
+      fireAndForgetServer_("triggerRecomputeCabang", [view.airCabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }, function (err) {
       if (saveBtn) {
         saveBtn.disabled = false;

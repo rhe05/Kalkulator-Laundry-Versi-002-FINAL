@@ -173,6 +173,21 @@ const DASHBOARD_COMPUTED_SOURCE_FNS_ = {
  * rumus/logika bisnis apa pun.
  * BEST-EFFORT: tidak pernah melempar; kembalikan {ok:false,...} kalau gagal.
  */
+/**
+ * [2026-08-27 - PERFORMA SIMPAN, P0-1] Entry point PUBLIK supaya client bisa
+ * memicu recompute di REQUEST TERPISAH dari save (fire-and-forget, tidak
+ * ditunggu) - dipakai supaya tombol Simpan tidak diam 30-57 detik menunggu
+ * recomputeCabangSummary_ selesai. TIDAK ada logic baru, cuma bungkus
+ * withTenant_ di sekitar fungsi yang sudah ada. Lihat pemanggil di
+ * Modul_BiayaAir.gs (saveBiayaAir_impl_, yang sekarang cuma sync config
+ * cepat) & Script_Fitur_BiayaAir.html (saveAirForm).
+ */
+function triggerRecomputeCabang(sessionToken, cabangId, fields) {
+  return withTenant_(sessionToken, function () {
+    return recomputeCabangSummary_(cabangId, fields);
+  });
+}
+
 function recomputeCabangSummary_(cabangId, fields) {
   try {
     if (!cabangId || typeof cabangId !== "string") {

@@ -679,6 +679,21 @@ menjalankan bootApp().
     runner[fnName].apply(runner, finalArgs);
   }
 
+  /**
+   * [2026-08-27 - PERFORMA SIMPAN, P0-1] fireAndForgetServer_ : sama seperti
+   * callServer_, TAPI tidak mengunci UI menunggu hasilnya - dipakai utk
+   * pekerjaan berat di background (mis. triggerRecomputeCabang, 30-50 detik)
+   * yang TIDAK perlu ditunggu user, cukup dijalankan lalu dilupakan
+   * (server tetap menjalankannya sampai selesai, cuma client tidak menunggu).
+   * Error diam-diam di-log ke console saja - non-fatal by design, jangan
+   * ganggu alur UI utama.
+   */
+  function fireAndForgetServer_(fnName, argsArray) {
+    callServer_(fnName, argsArray, null, function (err) {
+      console.warn("fireAndForgetServer_(" + fnName + ") gagal (non-fatal): " + (err && err.message ? err.message : err));
+    });
+  }
+
   function invalidateServerReadCache_(fnName, key) {
     if (key === undefined) {
       var prefix = fnName + "::";
