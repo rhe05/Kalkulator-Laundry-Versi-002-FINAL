@@ -276,7 +276,9 @@ function saveBiayaTetapOutlet_impl_(cabangId, payload) {
     // best-effort (tidak pernah melempar).
     if (tetapResult && tetapResult.ok) {
       firestoreSyncConfigDoc_(cabangId, "tetapOutlet", tetapResult.data.record); // best-effort (non-fatal)
-      recomputeCabangSummary_(cabangId, DASHBOARD_RECOMPUTE_FIXEDCOST_GROUP_); // best-effort (non-fatal)
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 2] Recompute dipindah ke
+      // client via triggerRecomputeCabang (fire-and-forget) - lihat
+      // Modul_BiayaAir.gs utk penjelasan lengkap pola ini.
     }
     return tetapResult;
   } catch (err) {

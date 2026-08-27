@@ -612,6 +612,9 @@ menjalankan bootApp().
         showToast("Biaya tetap outlet tersimpan.", "ok");
         setSaveStatus("Tersimpan", "ok");
         renderBiayaTetapOutletForm(res.data);
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 2] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [view.biayaTetapCabangId, ["fixedCost", "bep", "potensiOmset"]]);
       }, function (err) {
         if (btn) btn.disabled = false;
         handleBackendError({ error: err && err.message ? err.message : String(err), stage: "client:saveBiayaTetapOutlet" }, "menyimpan biaya tetap outlet");

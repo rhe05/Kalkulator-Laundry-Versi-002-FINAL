@@ -693,6 +693,9 @@ menjalankan bootApp().
         invalidateServerReadCache_("getHargaLayanan", hargaLayananCurrentCabangId);
         hargaLayananFormDirty = false;
         openHargaLayananOutletList();
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 2] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [hargaLayananCurrentCabangId, ["hargaLayanan", "bep", "potensiOmset"]]);
       }, function (err) {
         if (btn) btn.disabled = false;
         handleBackendError(
