@@ -537,6 +537,40 @@ function firestoreDeleteSubDocAndRecompute_(cabangId, subcollection, itemId, fie
  * yang SAMA, jadi cukup 1 PATCH biasa (bukan perlu :commit sama sekali,
  * lebih murah lagi dari kasus lain yg beda dokumen). BEST-EFFORT.
  */
+/**
+ * [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 3] Versi CEPAT dari fungsi di
+ * bawah - cuma tulis field profil, TANPA ikut hitung/tulis computed.hpp
+ * (yang makan ~12 detik via getStrukturBiayaHPP_impl_ live). Dipakai
+ * createCabang_impl_/updateCabang_impl_ (Modul_Cabang.gs); recompute HPP
+ * dipicu client via triggerRecomputeCabang (fire-and-forget) setelah respons
+ * balik. Trade-off: computed.hpp sempat stale ~12 detik pasca simpan profil
+ * cabang (self-heal existing tetap fallback ke Sheets kalau computed kosong/
+ * basi utk cabang BARU).
+ */
+function firestoreSyncCabangProfil_(cabangId, cabang) {
+  try {
+    const tenantId = activeDataSpreadsheetId_();
+    if (!tenantId) return;
+    const data = {
+      profil: cabang.profil,
+      mesinCuci: cabang.mesinCuci,
+      mesinPengering: cabang.mesinPengering,
+      mesinSetrika: cabang.mesinSetrika,
+      kategoriLayanan: cabang.kategoriLayanan,
+      okupansi: cabang.okupansi,
+      createdAt: cabang.createdAt,
+      updatedAt: cabang.updatedAt,
+    };
+    const maskFields = ["profil", "mesinCuci", "mesinPengering", "mesinSetrika", "kategoriLayanan", "okupansi", "createdAt", "updatedAt"];
+    firestoreSet_(firestoreCabangDocPath_(tenantId, cabangId), data, maskFields);
+    if (Object.prototype.hasOwnProperty.call(_dashboardComputedDocCache_, cabangId)) {
+      delete _dashboardComputedDocCache_[cabangId];
+    }
+  } catch (err) {
+    console.warn("firestoreSyncCabangProfil_ gagal (non-fatal): " + err);
+  }
+}
+
 function firestoreSyncCabangProfilAndRecompute_(cabangId, cabang) {
   try {
     const tenantId = activeDataSpreadsheetId_();

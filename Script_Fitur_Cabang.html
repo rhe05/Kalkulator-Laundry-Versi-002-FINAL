@@ -723,6 +723,12 @@ menjalankan bootApp().
       if (typeof setStoredOutletId_ === "function") setStoredOutletId_(view.editingId);
       if (typeof dashboardSelectedOutletId !== "undefined") dashboardSelectedOutletId = view.editingId;
       showScreen("menu");
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 3] lihat Script_Fitur_BiayaAir.html.
+      // Dashboard yang baru dibuka masih boleh baca computed.hpp LAMA/kosong -
+      // self-heal (getStrukturBiayaHPPFast_) fallback ke hitung live Sheets
+      // kalau computed belum ter-update, jadi angka yang tampil tetap benar.
+      fireAndForgetServer_("triggerRecomputeCabang", [res.data.cabang.id, ["hpp"]]);
     }
 
     if (view.isNew) {

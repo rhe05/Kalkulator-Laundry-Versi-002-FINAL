@@ -227,7 +227,10 @@ function createCabang_impl_(payload) {
     const sheet = ensureDataSheet_();
     writeKeyAndAppendOrder_(sheet, "cabang_" + clean.id, JSON.stringify(clean), KEY_CABANG_ORDER, clean.id);
 
-    firestoreSyncCabangProfilAndRecompute_(clean.id, clean); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 3] Recompute HPP dipindah
+    // ke client via triggerRecomputeCabang (fire-and-forget) - lihat
+    // Modul_BiayaAir.gs / firestoreSyncCabangProfil_.
+    firestoreSyncCabangProfil_(clean.id, clean); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
@@ -271,7 +274,10 @@ function updateCabang_impl_(id, payload) {
     }
 
     writeKey_(sheet, "cabang_" + id, JSON.stringify(clean));
-    firestoreSyncCabangProfilAndRecompute_(id, clean); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1 Tingkat 3] Recompute HPP dipindah
+    // ke client via triggerRecomputeCabang (fire-and-forget) - lihat
+    // Modul_BiayaAir.gs / firestoreSyncCabangProfil_.
+    firestoreSyncCabangProfil_(id, clean); // best-effort, 1 HTTP call (non-fatal)
     return { ok: true, data: { cabang: clean, summary: computeSummary_(clean) } };
   } catch (err) {
     return errorResponse_(err, "updateCabang");
