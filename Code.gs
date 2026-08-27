@@ -176,6 +176,10 @@ function doGet(e) {
   // Undangan" di Panel Admin) - token ini dibaca client (Script_Fitur_
   // Auth.html) utk tampilkan layar set-password. Kosong = jalur normal biasa.
   tmpl.accountInviteToken = (e && e.parameter && e.parameter.invite) || "";
+  // [2026-07-27] Link "Masuk Langsung" (bypass total, adminGenerateDirectLoginLink,
+  // Modul_Auth.gs) - beda dari invite di atas (invite = customer masih pilih
+  // password sendiri; ini = langsung dapat sesi login, TIDAK ADA password).
+  tmpl.directLoginToken = (e && e.parameter && e.parameter.directLogin) || "";
 
   return tmpl
     .evaluate()
@@ -206,7 +210,24 @@ function handleFirestoreDiagnostic_(e) {
   let payload;
   try {
     const action = params.action || "testConnection";
-    if (action === "testConnection") {
+    if (action === "timeWithTenantOverhead") {
+      // [2026-08-27 - AUDIT P0-2] Ukur murni biaya SpreadsheetApp.openById
+      // (yang dipanggil withTenant_ di SETIAP request, Code.gs) TERPISAH dari
+      // cold-start container - fungsi ini sendiri sudah "warm" saat baris ini
+      // jalan (cold-start terjadi SEBELUM eksekusi mulai, tidak bisa diukur
+      // dari dalam kode). Bandingkan openByIdMs di sini dengan HTTP total
+      // (diukur client, mis. curl -w time_total) utk estimasi porsi
+      // cold-start+network = HTTP total - openByIdMs - overhead kecil lain.
+      const t0 = Date.now();
+      const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
+      const t1 = Date.now();
+      const ss2 = SpreadsheetApp.openById(ssId);
+      const t2 = Date.now();
+      const t3 = Date.now();
+      const sheets2 = ss2.getSheets().length; // paksa akses nyata, bukan cuma handle
+      const t4 = Date.now();
+      payload = { ok: true, action: action, getActiveSpreadsheetMs: t1 - t0, openByIdMs: t2 - t1, accessSheetsMs: t4 - t3, sheetsCount: sheets2 };
+    } else if (action === "testConnection") {
       payload = { ok: true, action: action, result: testFirestoreConnection_() };
     } else if (action === "listCabang") {
       payload = { ok: true, action: action, result: listCabangIdsForTest_() };
