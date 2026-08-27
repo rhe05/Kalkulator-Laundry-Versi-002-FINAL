@@ -69,7 +69,7 @@ DIPAKAI OLEH FILE LAIN (contoh, bukan daftar lengkap):
   // kategori + jumlah outlet), semuanya menunjuk outlet yang SAMA
   // (dashboardSelectedOutletId). Didaftarkan di satu tempat spy nambah pill
   // baru cukup 1 baris, bukan menyalin ulang blok yang sama.
-  var OUTLET_FILTER_PILL_IDS_ = ["dashboardOutletFilter", "profilOutletFilter", "masterBiayaOutletFilter", "strukturHPPOutletFilter", "hargaLayananOutletFilter", "biayaTetapOutletFilter", "bepScreenOutletFilter"];
+  var OUTLET_FILTER_PILL_IDS_ = ["dashboardOutletFilter", "profilOutletFilter", "masterBiayaOutletFilter", "strukturHPPOutletFilter", "hargaLayananOutletFilter", "biayaTetapOutletFilter", "bepScreenOutletFilter", "laporanOutletFilter"];
 
   /**
    * [2026-08-11] Singkatan outlet utk avatar menu utama di HP (Index.html):
@@ -209,6 +209,8 @@ DIPAKAI OLEH FILE LAIN (contoh, bukan daftar lengkap):
         // Sama utk layar "Target & Potensi" (BEP + Potensi Omset, desktop) -
         // fungsi ada di Script_Fitur_BEP.html.
         if (typeof renderBEPScreenDesktop_ === "function") renderBEPScreenDesktop_();
+        // Sama utk layar "Laporan Usaha" - Script_Fitur_LaporanUsaha.html.
+        if (typeof renderLaporanUsaha_ === "function") renderLaporanUsaha_();
       });
     });
   }

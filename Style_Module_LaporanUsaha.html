@@ -1,0 +1,178 @@
+<!--
+===============================================================================
+FILE: Style_Module_LaporanUsaha.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Style layar "Laporan Usaha" (screenLaporanUsaha) - panel preview +
+dokumen laporan (dipakai jadi konten cetak apa adanya) + aturan @media print.
+
+Reuse token CSS yang SUDAH ADA (--panel/--border/--text/--sage/--radius dst,
+Style_Tokens.html) - tidak ada warna/variable baru. Reuse struktur
+.dashboard-header/.outlet-filter-pill/.panel/.dashboard-card-summary yang
+sudah ada (SAMA persis dgn screenBEP), cuma tambah class BARU utk isi
+dokumen laporan (.laporan-doc dkk) yang belum ada bentuknya di layar manapun.
+
+Di-include dari Index.html lewat include('Style_Module_LaporanUsaha').
+===============================================================================
+-->
+<style>
+  .laporan-screen-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .laporan-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .laporan-print-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--sage);
+    background: var(--sage);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: filter .15s ease, transform .15s ease;
+  }
+  .laporan-print-btn:hover { filter: brightness(1.06); }
+  .laporan-print-btn:active { transform: scale(0.98); }
+
+  .laporan-print-hint {
+    color: var(--text-faint);
+    font-size: 12.5px;
+  }
+
+  .laporan-preview-panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+  }
+
+  /* ---- Dokumen laporan (dipakai preview LAYAR & konten CETAK sekaligus) ---- */
+  .laporan-doc { max-width: 640px; margin: 0 auto; }
+
+  .laporan-doc-header {
+    text-align: center;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--text);
+  }
+  .laporan-doc-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .laporan-doc-outlet {
+    margin-top: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .laporan-doc-kategori {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    vertical-align: middle;
+  }
+  .laporan-doc-date {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  .laporan-section { margin-bottom: 20px; }
+  .laporan-section:last-of-type { margin-bottom: 0; }
+  .laporan-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sage);
+    margin-bottom: 8px;
+  }
+  .laporan-section-note {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .laporan-section-body { border-top: 1px solid var(--border); }
+
+  .laporan-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 14px;
+  }
+  .laporan-row:last-child { border-bottom: none; }
+  .laporan-row-label { color: var(--text-dim); }
+  .laporan-row-value {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .laporan-row-strong .laporan-row-value { font-weight: 700; }
+  .laporan-row-muted .laporan-row-value { color: var(--text-faint); }
+
+  .laporan-empty { color: var(--text-faint); font-size: 13px; padding: 6px 0; }
+
+  .laporan-doc-footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .laporan-preview-panel { padding: 18px; }
+  }
+
+  /* =========================================================================
+     CETAK - panel laporan dicetak APA ADANYA (sama dgn yang tampil di layar,
+     tidak generate ulang), semua elemen app lain disembunyikan.
+     ========================================================================= */
+  @media print {
+    #appSidebar, #appHeader, #loadingState { display: none !important; }
+    #appRoot > .screen:not(#screenLaporanUsaha) { display: none !important; }
+    #screenLaporanUsaha { display: block !important; }
+    #screenLaporanUsaha .dashboard-header,
+    #screenLaporanUsaha .laporan-actions { display: none !important; }
+
+    body { background: #fff !important; }
+    .laporan-screen-body { height: auto !important; }
+    .laporan-preview-panel {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      overflow: visible !important;
+      max-height: none !important;
+    }
+    .laporan-doc { max-width: 100% !important; }
+    .laporan-section { break-inside: avoid; }
+  }
+</style>

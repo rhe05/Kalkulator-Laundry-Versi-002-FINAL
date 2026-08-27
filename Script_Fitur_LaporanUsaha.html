@@ -1,0 +1,241 @@
+<!--
+===============================================================================
+FILE: Script_Fitur_LaporanUsaha.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Fitur layar "Laporan Usaha" (screenLaporanUsaha) - ringkasan usaha
+siap cetak/unduh PDF, dibuka dari sidebar (desktop) & menu avatar (HP).
+
+FUNGSI:
+- openScreenLaporanUsaha: dipanggil sidebarGoTo('laporan') & menu avatar HP -
+  tampilkan layar & render.
+- renderLaporanUsaha_: baca outlet terpilih (dashboardSelectedOutletId, SAMA
+  dgn Dashboard/BEP/dst), ambil data lewat endpoint yang SUDAH ADA
+  (getDashboardFullSummary, Modul_Dashboard.gs) via cachedServerRead_ dgn
+  KUNCI CACHE SAMA yang dipakai Dashboard - kalau outlet ini sudah pernah
+  dibuka di Dashboard sesi ini, laporan tampil INSTAN dari cache (0 request
+  server baru). TIDAK ADA endpoint/hitungan baru sama sekali.
+- buildLaporanUsahaHtml_: satu builder HTML yang dipakai BERSAMA utk preview
+  di layar DAN konten yang dicetak (bukan 2 builder terpisah) - print CSS
+  (Style_Module_LaporanUsaha.html) cuma menyembunyikan semua elemen LAIN
+  saat mode cetak, panel ini apa adanya yang tercetak. Jadi klik "Cetak"
+  genuinely instan (window.print() langsung, tidak generate ulang apapun).
+- dipanggil ulang dari outlet picker (Script_Fitur_Dashboard_OutletPicker.html)
+  tiap outlet diganti, pola SAMA dgn renderBEPScreenDesktop_ dkk.
+
+PENTING -- catat sebelum edit:
+Semua file Script_*.html berbagi SATU scope global yang sama (Apps Script
+include() cuma menggabungkan teks mentah jadi satu <script> demi <script>
+di halaman yang sama -- bukan module system). Karena itu file ini SENGAJA
+TIDAK dibungkus (function(){...})() -- kalau kamu bungkus lagi, fungsi di
+file ini jadi tidak kelihatan dari file lain dan app akan rusak.
+===============================================================================
+-->
+<script>
+"use strict";
+
+  function laporanKategoriLabel_(k) {
+    return (typeof KATEGORI_LABEL !== "undefined" && KATEGORI_LABEL[k]) ? KATEGORI_LABEL[k] : (k || "-");
+  }
+
+  window.openScreenLaporanUsaha = function () {
+    showScreen("laporanUsaha");
+    renderLaporanUsaha_();
+  };
+
+  /**
+   * Baris kecil "Label ....... Nilai" dipakai berulang di semua section
+   * laporan - satu bentuk visual konsisten selayaknya laporan usaha.
+   */
+  function laporanRow_(label, value, opts) {
+    opts = opts || {};
+    var cls = "laporan-row" + (opts.strong ? " laporan-row-strong" : "") + (opts.muted ? " laporan-row-muted" : "");
+    return '<div class="' + cls + '">' +
+      '<span class="laporan-row-label">' + escapeHtml(label) + '</span>' +
+      '<span class="laporan-row-value">' + value + '</span>' +
+    '</div>';
+  }
+
+  function laporanSection_(title, innerHtml, opts) {
+    opts = opts || {};
+    if (!innerHtml) return "";
+    return '<div class="laporan-section">' +
+      '<div class="laporan-section-title">' + escapeHtml(title) + '</div>' +
+      (opts.note ? '<div class="laporan-section-note">' + escapeHtml(opts.note) + '</div>' : '') +
+      '<div class="laporan-section-body">' + innerHtml + '</div>' +
+    '</div>';
+  }
+
+  /**
+   * buildLaporanUsahaHtml_: satu-satunya builder, dipakai preview LAYAR &
+   * konten CETAK sekaligus (lihat catatan di atas). `d` = shape SAMA PERSIS
+   * yang dipakai Dashboard (dashboardFullSummaryCache_[cId]/hasil
+   * getDashboardFullSummary): {cabang, masterBiaya, hpp, hargaLayanan,
+   * fixedCost, bep, potensiOmset}.
+   */
+  function buildLaporanUsahaHtml_(d) {
+    d = d || {};
+    var cabangRow = (d.cabang && d.cabang.ok && Array.isArray(d.cabang.data && d.cabang.data.rows) && d.cabang.data.rows[0]) || null;
+    var namaLaundry = cabangRow ? cabangRow.namaLaundry : "Outlet";
+    var kategoriLabel = cabangRow ? laporanKategoriLabel_(cabangRow.kategoriLayanan) : "-";
+    var tanggalCetak = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+    var html = '<div class="laporan-doc">' +
+      '<div class="laporan-doc-header">' +
+        '<div class="laporan-doc-title">Laporan Usaha</div>' +
+        '<div class="laporan-doc-outlet">' + escapeHtml(namaLaundry) + '<span class="laporan-doc-kategori">' + escapeHtml(kategoriLabel) + '</span></div>' +
+        '<div class="laporan-doc-date">Dicetak ' + escapeHtml(tanggalCetak) + '</div>' +
+      '</div>';
+
+    // ---- Ringkasan Eksekutif (Estimasi Omset/Profit vs BEP) ----
+    var potensi = (d.potensiOmset && d.potensiOmset.ok && d.potensiOmset.data) ? d.potensiOmset.data : null;
+    var bep = (d.bep && d.bep.ok && d.bep.data) ? d.bep.data : null;
+    if (potensi || bep) {
+      var ringkasHtml = "";
+      if (potensi) {
+        ringkasHtml += laporanRow_("Estimasi Omset / Bulan", money0(potensi.estimasiOmsetPerBulan), { strong: true });
+        ringkasHtml += laporanRow_("Estimasi Profit / Bulan", money0(potensi.estimasiProfitPerBulan), { strong: true });
+      }
+      if (bep && bep.bepLoadPerBulan > 0) {
+        ringkasHtml += laporanRow_("Target BEP Load / Bulan", formatNum(bep.bepLoadPerBulan, 0) + " load");
+        ringkasHtml += laporanRow_("Target BEP Omset / Bulan", money0(bep.bepOmsetPerBulan));
+      }
+      html += laporanSection_("Ringkasan Eksekutif", ringkasHtml);
+    }
+
+    // ---- Profil Outlet & Kapasitas Produksi ----
+    if (cabangRow) {
+      var jamBuka = cabangRow.jamBukaMenit != null ? cabangRow.jamBukaMenit : 0;
+      var jamTutup = cabangRow.jamTutupMenit != null ? cabangRow.jamTutupMenit : 0;
+      var jamStr = function (menit) {
+        var h = Math.floor(menit / 60), m = menit % 60;
+        return (h < 10 ? "0" : "") + h + "." + (m < 10 ? "0" : "") + m;
+      };
+      var profilHtml = laporanRow_("Kategori Layanan", escapeHtml(kategoriLabel));
+      profilHtml += laporanRow_("Jam Operasional", jamStr(jamBuka) + " - " + jamStr(jamTutup));
+      var mesinBits = [];
+      if (cabangRow.totalUnitCuci || cabangRow.totalUnitPengering) {
+        mesinBits.push((cabangRow.totalUnitCuci || 0) + " mesin cuci");
+        mesinBits.push((cabangRow.totalUnitPengering || 0) + " mesin pengering");
+      }
+      if (mesinBits.length) profilHtml += laporanRow_("Unit Mesin", escapeHtml(mesinBits.join(" · ")));
+      html += laporanSection_("Profil Outlet", profilHtml);
+
+      var isSetrikaOnly = cabangRow.kategoriLayanan === "jasa_setrika";
+      var isKiloan = cabangRow.kategoriLayanan === "drop_off" || cabangRow.kategoriLayanan === "hybrid";
+      var hasSetrika = (isKiloan || isSetrikaOnly) && Number(cabangRow.totalUnitSetrika || 0) > 0;
+      var kapasitasRows = [];
+      if (!isSetrikaOnly) {
+        kapasitasRows.push({ nama: "Cuci", terpakai: Number(cabangRow.loadCuciPerBulan) || 0, okupansi: Number(cabangRow.okupansiCuci) || 0, satuan: "load/bulan", desimal: 0 });
+        kapasitasRows.push({ nama: "Kering", terpakai: Number(cabangRow.loadKeringPerBulan) || 0, okupansi: Number(cabangRow.okupansiKering) || 0, satuan: "load/bulan", desimal: 0 });
+      }
+      if (hasSetrika || isSetrikaOnly) {
+        kapasitasRows.push({ nama: "Setrika", terpakai: Number(cabangRow.kapasitasSetrikaKgPerJam) || 0, okupansi: Number(cabangRow.okupansiSetrika) || 0, satuan: "kg/jam", desimal: 1 });
+      }
+      var kapasitasHtml = kapasitasRows.map(function (l) {
+        var adaOkupansi = l.okupansi > 0;
+        var maksimal = adaOkupansi ? (l.terpakai / (l.okupansi / 100)) : 0;
+        var nilai = adaOkupansi
+          ? (formatNum(l.terpakai, l.desimal) + " dari " + formatNum(maksimal, l.desimal) + " " + l.satuan + " (okupansi " + formatNum(l.okupansi, 0) + "%)")
+          : "Okupansi belum diisi";
+        return laporanRow_(l.nama, escapeHtml(nilai));
+      }).join("");
+      html += laporanSection_("Kapasitas Produksi", kapasitasHtml, { note: "Angka \"terpakai\" sudah disesuaikan okupansi - kapasitas maksimal dihitung balik dari situ." });
+    }
+
+    // ---- Ringkasan HPP ----
+    var hppRow = (d.hpp && d.hpp.ok && Array.isArray(d.hpp.data && d.hpp.data.rows) && d.hpp.data.rows[0]) || null;
+    if (hppRow) {
+      var layananList = Array.isArray(hppRow.layananList) ? hppRow.layananList : [];
+      var hppHtml = layananList.map(function (svc) {
+        return laporanRow_(svc.title || "", money0(svc.total), { strong: true });
+      }).join("");
+      html += laporanSection_("Ringkasan HPP (Harga Pokok Produksi)", hppHtml, { note: "HPP per siklus (per load/kg/jam sesuai jenis layanan)." });
+    }
+
+    // ---- Harga Layanan ----
+    var hlRow = (d.hargaLayanan && d.hargaLayanan.ok && Array.isArray(d.hargaLayanan.data && d.hargaLayanan.data.rows) && d.hargaLayanan.data.rows[0]) || null;
+    if (hlRow) {
+      var hlList = Array.isArray(hlRow.layananList) ? hlRow.layananList : [];
+      var hlHtml = hlList.map(function (item) {
+        var isKgBased = item.hppPerLoad !== undefined || item.hppPerJam !== undefined;
+        var unit = isKgBased ? "Kg" : (item.unitLabel || "").replace(/^per\s+/i, "");
+        var harga = isKgBased ? item.hargaJualPerKg : item.hargaJual;
+        var pct = typeof item.marginPercent === "number" ? (Math.round(item.marginPercent * 10) / 10) + "%" : "-";
+        var line = money0(harga) + "/" + unit + " · margin " + pct;
+        return laporanRow_(item.title || "", escapeHtml(line));
+      }).join("");
+      html += laporanSection_("Harga Layanan", hlHtml || '<div class="laporan-empty">Belum ada harga yang diisi.</div>');
+    }
+
+    // ---- BEP detail ----
+    if (bep && bep.bepLoadPerBulan > 0) {
+      var bepHtml = laporanRow_("Load / Minggu", formatNum(bep.bepLoadPerMinggu, 0) + " load");
+      bepHtml += laporanRow_("Omset / Minggu", money0(bep.bepOmsetPerMinggu));
+      bepHtml += laporanRow_("Load / Hari", formatNum(bep.bepLoadPerHari, 0) + " load");
+      bepHtml += laporanRow_("Omset / Hari", money0(bep.bepOmsetPerHari));
+      html += laporanSection_("Target Titik Impas (BEP)", bepHtml);
+    }
+
+    // ---- Fixed Cost ----
+    var fcRow = (d.fixedCost && d.fixedCost.ok && Array.isArray(d.fixedCost.data && d.fixedCost.data.rows) && d.fixedCost.data.rows[0]) || null;
+    if (fcRow) {
+      var components = Array.isArray(fcRow.components) ? fcRow.components : [];
+      var fcHtml = components.map(function (c) {
+        return laporanRow_(c.label || "", money0(c.amount));
+      }).join("");
+      fcHtml += laporanRow_("Total Fixed Cost / Bulan", money0(fcRow.totalPerBulan), { strong: true });
+      html += laporanSection_("Biaya Tetap Outlet (Fixed Cost)", fcHtml);
+    }
+
+    html += '<div class="laporan-doc-footer">Dibuat otomatis oleh Kalkulator Laundry - angka bersifat estimasi berdasar data yang diisi.</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderLaporanUsaha_() {
+    var host = document.getElementById("laporanPreviewContent");
+    if (!host) return;
+
+    if (typeof ensureDashboardOutletSelection_ === "function") ensureDashboardOutletSelection_();
+    if (typeof updateOutletFilterPillText_ === "function") updateOutletFilterPillText_();
+
+    var cId = (typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null;
+    if (!cId) {
+      host.innerHTML = '<div class="dashboard-empty">Belum ada outlet. Tambahkan outlet dulu di menu Profil Outlet.</div>';
+      return;
+    }
+
+    host.innerHTML = '<div class="dashboard-card-summary is-loading">Memuat data...</div>';
+
+    // KUNCI CACHE SAMA dgn Dashboard ("getDashboardFullSummary"+cId) - kalau
+    // outlet ini sudah dibuka di Dashboard sesi ini, INSTAN dari cache.
+    cachedServerRead_("getDashboardFullSummary", cId, function (res, fromCache) {
+      if (view.screen !== "laporanUsaha") return;
+      if (((typeof dashboardSelectedOutletId !== "undefined") ? dashboardSelectedOutletId : null) !== cId) return;
+      if (!res || !res.ok) {
+        if (!fromCache) host.innerHTML = '<div class="dashboard-empty">' + escapeHtml((res && res.error) || "Gagal memuat data laporan.") + '</div>';
+        return;
+      }
+      host.innerHTML = buildLaporanUsahaHtml_(res.data || {});
+    }, function (err, hadCache) {
+      if (hadCache) return;
+      host.innerHTML = '<div class="dashboard-empty">' + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+    });
+  }
+
+  /**
+   * cetakLaporanUsaha_: TIDAK generate ulang apapun - panel yang sudah
+   * dirender di layar (laporanPreviewContent) PERSIS yang dicetak, print CSS
+   * (Style_Module_LaporanUsaha.html) menyembunyikan sisanya. Ini kenapa
+   * klik cetak genuinely instan (window.print() langsung), sesuai
+   * permintaan "wajib super cepat".
+   */
+  window.cetakLaporanUsaha_ = function () {
+    var host = document.getElementById("laporanPreviewContent");
+    if (!host || !host.querySelector(".laporan-doc")) {
+      showToast("Data laporan belum siap, tunggu sebentar.", "err");
+      return;
+    }
+    window.print();
+  };
+</script>

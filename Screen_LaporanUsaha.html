@@ -1,0 +1,67 @@
+<!--
+===============================================================================
+FILE: Screen_LaporanUsaha.html
+PROJECT: Kalkulator Laundry Versi 002
+ISI: Layar "Laporan Usaha" - ringkasan cetak/unduh (PDF via dialog Cetak
+browser) untuk 1 outlet: Profil Outlet, Kapasitas Produksi, Ringkasan HPP,
+Harga Layanan, BEP, Fixed Cost - selayaknya laporan usaha yang bisa
+ditunjukkan ke pihak lain (bank/investor/tim).
+
+[2026-08-27] Dibuka dari 2 pintu (pola SAMA dgn screenBEP): sidebar desktop
+("Laporan Usaha") + menu utama HP di balik avatar ("Unduh Laporan Usaha") -
+layar & logic-nya SAMA PERSIS, cuma beda pintu masuk sesuai perangkat.
+
+Data dibaca dari endpoint yang SUDAH ADA (getDashboardFullSummary,
+Modul_Dashboard.gs - SAMA yang dipakai Dashboard) lewat cachedServerRead_
+KUNCI SAMA ("getDashboardFullSummary"+cabangId) - kalau Dashboard outlet ini
+sudah pernah dibuka sesi ini, laporan tampil INSTAN dari cache, TANPA
+request server tambahan. TIDAK ADA endpoint baru, TIDAK ADA hitungan baru.
+
+Tombol "Cetak / Unduh PDF" memicu window.print() ke area cetak tersembunyi
+yang di-generate saat itu juga dari data yang SUDAH ADA di memori (0 request
+server) - lihat Script_Fitur_LaporanUsaha.html. Ini kenapa fiturnya bisa
+instan sesuai permintaan user ("wajib super cepat").
+
+Pola "satu-outlet, satu-layar" SAMA dgn Dashboard/Profil Outlet/dst - pill
+outlet kanan atas, didaftarkan di OUTLET_FILTER_PILL_IDS_
+(Script_Fitur_Dashboard_OutletPicker.html).
+
+TIDAK dikunci "1 layar tanpa scroll" (sama seperti screenBEP) - kontennya
+variatif panjangnya (jumlah layanan/komponen biaya beda tiap outlet).
+
+Di-include dari Index.html lewat include('Screen_LaporanUsaha').
+===============================================================================
+-->
+    <section class="screen" id="screenLaporanUsaha">
+      <div class="laporan-screen-body">
+        <div class="dashboard-header">
+          <div class="dashboard-header-top">
+            <div class="dashboard-header-text">
+              <h1 class="dashboard-title">Laporan Usaha</h1>
+            </div>
+            <div class="dashboard-filter-right">
+              <button class="outlet-filter-pill" type="button" id="laporanOutletFilter" onclick="openOutletPicker()">
+                <span class="outlet-filter-name">-</span>
+                <span class="outlet-kategori-badge" id="laporanOutletKategori"></span>
+                <svg class="outlet-filter-arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="outlet-count-label" id="laporanOutletCountLabel"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="laporan-actions">
+          <button type="button" class="laporan-print-btn" id="laporanPrintBtn" onclick="cetakLaporanUsaha_()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M6 9V4h12v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="9" width="16" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="7" y="14" width="10" height="6" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span>Cetak / Unduh PDF</span>
+          </button>
+          <div class="laporan-print-hint">Pilih "Simpan sebagai PDF" di dialog cetak untuk mengunduh.</div>
+        </div>
+
+        <div class="panel laporan-preview-panel" id="laporanPreviewContent">
+          <div class="dashboard-card-summary is-loading">Memuat data...</div>
+        </div>
+      </div>
+    </section>

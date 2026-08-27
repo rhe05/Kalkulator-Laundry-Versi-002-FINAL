@@ -40,6 +40,8 @@ SEBELUM Script_Boot_Main.html.
     strukturHPPList: "strukturHPP", strukturHPPDetail: "strukturHPP",
     hargaLayananList: "hargaLayanan", hargaLayananDetail: "hargaLayanan",
     biayaTetapList: "biayaTetap", biayaTetapForm: "biayaTetap",
+    bep: "bep",
+    laporanUsaha: "laporan",
     adminAfiliator: "afiliator"
   };
 
@@ -51,6 +53,8 @@ SEBELUM Script_Boot_Main.html.
       case "strukturHPP": if (typeof openStrukturHPPOutletList === "function") openStrukturHPPOutletList(); break;
       case "hargaLayanan": if (typeof openHargaLayananOutletList === "function") openHargaLayananOutletList(); break;
       case "biayaTetap": if (typeof openBiayaTetapOutletList === "function") openBiayaTetapOutletList(); break;
+      case "bep": if (typeof openScreenBEP === "function") openScreenBEP(); break;
+      case "laporan": if (typeof openScreenLaporanUsaha === "function") openScreenLaporanUsaha(); break;
       case "afiliator": if (typeof openScreenAdminAfiliator === "function") openScreenAdminAfiliator(); break;
     }
   };
@@ -78,7 +82,57 @@ SEBELUM Script_Boot_Main.html.
     try {
       window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY_, collapsed ? "1" : "0");
     } catch (e) {}
+    sidebarTooltipHide_();
   };
+
+  // [2026-07-27] sidebarBrandClick_: saat sidebar ciutkan, tombol chevron
+  // disembunyikan (CSS) & logo brand INI yang jadi tombol lebarkan. Saat
+  // sidebar TIDAK ciutkan, klik logo tidak melakukan apa-apa (aman - logo
+  // tetap murni identitas brand di keadaan lebar).
+  window.sidebarBrandClick_ = function () {
+    var el = document.getElementById("appSidebar");
+    if (el && el.classList.contains("collapsed")) toggleSidebar();
+  };
+
+  // [2026-07-27] Tooltip nama menu saat sidebar ciutkan - posisi dihitung
+  // dari getBoundingClientRect elemen yang di-hover (position:fixed, lihat
+  // Style_Module_Sidebar.html), BUKAN CSS murni, supaya tidak pernah
+  // kepotong overflow-y:auto milik .app-sidebar.
+  var sidebarTooltipShowTimer_ = null;
+
+  function sidebarTooltipShow_(btn) {
+    var sidebarEl = document.getElementById("appSidebar");
+    var tipEl = document.getElementById("sidebarTooltip");
+    if (!sidebarEl || !tipEl || !sidebarEl.classList.contains("collapsed")) return;
+    var label = btn.getAttribute("data-tooltip");
+    if (!label) return;
+
+    var rect = btn.getBoundingClientRect();
+    tipEl.textContent = label;
+    tipEl.style.left = (rect.right + 14) + "px";
+    tipEl.style.top = (rect.top + rect.height / 2) + "px";
+
+    clearTimeout(sidebarTooltipShowTimer_);
+    sidebarTooltipShowTimer_ = setTimeout(function () {
+      tipEl.classList.add("is-visible");
+    }, 70);
+  }
+
+  function sidebarTooltipHide_() {
+    clearTimeout(sidebarTooltipShowTimer_);
+    var tipEl = document.getElementById("sidebarTooltip");
+    if (tipEl) tipEl.classList.remove("is-visible");
+  }
+
+  (function bindSidebarTooltips_() {
+    var items = document.querySelectorAll(".sidebar-nav-item[data-tooltip]");
+    items.forEach(function (el) {
+      el.addEventListener("mouseenter", function () { sidebarTooltipShow_(el); });
+      el.addEventListener("mouseleave", sidebarTooltipHide_);
+      el.addEventListener("focus", function () { sidebarTooltipShow_(el); });
+      el.addEventListener("blur", sidebarTooltipHide_);
+    });
+  })();
 
   // sidebarShow_/sidebarHide_: dipanggil dari authEnterApp_()/authLogout()
   // di Script_Fitur_Auth.html - sidebar cuma tampil setelah login sukses,

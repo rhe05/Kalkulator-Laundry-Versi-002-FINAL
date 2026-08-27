@@ -161,6 +161,7 @@ RIWAYAT PEMECAHAN FILE INI:
 <?!= include('Style_Module_Dashboard_HargaLayanan') ?>
 <?!= include('Style_Module_Dashboard_DesktopDensity') ?>
 <?!= include('Style_Module_BEP_Screen') ?>
+<?!= include('Style_Module_LaporanUsaha') ?>
 
 <?!= include('Style_Module_MasterBiaya') ?>
 <?!= include('Style_Module_HPP') ?>
@@ -268,6 +269,8 @@ RIWAYAT PEMECAHAN FILE INI:
                   onclick="closeAccountMenu_(); openScreenBEP();">Target BEP</button>
           <button type="button" class="account-popover-item" role="menuitem"
                   onclick="closeAccountMenu_(); openScreenBEP('potensi');">Potensi Omset</button>
+          <button type="button" class="account-popover-item" role="menuitem"
+                  onclick="closeAccountMenu_(); openScreenLaporanUsaha();">Unduh Laporan Usaha</button>
 
           <!-- Ditampilkan authApplyAdminUI_ (Script_Fitur_Auth.html) hanya utk
                email admin - kosmetik; backend tetap menolak yang bukan admin. -->
@@ -325,6 +328,8 @@ RIWAYAT PEMECAHAN FILE INI:
     <?!= include('Screen_BiayaTetapOutlet') ?>
 
     <?!= include('Screen_BEP') ?>
+
+    <?!= include('Screen_LaporanUsaha') ?>
 
     <?!= include('Screen_AdminAfiliator') ?>
 </div>
@@ -406,6 +411,7 @@ RIWAYAT PEMECAHAN FILE INI:
 <?!= include('Script_Fitur_BiayaTetapOutlet') ?>
 <?!= include('Script_Fitur_HargaLayanan') ?>
 <?!= include('Script_Fitur_BEP') ?>
+<?!= include('Script_Fitur_LaporanUsaha') ?>
 <?!= include('Script_Fitur_FirebaseAuth') ?>
 <?!= include('Script_Fitur_AuthCrypto') ?>
 <script>window.__accountInviteToken = "<?= accountInviteToken ?>";</script>
