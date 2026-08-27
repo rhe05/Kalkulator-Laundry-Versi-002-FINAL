@@ -172,6 +172,9 @@ menjalankan bootApp().
         invalidateServerReadCache_("listBiayaPacking", view.packingCabangId);
         invalidateServerReadCache_("getBiayaPacking");
         openPackingList(view.packingCabangId);
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [view.packingCabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
       }, function (err) {
         btn.disabled = false;
         btn.textContent = "Hapus";
@@ -379,6 +382,7 @@ menjalankan bootApp().
   }
 
   function updatePackingLayananFromCheckbox() {
+    if (!packingFormState) return;
     var layanan = [];
     if (document.getElementById("packingLayananKiloan").checked) layanan.push("kiloan");
     if (document.getElementById("packingLayananBedCover").checked) layanan.push("bed_cover");
@@ -387,13 +391,17 @@ menjalankan bootApp().
   }
 
   function bindPackingFormInputs() {
+    // [2026-07-27] Guard packingFormState null - lihat catatan sama di
+    // bindGasFormInputs (Script_Fitur_BiayaGas.html).
     document.getElementById("packingNama").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.nama = e.target.value;
       renderPackingFormNamaMode();
     });
     document.getElementById("packingLayananKiloan").addEventListener("change", updatePackingLayananFromCheckbox);
     document.getElementById("packingLayananBedCover").addEventListener("change", updatePackingLayananFromCheckbox);
     document.getElementById("packingHargaBeli").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       var digitsOnly = e.target.value.replace(/[^0-9]/g, "");
       var numVal = Number(digitsOnly) || 0;
       packingFormState.hargaBeli = numVal;
@@ -401,23 +409,29 @@ menjalankan bootApp().
       renderPackingFormPreview();
     });
     document.getElementById("packingIsiKemasan").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.isiKemasan = Number(e.target.value) || 0;
       renderPackingFormPreview();
     });
     document.getElementById("packingSatuanKemasan").addEventListener("change", function (e) {
+      if (!packingFormState) return;
       packingFormState.satuanKemasan = e.target.value;
     });
     document.getElementById("packingUkuranPanjang").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.ukuranPanjang = Number(e.target.value) || 0;
     });
     document.getElementById("packingUkuranLebar").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.ukuranLebar = Number(e.target.value) || 0;
     });
     document.getElementById("packingKapKgPerLembar").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.kapKgPerLembar = Number(e.target.value) || 0;
       renderPackingFormPreview();
     });
     document.getElementById("packingKapPerOrderan").addEventListener("input", function (e) {
+      if (!packingFormState) return;
       packingFormState.kapPerOrderan = Number(e.target.value) || 0;
       renderPackingFormPreview();
     });
@@ -444,6 +458,10 @@ menjalankan bootApp().
       invalidateServerReadCache_("getBiayaPacking");
       showScreen("masterBiaya");
       refreshBiayaPickCabangList();
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      var packingCabangIdForRecompute = res.data && res.data.record ? res.data.record.cabangId : view.packingCabangId;
+      fireAndForgetServer_("triggerRecomputeCabang", [packingCabangIdForRecompute, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }
 
     if (view.packingIsNew) {

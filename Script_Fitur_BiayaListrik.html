@@ -333,6 +333,9 @@ menjalankan bootApp().
         setSaveStatus("Tersimpan", "ok");
         showScreen("masterBiaya");
         refreshBiayaPickCabangList();
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [view.listrikCabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
       }, function (err) {
         if (btn) { btn.disabled = false; btn.textContent = "Simpan perubahan"; }
         handleBackendError({ error: err && err.message ? err.message : String(err), stage: "client:saveBiayaListrik" }, "menyimpan data biaya listrik");
@@ -345,7 +348,10 @@ menjalankan bootApp().
    * tombol "Simpan perubahan" diklik (saveListrikFormManual).
    */
   function bindListrikFormInputs() {
+    // [2026-07-27] Guard listrikFormState null - lihat catatan sama di
+    // bindGasFormInputs (Script_Fitur_BiayaGas.html).
     document.getElementById("listrikTdl").addEventListener("input", function (e) {
+      if (!listrikFormState) return;
       var digitsOnly = e.target.value.replace(/[^0-9]/g, "");
       var numVal = Number(digitsOnly) || 0;
       listrikFormState.tdlPerKwh = numVal;
@@ -353,18 +359,22 @@ menjalankan bootApp().
       renderListrikPreview();
     });
     document.getElementById("listrikWattCuci").addEventListener("input", function (e) {
+      if (!listrikFormState) return;
       listrikFormState.wattMesinCuci = Number(e.target.value) || 0;
       renderListrikPreview();
     });
     document.getElementById("listrikWattKering").addEventListener("input", function (e) {
+      if (!listrikFormState) return;
       listrikFormState.wattMesinPengering = Number(e.target.value) || 0;
       renderListrikPreview();
     });
     document.getElementById("listrikWattPompa").addEventListener("input", function (e) {
+      if (!listrikFormState) return;
       listrikFormState.wattPompaAir = Number(e.target.value) || 0;
       renderListrikPreview();
     });
     document.getElementById("listrikWattSetrika").addEventListener("input", function (e) {
+      if (!listrikFormState) return;
       listrikFormState.wattSetrikaListrik = Number(e.target.value) || 0;
       renderListrikPreview();
     });

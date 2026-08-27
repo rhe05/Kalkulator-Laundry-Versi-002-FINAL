@@ -165,6 +165,9 @@ menjalankan bootApp().
       }
       if (typeof onDone === "function") onDone();
       else if (typeof refreshDashboardFast === "function") refreshDashboardFast();
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      fireAndForgetServer_("triggerRecomputeCabang", [cabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }, function (err) {
       showToast(err && err.message ? err.message : "Gagal mengubah status layanan.", "err");
     });

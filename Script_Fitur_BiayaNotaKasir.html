@@ -352,6 +352,9 @@ menjalankan bootApp().
         setSaveStatus("Tersimpan", "ok");
         showScreen("masterBiaya");
         refreshBiayaPickCabangList();
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [view.notaKasirCabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
       }, function (err) {
         window.clearTimeout(saveTimeout);
         if (saveBtn) {

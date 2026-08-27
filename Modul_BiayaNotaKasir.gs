@@ -287,7 +287,9 @@ function saveBiayaNotaKasir_impl_(cabangId, payload) {
     });
     // best-effort DI LUAR lock (supaya HTTP Firestore tidak menahan kunci global)
     if (nkResult && nkResult.ok) {
-      firestoreSyncConfigDocAndRecompute_(cabangId, "notaKasir", nkResult.data.record, DASHBOARD_RECOMPUTE_HPP_GROUP_); // 1 HTTP call
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+      // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+      firestoreSyncConfigDoc_(cabangId, "notaKasir", nkResult.data.record); // 1 HTTP call
     }
     return nkResult;
   } catch (err) {

@@ -191,7 +191,10 @@ function saveBiayaListrik_impl_(cabangId, payload) {
 
     writeKey_(sheet, "biayaListrik_" + cabangId, JSON.stringify(clean));
 
-    firestoreSyncConfigDocAndRecompute_(cabangId, "listrik", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs utk
+    // penjelasan lengkap pola ini.
+    firestoreSyncConfigDoc_(cabangId, "listrik", clean); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { record: clean, summary: computeBiayaListrikSummary_(clean, cabang) } };
   } catch (err) {

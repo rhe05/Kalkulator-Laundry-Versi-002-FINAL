@@ -160,6 +160,9 @@ menjalankan bootApp().
         invalidateServerReadCache_("listBiayaGas", view.gasCabangId);
         invalidateServerReadCache_("getBiayaGas");
         openGasList(view.gasCabangId);
+
+        // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+        fireAndForgetServer_("triggerRecomputeCabang", [view.gasCabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
       }, function (err) {
         btn.disabled = false;
         btn.textContent = "Hapus";
@@ -484,16 +487,23 @@ function selectGasCustom() {
   }
 
   function bindGasFormInputs() {
+    // [2026-07-27] gasFormState cuma keisi saat layar Gas benar-benar dibuka
+    // (openGasForm/editGasForm) - listener di sini SUDAH terpasang sejak
+    // bootApp (elemen form-nya ada di DOM walau layarnya masih tersembunyi).
+    // Kalau ada "input"/"change" nyasar ke elemen ini SEBELUM layar Gas
+    // dibuka (mis. autofill browser mengisi ulang input tersembunyi dari
+    // riwayat form domain ini), gasFormState masih null -> tanpa guard ini
+    // crash ("Cannot set properties of null") & window.onerror
+    // (Script_Boot_Diagnostics.html) menghapus SELURUH tampilan app jadi
+    // GLOBAL ERROR, bukan cuma error kecil di form Gas.
     document.getElementById("gasKapasitasCustomKg").addEventListener("input", function (e) {
+      if (!gasFormState) return;
       gasFormState.kapasitasKg = Number(e.target.value) || 0;
-      if (!gasFormState.kapasitasLabel) {
-        // Label custom disusun dari angka yang diketik, supaya tetap punya
-        // identitas tampil di kartu list (mis. "22 Kg").
-      }
       renderGasFormPreview();
     });
 
     document.getElementById("gasHarga").addEventListener("input", function (e) {
+      if (!gasFormState) return;
       var digitsOnly = e.target.value.replace(/[^0-9]/g, "");
       var numVal = Number(digitsOnly) || 0;
       gasFormState.hargaPerTabung = numVal;
@@ -502,16 +512,19 @@ function selectGasCustom() {
     });
 
     document.getElementById("gasEstimasiJam").addEventListener("input", function (e) {
+      if (!gasFormState) return;
       gasFormState.estimasiPemakaianJam = Number(e.target.value) || 0;
       renderGasFormPreview();
     });
 
     document.getElementById("gasDryerRef").addEventListener("change", function (e) {
+      if (!gasFormState) return;
       gasFormState.dryerRefId = e.target.value;
       renderGasFormPreview();
     });
 
     document.getElementById("gasSetrikaRef").addEventListener("change", function (e) {
+      if (!gasFormState) return;
       gasFormState.setrikaRefId = e.target.value;
       renderGasFormPreview();
     });
@@ -565,6 +578,10 @@ function selectGasCustom() {
       invalidateServerReadCache_("getBiayaGas");
       showScreen("masterBiaya");
       refreshBiayaPickCabangList();
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      var gasCabangIdForRecompute = res.data && res.data.record ? res.data.record.cabangId : view.gasCabangId;
+      fireAndForgetServer_("triggerRecomputeCabang", [gasCabangIdForRecompute, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }
 
     if (view.gasIsNew) {

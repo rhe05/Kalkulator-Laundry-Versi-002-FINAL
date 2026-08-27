@@ -232,7 +232,9 @@ function createBiayaChemical_impl_(payload) {
 
     writeKeyAndAppendOrder_(sheet, "biayaChemical_" + clean.id, JSON.stringify(clean), KEY_BIAYA_CHEMICAL_ORDER, clean.id);
 
-    firestoreSyncSubItemAndRecompute_(clean.cabangId, "chemical", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncSubItem_(clean.cabangId, "chemical", clean); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { record: clean, summary: computeBiayaChemicalSummary_(clean, cabang) } };
   } catch (err) {
@@ -283,7 +285,9 @@ function updateBiayaChemical_impl_(id, payload) {
     }
 
     writeKey_(sheet, "biayaChemical_" + id, JSON.stringify(clean));
-    firestoreSyncSubItemAndRecompute_(clean.cabangId, "chemical", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncSubItem_(clean.cabangId, "chemical", clean); // best-effort, 1 HTTP call (non-fatal)
     return { ok: true, data: { record: clean, summary: computeBiayaChemicalSummary_(clean, cabang) } };
   } catch (err) {
     return errorResponse_(err, "updateBiayaChemical");
@@ -310,9 +314,11 @@ function deleteBiayaChemical_impl_(id) {
     deleteKeyRow_(sheet, "biayaChemical_" + id);
     removeFromOrder_(sheet, KEY_BIAYA_CHEMICAL_ORDER, id);
     if (cabangIdRec) {
-      firestoreDeleteSubDocAndRecompute_(cabangIdRec, "chemical", id, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+      // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+      firestoreDeleteSubDoc_(cabangIdRec, "chemical", id); // best-effort, 1 HTTP call (non-fatal)
     }
-    return { ok: true, data: { id: id } };
+    return { ok: true, data: { id: id, cabangId: cabangIdRec } };
   } catch (err) {
     return errorResponse_(err, "deleteBiayaChemical");
   }

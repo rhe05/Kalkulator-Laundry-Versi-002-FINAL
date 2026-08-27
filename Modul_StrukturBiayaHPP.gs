@@ -1144,7 +1144,9 @@ function setBedCoverAktif_impl_(cabangId, aktif) {
       updatedAt: new Date().toISOString(),
     }));
 
-    firestoreSyncHppTogglesAndRecompute_(cleanId, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncHppToggles_(cleanId); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { cabangId: cleanId, aktif: !!aktif } };
   } catch (err) {
@@ -1223,7 +1225,9 @@ function setHPPLayananAktif_impl_(cabangId, serviceKey, aktif) {
       updatedAt: new Date().toISOString(),
     }));
 
-    firestoreSyncHppTogglesAndRecompute_(cleanId, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncHppToggles_(cleanId); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { cabangId: cleanId, serviceKey: serviceKey, aktif: !!aktif } };
   } catch (err) {
@@ -1680,9 +1684,10 @@ function saveCustomLayananHPP_impl_(cabangId, payload) {
     }
 
     if (typeof _strukturBiayaHPPCache_ !== "undefined") delete _strukturBiayaHPPCache_[cleanCabangId];
-    try { recomputeCabangSummary_(cleanCabangId, DASHBOARD_RECOMPUTE_HPP_GROUP_); } catch (e) {}
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
 
-    return { ok: true, data: { key: key, title: title, unitLabel: unitLabel, componentKeys: componentKeys } };
+    return { ok: true, data: { key: key, title: title, unitLabel: unitLabel, componentKeys: componentKeys, cabangId: cleanCabangId } };
   } catch (err) {
     return strukturHPPErrorResponse_(err, "saveCustomLayananHPP");
   }
@@ -1708,9 +1713,10 @@ function deleteCustomLayananHPP_impl_(cabangId, key) {
     firestoreDeleteDoc_(firestoreCabangDocPath_(tenantId, cleanCabangId) + "/customLayanan/" + cleanKey);
 
     if (typeof _strukturBiayaHPPCache_ !== "undefined") delete _strukturBiayaHPPCache_[cleanCabangId];
-    try { recomputeCabangSummary_(cleanCabangId, DASHBOARD_RECOMPUTE_HPP_GROUP_); } catch (e) {}
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
 
-    return { ok: true, data: { key: cleanKey } };
+    return { ok: true, data: { key: cleanKey, cabangId: cleanCabangId } };
   } catch (err) {
     return strukturHPPErrorResponse_(err, "deleteCustomLayananHPP");
   }
@@ -1740,9 +1746,10 @@ function setCustomLayananHPPAktif_impl_(cabangId, key, aktif) {
     );
 
     if (typeof _strukturBiayaHPPCache_ !== "undefined") delete _strukturBiayaHPPCache_[cleanCabangId];
-    try { recomputeCabangSummary_(cleanCabangId, DASHBOARD_RECOMPUTE_HPP_GROUP_); } catch (e) {}
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
 
-    return { ok: true, data: { key: cleanKey, aktif: !!aktif } };
+    return { ok: true, data: { key: cleanKey, aktif: !!aktif, cabangId: cleanCabangId } };
   } catch (err) {
     return strukturHPPErrorResponse_(err, "setCustomLayananHPPAktif");
   }

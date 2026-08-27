@@ -269,6 +269,9 @@ menjalankan bootApp().
         return;
       }
       refreshCustomLayananView_(cabangId);
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      fireAndForgetServer_("triggerRecomputeCabang", [cabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }, function (err) {
       showToast(err && err.message ? err.message : "Gagal mengubah status layanan.", "err");
     });
@@ -300,6 +303,9 @@ menjalankan bootApp().
       }
       showToast("Layanan custom dihapus.", "ok");
       refreshCustomLayananView_(cabangId);
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      fireAndForgetServer_("triggerRecomputeCabang", [cabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }, function (err) {
       btn.disabled = false;
       btn.textContent = "Hapus";
@@ -386,6 +392,9 @@ menjalankan bootApp().
       closeCustomLayananModal();
       showToast("Layanan custom \"" + title + "\" tersimpan.", "ok");
       refreshCustomLayananView_(cabangId);
+
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] lihat Script_Fitur_BiayaAir.html
+      fireAndForgetServer_("triggerRecomputeCabang", [cabangId, ["hpp", "masterBiaya", "hargaLayanan", "bep", "potensiOmset"]]);
     }, function (err) {
       btn.disabled = false;
       btn.textContent = "Simpan";

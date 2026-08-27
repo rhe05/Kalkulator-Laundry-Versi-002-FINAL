@@ -260,7 +260,9 @@ function createBiayaPacking_impl_(payload) {
 
     writeKeyAndAppendOrder_(sheet, "biayaPacking_" + clean.id, JSON.stringify(clean), KEY_BIAYA_PACKING_ORDER, clean.id);
 
-    firestoreSyncSubItemAndRecompute_(clean.cabangId, "packing", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncSubItem_(clean.cabangId, "packing", clean); // best-effort, 1 HTTP call (non-fatal)
 
     return { ok: true, data: { record: clean, summary: computeBiayaPackingSummary_(clean) } };
   } catch (err) {
@@ -305,7 +307,9 @@ function updateBiayaPacking_impl_(id, payload) {
     }
 
     writeKey_(sheet, "biayaPacking_" + id, JSON.stringify(clean));
-    firestoreSyncSubItemAndRecompute_(clean.cabangId, "packing", clean, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+    // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+    // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+    firestoreSyncSubItem_(clean.cabangId, "packing", clean); // best-effort, 1 HTTP call (non-fatal)
     return { ok: true, data: { record: clean, summary: computeBiayaPackingSummary_(clean) } };
   } catch (err) {
     return errorResponse_(err, "updateBiayaPacking");
@@ -332,9 +336,11 @@ function deleteBiayaPacking_impl_(id) {
     deleteKeyRow_(sheet, "biayaPacking_" + id);
     removeFromOrder_(sheet, KEY_BIAYA_PACKING_ORDER, id);
     if (cabangIdRec) {
-      firestoreDeleteSubDocAndRecompute_(cabangIdRec, "packing", id, DASHBOARD_RECOMPUTE_HPP_GROUP_); // best-effort, 1 HTTP call (non-fatal)
+      // [2026-08-27 - PERFORMA SIMPAN, P0-1] Recompute dipindah ke client via
+      // triggerRecomputeCabang (fire-and-forget) - lihat Modul_BiayaAir.gs.
+      firestoreDeleteSubDoc_(cabangIdRec, "packing", id); // best-effort, 1 HTTP call (non-fatal)
     }
-    return { ok: true, data: { id: id } };
+    return { ok: true, data: { id: id, cabangId: cabangIdRec } };
   } catch (err) {
     return errorResponse_(err, "deleteBiayaPacking");
   }
