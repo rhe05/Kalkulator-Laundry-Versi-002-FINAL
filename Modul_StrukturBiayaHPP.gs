@@ -141,7 +141,7 @@ function getStrukturBiayaHPP_(cabangId) {
       });
       layanan = buildKiloanHPPStructure_(normalized, serviceAktifMap);
       konsepUsaha = kategori === "hybrid" ? "Hybrid" : "Drop Off / Kiloan";
-      note = "Semua HPP dihitung per load: biaya mesin (air/listrik/gas/nota) dari master biaya sudah per load, Chemical & Packing (per Kg) dikonversi ke per load memakai kapasitas kg mesin cuci, Setrika (per jam) dikonversi lewat kap kg per jam lalu ke per load.";
+      note = "Semua HPP dihitung per load: biaya mesin (air/listrik/gas/nota) dari master biaya sudah per load, Chemical & Packing (per Kg) dikonversi ke per load memakai kapasitas kg mesin cuci, Setrika Uap (Air/Gas) dihitung per jam operasi mesin setrika (1 load = 1 jam), Setrika Listrik dikonversi lewat kap kg per jam lalu ke per load.";
       serviceToggles = STRUKTUR_HPP_KILOAN_TOGGLE_TITLES_.map(function (item) {
         return { key: item.key, title: item.title, aktif: serviceAktifMap[item.key] };
       });
@@ -827,16 +827,25 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
 
   // Rincian biaya Setrika per sumber energi (Air/Gas/Listrik), bukan satu
   // baris "Setrika" gabungan - supaya biaya setrika uap (Air/Gas) ikut
-  // kehitung, tidak cuma setrika listrik seperti sebelumnya. Ketiganya
-  // dikonversi lewat kapasitas kg/jam mesin setrika (semua jenis), lalu ke
-  // per load memakai kapasitas kg mesin cuci per load.
-  const setrikaKapasitasKgPerJam = normalized.kiloan.setrikaKapasitasKgPerJam;
-  const toPerKgSetrika = function (rpPerJam) {
-    return setrikaKapasitasKgPerJam > 0 ? strukturHPPRound2_(rpPerJam / setrikaKapasitasKgPerJam) : 0;
-  };
+  // kehitung, tidak cuma setrika listrik seperti sebelumnya.
+  //
+  // [2026-08-29 - KEPUTUSAN USER] SETRIKA UAP (Air Setrika & Gas Setrika)
+  // basisnya PER JAM, dan untuk mesin setrika uap "1 load = 1 jam operasi".
+  // Jadi rpPerJam dipakai APA ADANYA - TIDAK dibagi kapasitas kg/jam mesin
+  // setrika lalu dikali kapasitas kg mesin cuci seperti versi sebelumnya.
+  // Konvensi ini SAMA PERSIS dengan kategori Jasa Setrika
+  // (buildJasaSetrikaHPPStructure_), jadi satu outlet tidak lagi punya dua
+  // arti "per load" yang berbeda untuk mesin setrika yang sama.
+  // Contoh K2 Laundry: LPG 12kg Rp250.000 / 32 jam = Rp7.813/jam -> baris
+  // "Gas Setrika per Load" menampilkan Rp7.813 (versi lama Rp10.938 karena
+  // sempat dikali 7 kg kapasitas mesin cuci).
+  // Setrika LISTRIK TIDAK ikut berubah - tetap lewat kapasitas kg/jam lalu
+  // ke per load mesin cuci (getStrukturHPPSetrikaPerKg_), karena keputusan
+  // ini khusus untuk setrika uap.
   const setrikaNote = normalized.kiloan.adaMesinSetrika ? "" : "Belum ada mesin setrika di Profil Outlet.";
-  const airSetrikaPerLoad = toPerLoad(toPerKgSetrika(normalized.kiloan.airSetrikaRpPerJam));
-  const gasSetrikaPerLoad = toPerLoad(toPerKgSetrika(normalized.kiloan.gasSetrikaRpPerJam));
+  const setrikaUapNote = normalized.kiloan.adaMesinSetrika ? "Setrika uap dihitung per jam operasi mesin (1 load = 1 jam)." : setrikaNote;
+  const airSetrikaPerLoad = strukturHPPRound2_(strukturHPPNumber_(normalized.kiloan.airSetrikaRpPerJam, 0));
+  const gasSetrikaPerLoad = strukturHPPRound2_(strukturHPPNumber_(normalized.kiloan.gasSetrikaRpPerJam, 0));
   const listrikSetrikaPerLoad = toPerLoad(getStrukturHPPSetrikaPerKg_(normalized));
   // Saling eksklusif sesuai jenis mesin setrika di Profil Outlet: kalau ada
   // mesin setrika LISTRIK, tampilkan "Listrik Setrika" saja (Air Setrika &
@@ -848,7 +857,7 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
   // layanan di bawah).
   const airSetrikaComponents_ = function () {
     return normalized.kiloan.adaMesinSetrikaListrik ? [] : [
-      { key: "air_setrika", label: "Air Setrika per Load", amount: airSetrikaPerLoad, note: setrikaNote },
+      { key: "air_setrika", label: "Air Setrika per Load", amount: airSetrikaPerLoad, note: setrikaUapNote },
     ];
   };
   const listrikSetrikaComponents_ = function () {
@@ -858,7 +867,7 @@ function buildKiloanHPPStructure_(normalized, serviceAktifMap) {
   };
   const gasSetrikaComponents_ = function () {
     return normalized.kiloan.adaMesinSetrikaListrik ? [] : [
-      { key: "gas_setrika", label: "Gas Setrika per Load", amount: gasSetrikaPerLoad, note: "" },
+      { key: "gas_setrika", label: "Gas Setrika per Load", amount: gasSetrikaPerLoad, note: setrikaUapNote },
     ];
   };
 
@@ -1552,15 +1561,15 @@ function strukturHPPComponentPool_(normalized, kategori) {
   push("parfum", "Parfum per Load", toPerLoad(normalized.kiloan.parfumPerKg));
 
   const setrikaNote = normalized.kiloan.adaMesinSetrika ? "" : "Belum ada mesin setrika di Profil Outlet.";
-  const setrikaKapasitasKgPerJam = normalized.kiloan.setrikaKapasitasKgPerJam;
-  const toPerKgSetrika = function (rpPerJam) {
-    return setrikaKapasitasKgPerJam > 0 ? strukturHPPRound2_(rpPerJam / setrikaKapasitasKgPerJam) : 0;
-  };
+  // [2026-08-29] Setrika uap = per jam operasi (1 load = 1 jam). Nilai di pool
+  // ini WAJIB identik dengan buildKiloanHPPStructure_ (layanan custom harus
+  // berperilaku sama dengan layanan bawaan) - lihat catatan panjang di sana.
+  const setrikaUapNote = normalized.kiloan.adaMesinSetrika ? "Setrika uap dihitung per jam operasi mesin (1 load = 1 jam)." : setrikaNote;
   if (normalized.kiloan.adaMesinSetrikaListrik) {
     push("listrik_setrika", "Listrik Setrika per Load", toPerLoad(getStrukturHPPSetrikaPerKg_(normalized)), setrikaNote);
   } else {
-    push("air_setrika", "Air Setrika per Load", toPerLoad(toPerKgSetrika(normalized.kiloan.airSetrikaRpPerJam)), setrikaNote);
-    push("gas_setrika", "Gas Setrika per Load", toPerLoad(toPerKgSetrika(normalized.kiloan.gasSetrikaRpPerJam)));
+    push("air_setrika", "Air Setrika per Load", normalized.kiloan.airSetrikaRpPerJam, setrikaUapNote);
+    push("gas_setrika", "Gas Setrika per Load", normalized.kiloan.gasSetrikaRpPerJam, setrikaUapNote);
   }
 
   const packingItemsKiloan = Array.isArray(normalized.kiloan.packingItemsKiloan) ? normalized.kiloan.packingItemsKiloan : [];
