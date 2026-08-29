@@ -64,6 +64,55 @@ Jika tampilan input harga jual, margin, status margin, atau ringkasan Harga Laya
 .hl-note b { color: var(--brass); font-weight: 700; }
 @media (max-width: 520px) { .hl-metric-grid { grid-template-columns: 1fr; } }
 
+/* ====================================================================
+   [2026-08-29] BARIS 4 INFO - HPP / Harga Jual / Min Order / Harga Total
+   ====================================================================
+   Dipakai HANYA oleh kartu layanan berbasis per Kg (kelas ditambahkan dari
+   renderHargaLayananServiceCard). Aturan .hl-metric-grid polos di atas TIDAK
+   diubah, supaya kartu non per-Kg (Self Service & Bed Cover) tetap 2 kolom
+   persis seperti sebelumnya.
+
+   Empat kolom pada layar selebar ~360px menyisakan ~75px per sel, jadi
+   ukuran huruf memakai clamp() terhadap lebar layar - bukan satu nilai
+   tetap - supaya "Rp 28.000" tetap utuh satu baris di HP kecil tanpa
+   terlihat kekecilan di HP besar/tablet. tabular-nums menjaga digit tetap
+   selebar sama sehingga kolom tidak "bergoyang" saat angka berubah. */
+.hl-metric-grid-4 { grid-template-columns: repeat(4, 1fr); gap: 6px; align-items: stretch; }
+.hl-metric-grid-4 .hl-metric,
+.hl-metric-grid-4 .field { display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+.hl-metric-grid-4 .hl-metric { padding: 9px 8px; }
+.hl-metric-grid-4 .hl-metric .label,
+.hl-metric-grid-4 .field label { font-size: clamp(8.5px, 2.5vw, 10px); letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.hl-metric-grid-4 .hl-metric .value {
+  font-size: clamp(11px, 3.3vw, 14px);
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hl-metric-grid-4 .field input {
+  font-size: clamp(11px, 3.3vw, 14px);
+  padding: 7px 8px;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+}
+/* Harga Total = hasil akhir yang paling dicari mata, diberi aksen sage
+   seperti kartu Margin (.hl-metric.highlight) supaya jelas ini nilai
+   turunan, bukan kolom isian. */
+.hl-metric-grid-4 .hl-metric-total { border-color: var(--sage-dim); background: rgba(111,160,140,0.07); }
+.hl-metric-grid-4 .hl-metric-total .value { color: var(--sage); }
+.hl-minorder-hint { margin-top: 10px; }
+
+/* HP kecil: aturan 1 kolom di atas TIDAK boleh ikut meruntuhkan baris ini -
+   permintaannya justru 4 info tetap sebaris. Jarak & huruf dirapatkan. */
+@media (max-width: 520px) {
+  .hl-metric-grid-4 { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .hl-metric-grid-4 .hl-metric { padding: 8px 6px; }
+  .hl-metric-grid-4 .field input { padding: 6px 6px; }
+}
+
 /* Rincian per layanan di kartu ringkasan outlet (screenHargaLayananList) -
    default (HP, TIDAK diubah): sel dipisah tanda titik " · " via ::before,
    hasilnya identik dgn teks gabungan "Rp X · Margin Rp Y · % Margin Z%"

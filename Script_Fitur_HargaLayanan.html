@@ -324,6 +324,13 @@ menjalankan bootApp().
     var isKgBased = item.hppPerLoad !== undefined || item.hppPerJam !== undefined;
     var hppPerSiklus = item.hppPerLoad !== undefined ? item.hppPerLoad : (item.hppPerJam !== undefined ? item.hppPerJam : item.hpp);
     var minimumOrderKg = Number(item.minimumOrderKg || 0);
+    // [2026-08-29] Harga Total = Harga Jual x Minimum Order. Sengaja "-"
+    // (bukan Rp0) selama Min Order belum diisi: Rp0 terbaca seperti hasil
+    // hitungan yang sah, padahal angkanya memang belum bisa dihitung.
+    var hargaJualAwal = Number(item.hargaJual || 0);
+    var hargaTotalAwal = (hargaJualAwal > 0 && minimumOrderKg > 0)
+      ? formatRupiahTanpaDesimal(hargaJualAwal * minimumOrderKg)
+      : "&mdash;";
 
     return (
       '<div class="hl-service-card" data-harga-layanan-card="' + escapeHtml(key) + '" data-hpp="' + Number(item.hpp || 0) + '" data-hpp-siklus="' + Number(hppPerSiklus || 0) + '"' +
@@ -337,7 +344,12 @@ menjalankan bootApp().
           '<div class="hl-status-pill ' + escapeHtml(status) + '">' + escapeHtml(statusLabel) + '</div>' +
         '</div>' +
 
-        '<div class="hl-metric-grid">' +
+        // [2026-08-29] Layanan per Kg: satu baris berisi 4 info sekaligus
+        // (HPP / Harga Jual / Min Order / Harga Total) - kelas tambahan
+        // hl-metric-grid-4 yang mengatur 4 kolom + ukuran huruf yang
+        // menyesuaikan. Layanan non per-Kg (Self Service & Bed Cover) tidak
+        // punya Min Order, jadi tetap 2 kolom seperti sebelumnya.
+        '<div class="hl-metric-grid' + (isKgBased ? ' hl-metric-grid-4' : '') + '">' +
           '<div class="hl-metric">' +
             '<div class="label">HPP Layanan</div>' +
             '<div class="value">' + formatRupiahTanpaDesimal(item.hpp || 0) + '</div>' +
@@ -346,17 +358,23 @@ menjalankan bootApp().
             '<label>Harga Jual</label>' +
             '<input type="text" inputmode="numeric" pattern="[0-9]*" data-harga-layanan-key="' + escapeHtml(key) + '" value="' + (Number(item.hargaJual || 0) > 0 ? Number(item.hargaJual || 0).toLocaleString("id-ID") : "") + '" oninput="onHargaLayananInput(event)">' +
           '</div>' +
+          (isKgBased ?
+            '<div class="field" style="margin-bottom:0;">' +
+              '<label>Min Order (Kg)</label>' +
+              '<input type="number" inputmode="decimal" min="0" step="0.1" data-harga-layanan-minorder-key="' + escapeHtml(key) + '" value="' + (minimumOrderKg > 0 ? minimumOrderKg : "") + '" placeholder="3" oninput="onHargaLayananInput(event)">' +
+            '</div>' +
+            '<div class="hl-metric hl-metric-total">' +
+              '<div class="label">Harga Total</div>' +
+              '<div class="value hl-harga-total-value">' + hargaTotalAwal + '</div>' +
+            '</div>'
+          : '') +
         '</div>' +
 
         '<div class="hl-harga-reco" data-hl-harga-reco="' + escapeHtml(key) + '"></div>' +
 
         (isKgBased ?
-          '<div class="field" style="margin-bottom:12px;">' +
-            '<label>Minimum Order (Kg)</label>' +
-            '<input type="number" inputmode="decimal" min="0" step="0.1" data-harga-layanan-minorder-key="' + escapeHtml(key) + '" value="' + (minimumOrderKg > 0 ? minimumOrderKg : "") + '" placeholder="Contoh: 3" oninput="onHargaLayananInput(event)">' +
-            '<div class="field-hint">Margin di bawah dihitung dari Harga Jual &times; Minimum Order, dikurangi HPP per siklus mesin.</div>' +
-            '<div class="hl-minorder-reco" data-hl-minorder-reco="' + escapeHtml(key) + '"></div>' +
-          '</div>'
+          '<div class="field-hint hl-minorder-hint">Harga Total = Harga Jual &times; Minimum Order. Margin dihitung dari Harga Total dikurangi HPP per siklus mesin.</div>' +
+          '<div class="hl-minorder-reco" data-hl-minorder-reco="' + escapeHtml(key) + '"></div>'
         : '') +
 
         '<div class="hl-metric-grid">' +
@@ -451,6 +469,18 @@ menjalankan bootApp().
 
       if (marginEl) marginEl.textContent = formatRupiahTanpaDesimal(margin);
       if (percentEl) percentEl.textContent = formatNum(marginPercent) + "%";
+
+      // [2026-08-29] Harga Total = Harga Jual x Min Order. Nilainya persis
+      // `omzet` yang sudah dihitung di atas untuk kartu per-Kg, tapi sengaja
+      // dihitung ulang eksplisit di sini: pada cabang else, `omzet` berisi
+      // harga jual saja (bukan hasil perkalian), sehingga memakainya akan
+      // menampilkan angka yang keliru saat Min Order kosong.
+      var totalEl = card.querySelector(".hl-harga-total-value");
+      if (totalEl) {
+        totalEl.textContent = (minimumOrderKg > 0 && hargaJual > 0)
+          ? formatRupiahTanpaDesimal(hargaJual * minimumOrderKg)
+          : "â€”";
+      }
       if (statusEl) {
         statusEl.className = "hl-status-pill " + statusInfo.status;
         statusEl.textContent = statusInfo.label;
