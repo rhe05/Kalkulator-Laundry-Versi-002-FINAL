@@ -368,6 +368,10 @@ function buildHargaLayananHPPMap_(hppResult) {
       title: item.title || "",
       total: round2_(total),
       unitLabel: item.unitLabel || "per load",
+      // [2026-08-29] Rincian komponen ikut dibawa - dibutuhkan
+      // hargaLayananHppPerKg_ untuk membagi TIAP komponen dengan kapasitas
+      // mesinnya masing-masing (bukan membagi totalnya dengan satu angka).
+      components: Array.isArray(item.components) ? item.components : [],
     };
   });
 
@@ -435,10 +439,61 @@ function getHargaLayananDefinitions_(kategori, aktifMap, customLayananDefs) {
   return defs.concat(customDefs);
 }
 
+/**
+ * [2026-08-29] Pembagi per KOMPONEN untuk konversi HPP per Load -> per Kg.
+ * Tiap komponen dibagi kapasitas MESIN YANG MENGERJAKANNYA, bukan semuanya
+ * dibagi kapasitas mesin cuci:
+ *   - Setrika (Air/Gas/Listrik) : kapasitas kg per JAM mesin setrika
+ *   - Dryer (Listrik/Gas)       : kapasitas kg mesin pengering
+ *   - Sisanya                   : kapasitas kg mesin cuci
+ * Komponen Chemical & Packing masuk kelompok "sisanya" karena nilai per
+ * load-nya memang dibentuk dari biayaPerKg x kapasitas mesin cuci di
+ * buildKiloanHPPStructure_ - membaginya kembali dengan angka lain (mis. kap
+ * per lembar plastik) akan menghitung pembagi yang sama DUA KALI, karena
+ * pembagian per lembar itu sudah terjadi di Modul_BiayaPacking.gs
+ * (biayaPerKg = biayaPerLoad / kapKgPerLembar).
+ * Kalau kapasitas mesin yang seharusnya dipakai belum diisi di Profil
+ * Outlet (0), jatuh ke kapasitas mesin cuci supaya tidak membagi nol.
+ */
+const HARGA_LAYANAN_PEMBAGI_SETRIKA_KEYS_ = ["air_setrika", "gas_setrika", "listrik_setrika", "setrika_air", "setrika_gas", "setrika_listrik"];
+const HARGA_LAYANAN_PEMBAGI_PENGERING_KEYS_ = ["listrik_dryer", "gas_dryer"];
+
+function hargaLayananKomponenPembagi_(key, kapCuci, kapPengering, kapSetrikaPerJam) {
+  const k = String(key || "");
+  if (HARGA_LAYANAN_PEMBAGI_SETRIKA_KEYS_.indexOf(k) !== -1) {
+    return kapSetrikaPerJam > 0 ? kapSetrikaPerJam : kapCuci;
+  }
+  if (HARGA_LAYANAN_PEMBAGI_PENGERING_KEYS_.indexOf(k) !== -1) {
+    return kapPengering > 0 ? kapPengering : kapCuci;
+  }
+  return kapCuci;
+}
+
+/**
+ * Total HPP per Kg = jumlah (komponen per load / pembagi komponen itu).
+ * Tiap komponen dibulatkan ke Rupiah bulat DULU baru dijumlahkan - sama
+ * seperti calculateHPPService_ di Modul_StrukturBiayaHPP.gs, supaya total
+ * selalu pas dengan penjumlahan manual angka yang terlihat di layar.
+ * Kembalikan null kalau rincian komponen tidak tersedia (mis. snapshot
+ * computed.hpp versi lama) - pemanggil lalu memakai cara lama.
+ */
+function hargaLayananHppPerKg_(components, kapCuci, kapPengering, kapSetrikaPerJam) {
+  if (!Array.isArray(components) || components.length === 0) return null;
+  let total = 0;
+  for (let i = 0; i < components.length; i++) {
+    const komponen = components[i] || {};
+    const pembagi = hargaLayananKomponenPembagi_(komponen.key, kapCuci, kapPengering, kapSetrikaPerJam);
+    if (!(pembagi > 0)) return null;
+    total += Math.round(toNumber_(komponen.amount, 0) / pembagi);
+  }
+  return round2_(total);
+}
+
 function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, konversi, storedMinimumOrderKg, recoContext, customLayananDefs) {
   const defs = getHargaLayananDefinitions_(kategori, aktifMap, customLayananDefs);
   const items = [];
   const kapasitasKgPerLoad = toNumber_(konversi && konversi.kapasitasKgPerLoad, 0);
+  const kapasitasKgPerLoadPengering = toNumber_(konversi && konversi.kapasitasKgPerLoadPengering, 0);
   const setrikaKapasitasKgPerJam = toNumber_(konversi && konversi.setrikaKapasitasKgPerJam, 0);
   const minimumOrderKgMap = storedMinimumOrderKg && typeof storedMinimumOrderKg === "object" ? storedMinimumOrderKg : {};
 
@@ -472,7 +527,19 @@ function buildHargaLayananItems_(kategori, hppMap, storedHargaJual, aktifMap, ko
       const hppPerLoad = hpp;
       const hargaJualPerKg = hargaJual;
       const hargaJualPerLoad = round2_(hargaJualPerKg * kapasitasKgPerLoad);
-      const hppPerKg = kapasitasKgPerLoad > 0 ? round2_(hppPerLoad / kapasitasKgPerLoad) : 0;
+      // [2026-08-29] Per Kg dihitung PER KOMPONEN (lihat hargaLayananHppPerKg_).
+      // Cara lama membagi TOTAL per load dgn kapasitas mesin cuci saja - itu
+      // memberi angka keliru untuk komponen Dryer (kapasitas mesin pengering
+      // bisa beda) dan Setrika (basisnya kg per JAM mesin setrika).
+      const hppPerKgKomponen = hargaLayananHppPerKg_(
+        hppItem ? hppItem.components : null,
+        kapasitasKgPerLoad,
+        kapasitasKgPerLoadPengering,
+        setrikaKapasitasKgPerJam
+      );
+      const hppPerKg = (hppPerKgKomponen !== null)
+        ? hppPerKgKomponen
+        : (kapasitasKgPerLoad > 0 ? round2_(hppPerLoad / kapasitasKgPerLoad) : 0);
       const marginPerLoad = round2_(hargaJualPerLoad - hppPerLoad);
       const marginPercentPerLoad = hargaJualPerLoad > 0 ? round2_((marginPerLoad / hargaJualPerLoad) * 100) : 0;
       const marginPerKg = round2_(hargaJualPerKg - hppPerKg);

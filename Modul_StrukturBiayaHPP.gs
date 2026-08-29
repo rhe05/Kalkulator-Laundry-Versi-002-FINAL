@@ -109,8 +109,10 @@ let _strukturBiayaHPPCache_ = {};
 // lambat sekali (jalur Sheets, ~8 detik), berikutnya cepat lagi seperti biasa.
 //
 // Riwayat: 1 = sebelum 2026-08-29. 2 = setrika uap (Air/Gas) pakai basis per
-// jam, tidak lagi dikali kapasitas kg mesin cuci.
-const HPP_FORMULA_VERSION_ = 2;
+// jam, tidak lagi dikali kapasitas kg mesin cuci. 3 = konversi HPP per Kg di
+// Harga Layanan dihitung PER KOMPONEN (pembagi beda-beda per mesin), plus
+// field baru konversi.kapasitasKgPerLoadPengering.
+const HPP_FORMULA_VERSION_ = 3;
 
 // [2026-07-21 FIRESTORE] Layar HPP sekarang baca dari cache Firestore
 // (getStrukturBiayaHPPFast_, ~450ms) dengan fallback otomatis ke hitung Sheets
@@ -221,6 +223,7 @@ function getStrukturBiayaHPP_(cabangId) {
         // konversi HPP per Load/Jam <-> per Kg tanpa duplikasi rumus.
         konversi: {
           kapasitasKgPerLoad: normalized.kiloan.kapasitasKgPerLoad,
+          kapasitasKgPerLoadPengering: normalized.kiloan.kapasitasKgPerLoadPengering,
           setrikaKapasitasKgPerJam: normalized.kiloan.setrikaKapasitasKgPerJam,
         },
         warnings: validation.warnings,
@@ -472,6 +475,11 @@ function normalizeStrukturHPPInput_(sources) {
   // buildSelfServiceHPPStructure_).
   // ==========================================================================
   const kapasitasKgPerLoad = getWeightedMachineCost_(cabang.mesinCuci, "kapasitasKg");
+  // [2026-08-29] Kapasitas mesin PENGERING - dipakai Harga Layanan untuk
+  // membagi komponen Listrik Dryer & Gas Dryer ke basis per Kg. Mesin
+  // pengering sering beda kapasitas dari mesin cuci, jadi memakai kapasitas
+  // mesin cuci untuk komponen dryer memberi angka per Kg yang keliru.
+  const kapasitasKgPerLoadPengering = getWeightedMachineCost_(cabang.mesinPengering, "kapasitasKg");
 
   const chemicalItems = sources.chemical && Array.isArray(sources.chemical.items) ? sources.chemical.items : [];
   const packingItems = sources.packing && Array.isArray(sources.packing.items) ? sources.packing.items : [];
@@ -516,6 +524,7 @@ function normalizeStrukturHPPInput_(sources) {
     },
     kiloan: {
       kapasitasKgPerLoad: strukturHPPRound2_(kapasitasKgPerLoad),
+      kapasitasKgPerLoadPengering: strukturHPPRound2_(kapasitasKgPerLoadPengering),
       deterjenPerKg: strukturHPPRound2_(findStrukturHPPChemicalBiayaPerKg_(chemicalItems, "Deterjen")),
       softenerPerKg: strukturHPPRound2_(findStrukturHPPChemicalBiayaPerKg_(chemicalItems, "Softener")),
       parfumPerKg: strukturHPPRound2_(findStrukturHPPChemicalBiayaPerKg_(chemicalItems, "Parfum")),
