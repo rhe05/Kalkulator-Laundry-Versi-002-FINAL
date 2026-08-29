@@ -34,7 +34,20 @@ sebelumnya).
     justify-content: space-between;
     gap: 8px;
   }
-  .sidebar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    border: none;
+    background: none;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+  }
   .sidebar-brand svg {
     width: 26px;
     height: 26px;
@@ -44,7 +57,13 @@ sebelumnya).
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
+    transition: stroke 0.15s ease;
   }
+  /* Saat ciutkan, chevron disembunyikan & brand INI yang jadi tombol
+     lebarkan (lihat sidebarBrandClick_, Script_Fitur_Sidebar.html). */
+  .app-sidebar.collapsed .sidebar-brand { cursor: pointer; }
+  .app-sidebar.collapsed .sidebar-brand:hover svg { stroke: var(--sage); }
+  .app-sidebar.collapsed .sidebar-toggle-btn { display: none; }
   .sidebar-brand-text {
     font-family: var(--font-display);
     font-weight: 700;
@@ -89,7 +108,8 @@ sebelumnya).
   }
   .sidebar-nav-item:hover { background: var(--panel-2); color: var(--text); }
   .sidebar-nav-item.active { background: var(--sage-dim); color: var(--sage); font-weight: 700; }
-  .sidebar-nav-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+  .sidebar-nav-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .sidebar-nav-icon svg { width: 18px; height: 18px; }
   .sidebar-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .sidebar-bottom { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
@@ -100,7 +120,49 @@ sebelumnya).
   .app-sidebar.collapsed .sidebar-brand-text,
   .app-sidebar.collapsed .sidebar-nav-label { display: none; }
   .app-sidebar.collapsed .sidebar-nav-item { justify-content: center; }
-  .app-sidebar.collapsed .sidebar-toggle-btn svg { transform: rotate(180deg); }
+  /* [2026-07-27] Logo brand HARUS ikut aturan "full width + center" yang
+     sama persis dengan .sidebar-nav-item saat ciutkan - kalau tidak, logo
+     (padding:0, lebar mengikuti konten) nempel ~10px lebih kiri dari icon
+     menu di bawahnya (yang lebar penuh & di-tengahkan lewat padding
+     10px+justify-content:center). Menyamakan cara centering, BUKAN cuma
+     nebak angka margin, supaya presisi walau ukuran icon beda (26px vs 18px). */
+  .app-sidebar.collapsed .sidebar-brand { width: 100%; justify-content: center; }
+
+  /* [2026-07-27] Tooltip nama menu saat ciutkan - SATU elemen dipakai ulang
+     (#sidebarTooltip, Screen_Sidebar.html), posisi dihitung JS per-hover
+     (sidebarTooltipShow_, Script_Fitur_Sidebar.html). position:fixed supaya
+     tidak pernah kepotong overflow-y:auto milik .app-sidebar. */
+  .sidebar-tooltip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translate(-6px, -50%);
+    background: var(--text);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    box-shadow: 0 12px 28px rgba(17, 24, 39, 0.22), 0 2px 8px rgba(17, 24, 39, 0.12);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .sidebar-tooltip.is-visible { opacity: 1; transform: translate(0, -50%); }
+  .sidebar-tooltip::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--text);
+    border-radius: 2px;
+    transform: translateY(-50%) rotate(45deg);
+  }
 
   /* Geser seluruh konten (.wrap) ke kanan supaya tidak ketiban sidebar -
      HANYA aktif kalau sidebar benar-benar tampil (class .is-visible, diatur

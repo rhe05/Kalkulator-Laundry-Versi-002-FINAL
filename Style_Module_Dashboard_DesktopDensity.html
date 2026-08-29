@@ -69,43 +69,8 @@ Karena isinya OVERRIDE, memindahkannya dari urutan akhir akan merusak tampilan.
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .desktop-summary-row { gap: 14px; min-height: 230px; }
     .desktop-summary-panel { padding: 13px 16px 11px; }
     .desktop-panel-title { margin-bottom: 8px; }
-    /* Panel BEP desktop: (1) judul "Target Titik Impas (BEP)" dikecilkan &
-       garis di bawahnya dinaikkan (font 14->11px, jarak bawah ->0) - sama
-       gaya dgn panel Master Biaya biar konsisten & elegan. Judul SIBLING
-       dari #desktopBepChart, discope :has(#desktopBepChart) supaya judul
-       panel lain tidak ikut. (2) Grafik "penyet" krn viewBox 300x150 +
-       preserveAspectRatio="none" diregang di panel yg lebar & pendek -
-       diperbaiki dgn memberi SVG tinggi maksimal: padding atas/bawah
-       chart-wrap & margin legenda dipangkas supaya .bep-chart-svg (flex:1)
-       tumbuh lebih tinggi -> garis lebih tegak/proporsional. Semua discope
-       ke panel BEP saja. */
-    .desktop-summary-panel:has(#desktopBepChart) .desktop-panel-title { font-size: 11px; margin-bottom: 0; }
-    #desktopBepChart .bep-chart-wrap { padding: 6px 12px 2px; position: relative; }
-    /* Legenda "Omset / Total Biaya" DIPINDAH masuk ke dalam grafik bagian
-       atas (permintaan user): dimunculkan lagi tapi di-overlay absolut
-       sebagai pill kecil di tengah-atas area chart (di atas titik potong
-       BEP, area yg kosong). Karena keluar dari alur normal (position:
-       absolute), .bep-chart-svg (flex:1) tetap memakai SELURUH tinggi
-       chart-wrap -> grafik tetap tinggi. Semua discope #desktopBepChart ->
-       legenda kartu HP (#dashboardBEPSummary) TIDAK berubah. */
-    #desktopBepChart .bep-chart-legend {
-      display: flex;
-      position: absolute;
-      top: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-      margin: 0;
-      gap: 14px;
-      z-index: 2;
-      padding: 3px 11px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      box-shadow: 0 1px 2px rgba(17,24,39,0.05);
-    }
     /* Master Biaya desktop: SEMUA komponen (Gas/Chemical/Listrik/Packing/
        Air/Nota) harus tampil. Sebelumnya .mb-komponen-list pakai
        justify-content:space-between (dari aturan dasar di atas) + flex:1 -

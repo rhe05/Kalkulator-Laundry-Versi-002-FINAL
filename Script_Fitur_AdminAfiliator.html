@@ -26,6 +26,9 @@ FUNGSI:
    otomatis penuh tanpa admin terlibat lagi. Sistem mandiri, TIDAK
    terintegrasi ke platform pembayaran/pihak ketiga mana pun (lihat catatan
    riwayat di Modul_Auth.gs kenapa webhook Lynk.id dibongkar).
+5. adminClearRateLimit: [2026-07-27] tombol gembok di tiap kartu akun -
+   bebaskan user yang kena batas percobaan daftar/masuk/reset password
+   (adminClearRateLimit, Modul_Auth.gs) supaya bisa langsung coba lagi.
 Backend yang menegakkan "hanya admin boleh" (cek session.email) - kartu menu
 & layar ini di client cuma disembunyikan utk user lain (authApplyAdminUI_,
 Script_Fitur_Auth.html), BUKAN satu-satunya lapisan keamanan.
@@ -44,6 +47,8 @@ Include SEBELUM Script_Boot_Main.html.
   window.openScreenAdminAfiliator = function () {
     var inviteErrEl = document.getElementById("adminInviteError");
     if (inviteErrEl) inviteErrEl.style.display = "none";
+    var directLoginErrEl = document.getElementById("adminDirectLoginError");
+    if (directLoginErrEl) directLoginErrEl.style.display = "none";
 
     adminAccountsDetailOpen_ = false;
     var section = document.getElementById("adminAccountsSection");
@@ -103,6 +108,7 @@ Include SEBELUM Script_Boot_Main.html.
       // yang bisa direset passwordnya).
       var actions = '<div class="actions">' +
         (acc.pending ? "" : '<button class="icon-btn" type="button" aria-label="Kirim link reset password" title="Kirim link reset password" onclick="adminSendPasswordReset(\'' + escapeJsAttr(acc.email) + '\', this); event.stopPropagation();">&#128231;</button>') +
+        '<button class="icon-btn" type="button" aria-label="Bebaskan batas percobaan" title="Bebaskan batas percobaan (daftar/masuk/reset password)" onclick="adminClearRateLimit(\'' + escapeJsAttr(acc.email) + '\', this); event.stopPropagation();">&#128275;</button>' +
         '<button class="icon-btn" type="button" aria-label="Hapus akun" onclick="openConfirmDeleteAccount(\'' + escapeJsAttr(acc.email) + '\'); event.stopPropagation();">&#10005;</button>' +
       '</div>';
 
@@ -174,6 +180,28 @@ Include SEBELUM Script_Boot_Main.html.
   };
 
   /**
+   * adminClearRateLimit: [2026-07-27] bantu user yang kena batas percobaan
+   * (mis. "Terlalu banyak email dikirim dalam waktu singkat" saat daftar,
+   * atau "Terlalu banyak percobaan gagal" saat masuk) - hapus counter
+   * cooldown-nya di server (Modul_Auth.gs) supaya user bisa langsung coba
+   * lagi tanpa nunggu. TIDAK mengubah password/data akun apa pun.
+   */
+  window.adminClearRateLimit = function (email, btn) {
+    if (btn) { btn.disabled = true; }
+    callServer_("adminClearRateLimit", [email], function (res) {
+      if (btn) { btn.disabled = false; }
+      if (!res || !res.ok) {
+        if (typeof showToast === "function") showToast((res && res.error) || "Gagal membebaskan batas percobaan.", "error");
+        return;
+      }
+      if (typeof showToast === "function") showToast("Batas percobaan untuk " + res.data.email + " sudah dibebaskan.", "ok");
+    }, function (err) {
+      if (btn) { btn.disabled = false; }
+      if (typeof showToast === "function") showToast(err && err.message ? err.message : String(err), "error");
+    });
+  };
+
+  /**
    * submitAdminCreateInvite: SATU-SATUNYA langkah manual admin dlm alur
    * "Undang Akun Baru" - panggil adminCreateInvite (Modul_Auth.gs, sudah
    * kirim email di server lewat MailApp), sisanya customer yang lanjutkan
@@ -202,6 +230,41 @@ Include SEBELUM Script_Boot_Main.html.
       if (typeof showToast === "function") showToast("Undangan terkirim ke " + res.data.email + ".", "ok");
     }, function (err) {
       if (btn) { btn.disabled = false; btn.textContent = "Kirim Undangan"; }
+      if (errEl) { errEl.textContent = err && err.message ? err.message : String(err); errEl.style.display = "block"; }
+    });
+  };
+
+  /**
+   * submitAdminDirectLogin: [2026-07-27] "Link Masuk Langsung" - bypass
+   * TOTAL (tanpa password/OTP/rate limit) utk user yang kesulitan
+   * daftar/masuk normal. Panggil adminGenerateDirectLoginLink (Modul_Auth.gs,
+   * kirim email berisi link `?directLogin=<token>`) - begitu user klik link
+   * itu, authHandleBootAuth_ (Script_Fitur_Auth.html) langsung buatkan sesi
+   * & masuk app otomatis, TIDAK ada langkah lain sama sekali.
+   */
+  window.submitAdminDirectLogin = function () {
+    var emailEl = document.getElementById("adminDirectLoginEmail");
+    var btn = document.getElementById("adminDirectLoginBtn");
+    var errEl = document.getElementById("adminDirectLoginError");
+    var email = emailEl ? emailEl.value.trim() : "";
+    if (errEl) errEl.style.display = "none";
+
+    if (!email) {
+      if (errEl) { errEl.textContent = "Email wajib diisi."; errEl.style.display = "block"; }
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "Mengirim..."; }
+    callServer_("adminGenerateDirectLoginLink", [email], function (res) {
+      if (btn) { btn.disabled = false; btn.textContent = "Kirim Link Masuk Langsung"; }
+      if (!res || !res.ok) {
+        if (errEl) { errEl.textContent = (res && res.error) || "Gagal mengirim link."; errEl.style.display = "block"; }
+        return;
+      }
+      if (emailEl) emailEl.value = "";
+      if (typeof showToast === "function") showToast("Link masuk langsung terkirim ke " + res.data.email + ".", "ok");
+    }, function (err) {
+      if (btn) { btn.disabled = false; btn.textContent = "Kirim Link Masuk Langsung"; }
       if (errEl) { errEl.textContent = err && err.message ? err.message : String(err); errEl.style.display = "block"; }
     });
   };

@@ -74,12 +74,10 @@ ISI FILE INI: layout ringkasan eksekutif dashboard KHUSUS desktop (>=1100px).
        di Script_Fitur_Dashboard.html, dipanggil tiap ganti layar & resize)
        pakai window.innerHeight yang selalu akurat - jauh lebih pasti drpd
        vh/overflow CSS. CSS di sini cuma menyiapkan strukturnya: topbar &
-       baris KPI tetap tinggi natural (flex-shrink:0), baris BEP+Master
-       Biaya jadi elemen elastis (flex:1) yg menyesuaikan ke sisa ruang
-       DALAM tinggi yang sudah dikunci JS tsb. */
+       baris KPI tetap tinggi natural (flex-shrink:0), panel Master Biaya &
+       Harga Layanan (.desktop-summary-full) auto-height biasa. */
     .desktop-dashboard-summary { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
     .desktop-kpi-row { flex-shrink: 0; }
-    .desktop-summary-row { flex: 1; min-height: 340px; }
     .desktop-summary-full { flex-shrink: 0; }
 
     /* Topbar tipis khusus desktop: header dashboard jadi strip putih (var
@@ -176,13 +174,10 @@ ISI FILE INI: layout ringkasan eksekutif dashboard KHUSUS desktop (>=1100px).
     .desktop-kpi-value.pos .desktop-kpi-number { color: var(--sage); }
     .desktop-kpi-value.neg .desktop-kpi-number { color: var(--red); }
 
-    /* Grafik BEP dilebarkan lagi (2.4fr), Master Biaya dikecilkan lagi (0.9fr).
-       align-items diganti dari "start" ke "stretch" supaya panel BEP & Master
-       Biaya SELALU sama tinggi (diminta user), tidak lagi ikut tinggi konten
-       masing-masing. Kedua panel dijadikan flex column supaya body-nya
-       (#desktopBepChart / #desktopMasterBiaya) bisa flex:1 mengisi penuh
-       tinggi panel - dasar dari pola "paksa 1 layar" di bawah. */
-    .desktop-summary-row { display: grid; grid-template-columns: 2.4fr 0.9fr; gap: 20px; align-items: stretch; }
+    /* [2026-07-27] Master Biaya & Harga Layanan sekarang SAMA-SAMA panel
+       lebar penuh (.desktop-summary-full), bukan lagi berbagi baris sempit
+       dgn BEP (BEP & Potensi Omset dipindah ke layar sendiri, screenBEP -
+       lihat Screen_BEP.html/Script_Fitur_BEP.html). */
     .desktop-summary-panel {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -190,63 +185,17 @@ ISI FILE INI: layout ringkasan eksekutif dashboard KHUSUS desktop (>=1100px).
       padding: 24px 22px 20px;
       overflow: hidden;
       min-width: 0;
-      display: flex;
-      flex-direction: column;
       box-shadow: 0 1px 2px rgba(17,24,39,0.03), 0 10px 24px -12px rgba(17,24,39,0.12);
     }
-    /* DIBATASI ke ".desktop-summary-row" saja (panel BEP & Master Biaya) -
-       kalau ditulis tanpa scope ini, rule "flex-direction:column" ini
-       KEBOCORAN ke panel Harga Layanan (.desktop-summary-full JUGA punya
-       class .desktop-summary-panel) & merusak barisnya jadi tersusun ke
-       bawah - itu penyebab bug "Harga Layanan lurus ke bawah" sebelumnya. */
-    .desktop-summary-row .desktop-summary-panel > .dashboard-card-summary { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .desktop-summary-full { width: 100%; }
 
-    /* === CHART BEP - restyle premium KHUSUS panel desktop (#desktopBepChart) ===
-       buildBepChartSvg() di Script_Shared_Util.html dipakai bareng kartu
-       ringkas HP (#dashboardBEPSummary) - markup SVG-nya TIDAK diubah (JS
-       tetap sama) supaya HP tidak ikut berubah. Semua polesan visual di
-       sini murni CSS yang di-scope ke id panel desktop saja: CSS menang
-       atas atribut presentasi SVG (stroke-width dll) jadi aman menimpa
-       tanpa sentuh JS. */
-    #desktopBepChart .bep-chart-wrap {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
-      border-radius: 12px;
-      padding: 14px 14px 10px;
-      box-shadow: none;
-    }
-    #desktopBepChart .bep-chart-svg line { stroke-width: 1.3; }
-    #desktopBepChart .bep-chart-svg text { font-family: var(--font-mono); letter-spacing: 0.01em; }
-    #desktopBepChart .bep-chart-svg polygon { opacity: 0.92; }
-    #desktopBepChart .bep-chart-legend { gap: 22px; margin-top: 10px; flex-shrink: 0; }
-    #desktopBepChart .bep-legend-item { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
-    #desktopBepChart .bep-legend-dot { width: 7px; height: 7px; }
-    /* Grafik BEP di panel desktop: .bep-chart-svg bawaan (dipakai bareng
-       kartu ringkas HP) tingginya fixed 120px, dulu dipaksa 300px KHUSUS
-       di sini - sekarang diganti flex:1 (elastis, bukan angka tetap)
-       supaya otomatis menyesuaikan ke sisa tinggi viewport (bagian dari
-       pola "paksa 1 layar" di atas, jadi presisi di layar manapun tanpa
-       perlu redesign ulang tiap ukuran layar). preserveAspectRatio="none"
-       pada SVG-nya (lihat buildBepChartSvg di Script_Shared_Util.html)
-       memang didesain utk skenario tinggi fleksibel spt ini - kartu
-       ringkas HP (#dashboardBEPSummary) TIDAK ikut berubah krn scoped ke
-       id ini saja. */
-    #desktopBepChart .bep-chart-svg { flex: 1; min-height: 0; height: auto; }
-
-    /* === MASTER BIAYA - susunan 2 baris per item + tinggi disamakan dgn
-       panel BEP di sebelahnya (via flex:1 dari .desktop-summary-panel di
-       atas) KHUSUS panel desktop (#desktopMasterBiaya). .mb-* dipakai
-       bareng kartu ringkas HP (#dashboardMasterBiayaSummary) - style
-       global .mb-* & markup .mb-komponen-top (1 baris) TIDAK diubah, HP
-       tetap pakai versi lama. Baris item di sini pakai class baru
-       (.mb-komponen-row-desktop/.mb-komponen-line1/line2, lihat
-       Script_Fitur_Dashboard.html) supaya tidak numpang di CSS HP sama
-       sekali. */
+    /* === MASTER BIAYA - susunan 2 baris per item KHUSUS panel desktop
+       (#desktopMasterBiaya). .mb-* dipakai bareng kartu ringkas HP
+       (#dashboardMasterBiayaSummary) - style global .mb-* & markup
+       .mb-komponen-top (1 baris) TIDAK diubah, HP tetap pakai versi lama.
+       Baris item di sini pakai class baru (.mb-komponen-row-desktop/
+       .mb-komponen-line1/line2, lihat Script_Fitur_Dashboard.html) supaya
+       tidak numpang di CSS HP sama sekali. */
     #desktopMasterBiaya .mb-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     #desktopMasterBiaya .mb-komponen-list {
       flex: 1;
