@@ -224,6 +224,14 @@ function recomputeCabangSummary_(cabangId, fields) {
       computed.hpp = hppRes.data;
       maskFields.push("computed.hpp");
       dashboardPrimeComputedCache_(cabangId, "hpp", hppRes.data);
+      // [2026-08-29] Cap versi rumus ikut ditulis SETIAP kali hpp dihitung
+      // ulang. WAJIB juga di-prime ke cache per-eksekusi: tanpa itu,
+      // getDashboardHargaLayananSummary_impl_/BEP yang dipanggil beberapa
+      // baris di bawah akan memanggil getStrukturBiayaHPPFast_ lagi, melihat
+      // versi masih kosong, lalu memicu recompute BERSARANG.
+      computed.hppFormulaVersion = HPP_FORMULA_VERSION_;
+      maskFields.push("computed.hppFormulaVersion");
+      dashboardPrimeComputedCache_(cabangId, "hppFormulaVersion", HPP_FORMULA_VERSION_);
     }
 
     // [2026-07-22] Ringkasan Dashboard lain - reuse fungsi _impl_ yang SUDAH
@@ -269,24 +277,51 @@ function recomputeCabangSummary_(cabangId, fields) {
 }
 
 /**
+ * [2026-08-29] Cap versi rumus disimpan sbg angka (Firestore bisa
+ * mengembalikannya sbg number ATAU string tergantung tipe yang tertulis),
+ * jadi bandingkan secara numerik, bukan ===. Snapshot lama (dibuat sebelum
+ * fitur ini ada) tidak punya field ini sama sekali -> Number(undefined) = NaN
+ * -> dianggap basi -> dihitung ulang. Itu memang yang diinginkan.
+ */
+function hppSnapshotVersionValid_(stored) {
+  const n = Number(stored);
+  return isFinite(n) && n === Number(HPP_FORMULA_VERSION_);
+}
+
+/**
  * Baca HPP CEPAT: 1 GET dari Firestore (computed.hpp, dibagi via
  * dashboardGetComputedDoc_). Kalau belum ada (cabang belum pernah di-
  * recompute), fallback hitung dari Sheets SEKALIGUS memicu recompute supaya
  * baca berikutnya sudah cepat. `_source` menandai dari mana hasilnya,
  * berguna saat verifikasi.
+ * [2026-08-29] Sekarang snapshot juga DITOLAK kalau `computed.hppFormulaVersion`
+ * tidak sama dengan HPP_FORMULA_VERSION_ (Modul_StrukturBiayaHPP.gs) - itu
+ * yang membuat perubahan rumus otomatis terlihat tanpa recompute manual.
  */
 function getStrukturBiayaHPPFast_(cabangId) {
+  let versiBasi = false;
   try {
     const doc = dashboardGetComputedDoc_(cabangId);
     if (doc && doc.computed && doc.computed.hpp) {
-      return { ok: true, data: doc.computed.hpp, _source: "firestore", _computedAt: doc.computed.computedAt || null };
+      if (hppSnapshotVersionValid_(doc.computed.hppFormulaVersion)) {
+        return { ok: true, data: doc.computed.hpp, _source: "firestore", _computedAt: doc.computed.computedAt || null };
+      }
+      // Snapshot ADA tapi dibuat oleh rumus versi lain -> JANGAN dipakai.
+      versiBasi = true;
     }
   } catch (err) {
     console.warn("getStrukturBiayaHPPFast_ Firestore gagal, fallback Sheets: " + err);
   }
   const res = getStrukturBiayaHPP_impl_(cabangId);
-  try { recomputeCabangSummary_(cabangId); } catch (e) {}
-  if (res && res.ok) res._source = "sheets_fallback";
+  // Snapshot basi karena versi: cukup hitung ulang GRUP HPP (hpp + turunannya
+  // hargaLayanan/bep/potensiOmset yang ikut memakai angka HPP). fixedCost
+  // TIDAK bergantung ke rumus HPP, jadi tidak perlu ikut - itu yang dulu bikin
+  // regresi 45 detik. Kalau snapshot memang belum pernah ada (cabang baru),
+  // tetap hitung SEMUA field seperti perilaku lama.
+  try {
+    recomputeCabangSummary_(cabangId, versiBasi ? DASHBOARD_RECOMPUTE_HPP_GROUP_ : undefined);
+  } catch (e) {}
+  if (res && res.ok) res._source = versiBasi ? "sheets_versi_rumus_baru" : "sheets_fallback";
   return res;
 }
 
@@ -461,6 +496,10 @@ function buildComputedWriteSpec_(tenantId, cabangId, fields) {
     computed.hpp = hppRes.data;
     maskFields.push("computed.hpp");
     dashboardPrimeComputedCache_(cabangId, "hpp", hppRes.data);
+    // [2026-08-29] Cap versi rumus -- lihat catatan di recomputeCabangSummary_.
+    computed.hppFormulaVersion = HPP_FORMULA_VERSION_;
+    maskFields.push("computed.hppFormulaVersion");
+    dashboardPrimeComputedCache_(cabangId, "hppFormulaVersion", HPP_FORMULA_VERSION_);
   }
 
   // Urutan `wanted` SENGAJA dependency-first -- lihat catatan sama di

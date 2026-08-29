@@ -87,6 +87,31 @@ let _strukturBiayaHPPCache_ = {};
 // sessionToken. Badan cache-check dipindah ke getStrukturBiayaHPP_impl_
 // (dipakai internal oleh modul lain spt Modul_HargaLayanan.gs/Modul_Dashboard.gs
 // TANPA sessionToken, krn sudah berjalan di dalam withTenant_ yang sama).
+// ============================================================================
+// VERSI RUMUS HPP -- NAIKKAN ANGKA INI SETIAP KALI RUMUS BERUBAH
+// ============================================================================
+// [2026-08-29] Hasil HPP disimpan sbg snapshot `computed.hpp` di Firestore
+// (lihat Modul_Firestore_Computed.gs). Selama snapshot itu ADA, rumus di file
+// ini TIDAK PERNAH dieksekusi lagi utk cabang tsb -- artinya perubahan rumus
+// TIDAK terlihat di layar walau deploy sudah benar, sampai cabang itu
+// di-recompute manual satu per satu. Itu betul-betul terjadi (perbaikan
+// setrika uap 2026-08-29: layar tetap Rp10.938 padahal kode baru sudah live).
+//
+// Solusinya angka di bawah: nilainya ikut ditulis ke `computed.hppFormulaVersion`
+// tiap recompute, dan getStrukturBiayaHPPFast_ MENOLAK snapshot yang versinya
+// beda -> otomatis hitung ulang dari Sheets + self-heal. Jadi:
+//
+//   UBAH RUMUS DI FILE INI  ->  NAIKKAN ANGKA INI  ->  deploy. Selesai.
+//   Semua cabang di semua tenant memperbaiki diri sendiri saat dibuka.
+//
+// Yang TIDAK perlu menaikkan angka: ubah label/note/urutan tampilan saja.
+// Konsekuensi menaikkan: pembukaan PERTAMA tiap cabang setelah deploy jadi
+// lambat sekali (jalur Sheets, ~8 detik), berikutnya cepat lagi seperti biasa.
+//
+// Riwayat: 1 = sebelum 2026-08-29. 2 = setrika uap (Air/Gas) pakai basis per
+// jam, tidak lagi dikali kapasitas kg mesin cuci.
+const HPP_FORMULA_VERSION_ = 2;
+
 // [2026-07-21 FIRESTORE] Layar HPP sekarang baca dari cache Firestore
 // (getStrukturBiayaHPPFast_, ~450ms) dengan fallback otomatis ke hitung Sheets
 // kalau computed belum ada. Pemanggil INTERNAL (Modul_HargaLayanan.gs /
