@@ -792,7 +792,7 @@ versi terakhir **@397**):**
 
 ---
 
-## SESI 2026-08-11 s/d 12 (PALING BARU) — fokus MOBILE
+## SESI 2026-08-11 s/d 12 — fokus MOBILE
 
 Deployment ID **SAMA** seperti biasa
 (`AKfycbxQPKNOM8aTSZtWaRwp6GENbE2dT5nERK1Yd1cakULzKN2Pxrqpcui_88R_6jSCyR73xg`),
@@ -929,6 +929,122 @@ menyasar elemen yang hanya dirender di HP.
 5. Prioritas lama yang masih pending TIDAK berubah dari sesi 2026-07-27
    (gap edukasi pemula, Kontribusi Omset, UX validasi form Profil Outlet) —
    lihat blok-blok di bawah.
+
+## SESI 2026-08-29 (PALING BARU) — rumus HPP setrika uap & HPP per Kg
+
+Deployment ID SAMA seperti biasa, versi terakhir **@417**. Semua sudah
+`git push` + `clasp push --force` + deploy.
+
+Sesi ini dipicu satu pertanyaan user: "kenapa biaya gas setrika keluar
+Rp10.938, padahal hitungan saya Rp7.813 per jam?" — dan berujung ke tiga
+perbaikan rumus + satu mekanisme pencegah bug yang sama terulang.
+
+### Yang selesai
+
+1. **@414 — Setrika uap memakai basis PER JAM, tidak lagi dikali kapasitas
+   mesin cuci** (`Modul_StrukturBiayaHPP.gs`). Sebelumnya Air/Gas Setrika
+   dikonversi `rpPerJam ÷ kap kg/jam setrika × kap kg mesin cuci`. Keputusan
+   user: untuk setrika uap **1 load = 1 jam operasi**, jadi rpPerJam dipakai
+   apa adanya. Contoh K2 Laundry: LPG 12kg Rp250.000 ÷ 32 jam = Rp7.813/jam
+   → baris "Gas Setrika per Load" kini Rp7.813 (dulu Rp10.938 = 7.813÷5×7).
+   Konvensi ini menyamakan Hybrid dengan kategori Jasa Setrika yang memang
+   sudah memakai basis itu sejak awal. **Setrika LISTRIK tidak berubah.**
+   Diperbaiki di DUA tempat: `buildKiloanHPPStructure_` (layanan bawaan) dan
+   `strukturHPPComponentPool_` (layanan custom) — kalau cuma satu, layanan
+   custom menampilkan angka berbeda dari layanan bawaan.
+
+2. **@415 — `HPP_FORMULA_VERSION_`: snapshot Firestore basi otomatis
+   dihitung ulang.** Ini pelajaran terpenting sesi ini, baca poin "JEBAKAN"
+   di bawah. Konstanta di `Modul_StrukturBiayaHPP.gs` (sekarang **3**) ikut
+   ditulis ke `computed.hppFormulaVersion` oleh KEDUA penulis snapshot
+   (`recomputeCabangSummary_` DAN `buildComputedWriteSpec_`);
+   `getStrukturBiayaHPPFast_` menolak snapshot yang versinya beda lalu
+   self-heal dengan `DASHBOARD_RECOMPUTE_HPP_GROUP_` saja (bukan 6 field —
+   `fixedCost` tidak bergantung rumus HPP).
+   **Cara pakai: ubah rumus HPP → naikkan angka itu → deploy. Selesai.**
+   Ubah label/note/urutan tampilan saja TIDAK perlu menaikkan angka.
+
+3. **@416 — HPP per Kg di Harga Layanan dihitung PER KOMPONEN**
+   (`Modul_HargaLayanan.gs`). Dulu `hppPerKg = total per load ÷ kapasitas
+   mesin cuci` — satu pembagi untuk semua komponen. Sekarang tiap komponen
+   dibagi kapasitas mesin yang mengerjakannya:
+   - Setrika (Air/Gas/Listrik) → kapasitas kg per **jam** mesin setrika
+   - Dryer (Listrik/Gas) → kapasitas kg **mesin pengering** (field
+     `konversi.kapasitasKgPerLoadPengering`, BARU — sebelumnya kapasitas
+     mesin pengering tidak pernah dipakai di mana pun)
+   - Sisanya → kapasitas kg mesin cuci
+   Chemical & Packing sengaja masuk kelompok "sisanya": nilai per load-nya
+   dibentuk dari `biayaPerKg × kap mesin cuci`, dan pembagian "per 5 kg"
+   yang user maksud SUDAH terjadi di `Modul_BiayaPacking.gs`
+   (`biayaPerKg = biayaPerLoad ÷ kapKgPerLembar`). Membaginya lagi akan
+   menghitung pembagi yang sama dua kali.
+   **Catatan penting:** kekeliruan komponen setrika di sini BARU MUNCUL
+   akibat @414 — sebelumnya nilai per load-nya sudah terskala ×7/5 sehingga
+   dibagi 7 kebetulan menghasilkan angka per kg yang benar.
+
+4. **@417 — "Harga Total" di kartu Harga Layanan**
+   (`Script_Fitur_HargaLayanan.html` + `Style_Module_HargaLayanan.html`).
+   Satu baris berisi 4 info: HPP Layanan / Harga Jual / Min Order / Harga
+   Total. Harga Total = Harga Jual × Min Order (7.000 × 4 = Rp 28.000),
+   diperbarui tiap ketik; menampilkan "—" (bukan Rp0) selama Min Order
+   kosong. Huruf memakai `clamp()` terhadap lebar layar + `tabular-nums`
+   supaya "Rp 28.000" utuh sebaris di HP 360px tanpa kolom bergoyang saat
+   angka berubah. Aturan lama yang meruntuhkan grid jadi 1 kolom di bawah
+   520px sengaja tidak berlaku untuk baris ini. Kartu tanpa Min Order
+   (Self Service & Bed Cover) tidak menerima kelas `hl-metric-grid-4`,
+   jadi tetap 2 kolom persis seperti sebelumnya.
+
+### JEBAKAN YANG MEMAKAN WAKTU PALING BANYAK (jangan sampai terulang)
+
+Setelah @414 di-deploy, layar K2 Laundry **tetap menampilkan Rp10.938**.
+Sesuai aturan "verifikasi akar masalah dulu", dilakukan
+`clasp pull --versionNumber 414` — dan terbukti kode BARU memang sudah ada
+di deployment produksi. Jadi bukan cache browser, bukan URL, bukan clasp.
+
+Akar masalahnya: `getStrukturBiayaHPP` membaca snapshot `computed.hpp` dari
+Firestore lewat `getStrukturBiayaHPPFast_`. **Selama dokumen itu ada,
+fallback hitung-Sheets tidak pernah jalan, jadi rumus baru TIDAK PERNAH
+dieksekusi untuk cabang itu.** Berlaku sama untuk keenam field `computed.*`
+(`dashboardFastReader_`). Pemulihan manual: simpan ulang salah satu master
+biaya cabang tsb (memicu `triggerRecomputeCabang`) — harus per cabang.
+
+Itulah sebabnya `HPP_FORMULA_VERSION_` dibuat (@415). **Sejak sekarang,
+jangan pernah menutup pekerjaan perubahan rumus dengan "sudah deploy" saja
+— pastikan versinya dinaikkan.**
+
+### Yang masih menggantung
+
+1. **Belum ada verifikasi visual untuk @417.** Claude tidak bisa login ke
+   app. Layout 4 kolom sudah diuji lewat menjalankan
+   `renderHargaLayananServiceCard` sungguhan di Node (markup benar, Rp 28.000
+   benar, Bed Cover tetap 2 kolom) + file pratinjau CSS asli, tapi **belum
+   pernah dilihat di HP sungguhan**. Yang perlu dicek: apakah 4 kolom terasa
+   sesak di HP kecil, dan apakah "Rp 28.000" benar-benar utuh sebaris.
+
+2. **@417 IKUT MENGUBAH DESKTOP** — melanggar aturan "desktop jangan
+   disentuh". Layar detail Harga Layanan dipakai bersama; desktop hanya
+   menyusunnya jadi 2 kolom masonry (`@media min-width:1100px`). Akibatnya
+   Min Order yang tadinya sebaris penuh kini masuk ke baris 4 kolom.
+   Alternatifnya menyembunyikan Harga Total di desktop — dinilai lebih
+   buruk. **User sudah diberi tahu dan belum memutuskan.** Kalau diminta,
+   kunci `.hl-metric-grid-4` kembali ke 2 kolom khusus ≥1100px (1 baris CSS).
+
+3. **Angka HPP per Kg hasil @416 belum dicocokkan user dengan hitungan
+   tangan.** Angka 3.089 yang sempat muncul di percakapan adalah hasil uji
+   dengan komponen KARANGAN (hanya totalnya, 18.497, yang nyata) — bukan
+   angka K2 sebenarnya. Minta user mencocokkan.
+
+4. **Outlet selain K2 akan lambat sekali di pembukaan pertama** setelah
+   @416 (versi rumus naik ke 3 → semua snapshot lama dianggap basi → hitung
+   ulang jalur Sheets ~8 detik). Sekali per outlet saja, wajar, bukan bug.
+
+5. **File `.bak-*` menumpuk di root** hasil patch sesi ini
+   (`*.bak-setrikauap-*`, `*.bak-fversi-*`, `*.bak-perkg-*`,
+   `*.bak-hargatotal-*`). Aman dari `clasp push` (ekstensinya bukan
+   .gs/.html) tapi mengotori folder. Hapus setelah user konfirmasi semua
+   angka benar.
+
+6. Prioritas lama TIDAK berubah — lihat blok-blok di bawah.
 
 ## DATA BACKEND TERSEDIA
 
